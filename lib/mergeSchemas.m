@@ -1,3 +1,6 @@
+% COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
+% Origin is https://github.com/decatur/ansatz27.
+
 function [ mergedSchema ] = mergeSchemas( schema, rootDir )
 %MERGESCHEMAS Summary of this function goes here
 %   Detailed explanation goes here

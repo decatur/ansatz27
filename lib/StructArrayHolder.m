@@ -1,3 +1,6 @@
+% COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
+% Origin is https://github.com/decatur/ansatz27.
+
 classdef StructArrayHolder < handle
     %StructArrayHolder Summary of this class goes here
     

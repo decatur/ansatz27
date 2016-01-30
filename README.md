@@ -52,12 +52,7 @@ In each schema you may specify a default value.
 {
     "type": "object",
     "properties": {
-        "foo":
-            {
-                "type": "string",
-                "default": "bar"
-            }
-        }
+        "foo": { "type": "string", "default": "bar" }
     }
 }
 

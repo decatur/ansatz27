@@ -1,10 +1,12 @@
+% COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
+% Origin is https://github.com/decatur/ansatz27.
+
 function obj = getPath(obj, path)
-%GETPATH Liefert den Wert unterhalb des Pfades
-% Beisiel:
+%GETPATH Returns the value under the path or empty if the path does not exist.
+% Example:
 %    obj = struct('foo', struct('bar', 13))
 %    getPath(obj, 'foo/bar') -> 13
-%
-% Author: Wolfgang Kuehn
+
 parts = strsplit(path, '/');
 for k=1:length(parts)
     if isfield(obj, parts{k})
@@ -14,5 +16,5 @@ for k=1:length(parts)
         return
     end
 end
-return
+
 end
