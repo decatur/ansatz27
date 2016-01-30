@@ -1,0 +1,97 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "foo": {
+            "type": "string",
+            "default": ""
+        },
+        "fixNumber": {
+            "type": "number",
+            "fixedPrecision": 2
+        },
+        "null": {
+            "type": "number"
+        },
+        "number": {
+            "type": "number"
+        },
+        "integer": {
+            "type": "integer"
+        },
+        "date": {
+            "type": "string",
+            "format": "date"
+        },
+        "datetime": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "vector": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "fixedPrecision": 2
+            }
+        },
+        "matrix": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "fixedPrecision": 2
+                }
+            }
+        },
+        "myArray": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "start": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "myNumber": {
+                        "type": "number",
+                        "minimum": 0,
+                        "fixedPrecision": 2
+                    }
+                }
+            }
+        },
+        "minNumber": {
+            "type": "number",
+            "minimum": 3
+        },
+        "invalidSchema": {
+            "minimum": 3
+        },
+        "a": {
+            "type": "array",
+            "items": [
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                {
+                    "type": "integer"
+                },
+                {
+                    "type": "integer"
+                }
+            ]
+        }
+    }
+}

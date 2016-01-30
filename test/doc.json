@@ -1,0 +1,34 @@
+{
+    "id": "4711",
+    "bar": "foo",
+    "minNumber": 1,
+    "null": null,
+    "matrix": [ [1, 2, 3], [4, -5, 6] ],
+    "vector": [ 1, null, 2, null, 3, null, 4 ],
+    "date": "2016-01-26",
+    "datetime": "2016-01-26T12:00+0100",
+    "myArray": [
+        {
+            "name": "foo",
+            "start": "2016-01-25T16:50+0100"
+        },
+        {
+            "name": "bar",
+            "start": "2016-01-27T16:50+0100",
+            "myNumber": -3.1415
+        }
+    ],
+    "myArray1": [
+        {
+            "name": "foo",
+            "start": "2016-01-25T16:50+0100"
+        },
+        {
+            "name": "bar",
+            "start": "2016-01-27T16:50+0100",
+            "number": 3.1415
+        }
+    ],
+    "invalidSchema": 3,
+    "a": ["2016-01-25", "2016-01-26", 1, 2]
+}
