@@ -1,5 +1,4 @@
-addpath('../');
-addpath('../../../../menergy/time');
+addpath('../lib');
 
 obj = struct;
 obj.fixNumber = pi;
@@ -14,18 +13,17 @@ obj.matrix3D(1,:,:) = [1 2; 3 4];
 obj.matrix3D(2,:,:) = 4+obj.matrix3D(1,:,:);
 obj.minNumber = 1;
 
-[json, errors] = JSON_stringifyValidate(obj, 'file:schema.json', 4);
+[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
 
 tokens = regexp(json, ':\s*(\d+(\.\d*)?)', 'tokens');
 assert(strcmp(tokens{1}, '3.14'));
 assert(strcmp(tokens{2}, '3.1415926536'));
 assert(strcmp(tokens{3}, '3'));
 
+% Test struct arrays
 obj = struct;
 obj.id = '4711';
-obj.myArray = s;
 
-% Test struct arrays
 d = now;
 s = struct([]);
 s(1).name = 'foo';
@@ -36,7 +34,9 @@ s(2).name = 'bar';
 s(2).start = d+2;
 s(2).ende = d+3;
 
-json1 = JSON_stringifyValidate(obj, 'file:schema.json', 4)
+obj.myArray = s;
+
+json1 = JSON_Stringifier.stringify(obj, 'file:schema.json')
 
 % Test cell arrays
 s = {struct, struct};
@@ -50,6 +50,6 @@ s{2}.ende = d+3;
 
 obj.myArray = s;
 
-[json2, errors] = JSON_stringifyValidate(obj, 'file:schema.json', 4)
+[json2, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json')
 
 assert(strcmp(json1, json2))
