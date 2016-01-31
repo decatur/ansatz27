@@ -23,19 +23,23 @@ classdef JSON_Parser < JSON_Handler
             
         end
         
-        function [value, errors] = parse(json, rootschema)
-            if nargin == 1
-                rootschema = [];
-            end
-            
+        function [value, errors] = parse(varargin)
             parser = JSON_Parser();
-            [value, errors] = parser.parse_(json, rootschema);
+            [value, errors] = parser.parse_(varargin{:});
         end
     end
     
     methods
         
         function [value, errors] = parse_(this, json, rootschema)
+            if nargin < 2 || ~ischar(json) || isempty(json)
+                error('JSON must be non-empty string');
+            end
+
+            if nargin < 3
+                rootschema = [];
+            end
+
             if regexp(json, '^file:')
                 this.json = this.readFileToString(regexprep(json, '^file:', ''), 'latin1');
             else
@@ -46,17 +50,14 @@ classdef JSON_Parser < JSON_Handler
             this.len = length(this.json);
             
             context = struct();
-            context.path = '/';
-            
-            if exist('rootschema', 'var') && ~isempty(rootschema)
+            context.path = '/';;
+            this.schemaURL = [];
+
+            if exist('rootschema', 'var') 
                 [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
-            else
-                this.schemaURL = [];
             end
             
             this.errors = {};
-            
-            
             
             % String delimiters and escape chars identified to improve speed:
             this.esc = find(this.json=='"' | this.json=='\' ); % comparable to: regexp(this.json, '["\\]');
@@ -96,7 +97,7 @@ classdef JSON_Parser < JSON_Handler
             schema = context.schema;
 
             if strcmp(getPath(schema, 'type'), 'object')
-                child.schema = getPath(schema, ['properties/' key]);
+                child.schema = getPath(schema, ['properties/' num2str(key)]);
             else
                 items = getPath(schema, 'items');
                 if isstruct(items)
@@ -123,7 +124,7 @@ classdef JSON_Parser < JSON_Handler
         function parse_object(this, holder, index, holderKey, context)
             
             if isfield(context, 'schema')
-                context.schema = mergeSchemas(context.schema, this.getRootDir());
+                context.schema = mergeSchemas(context.schema);
             end
             
             this.parse_char('{');
@@ -375,7 +376,6 @@ classdef JSON_Parser < JSON_Handler
                         this.error_pos('Token null expected at position %d');
                     end
             end
-            
             val = this.validate_(val, actType, context);
             holder.setVal(index, key, val);
         end

@@ -14,20 +14,24 @@ type = schema.type;
 
 if strcmp(actType, 'string')
     if ~strcmp(type, 'string')
-        errors = [errors, {sprintf('At %s, value %s does not match type %s', path, value, type)}];
+        errors = [errors, {sprintf('At %s value %s does not match type %s', path, value, type)}];
+        return;
     end
-elseif strcmp(actType, 'object')
-    if ~strcmp(type, 'object')
-        errors = [errors, {sprintf('At %s, object value does not match type %s', path, type)}];
+elseif strcmp(actType, 'object') || strcmp(actType, 'array')
+    if ~strcmp(type, actType)
+        errors = [errors, {sprintf('At %s value does not match type %s', path, type)}];
+        return;
     end
 elseif strcmp(actType, 'number')
     if ~strcmp(type, 'number') && ~strcmp(type, 'integer')
-        errors = [errors, {sprintf('At %s, value %f does not match type %s', path, value, type)}];
+        errors = [errors, {sprintf('At %s value %f does not match type %s', path, value, type)}];
+        return;
     end
 elseif strcmp(actType, 'boolean')
     booleanStrings = {'false', 'true'};
     if ~strcmp(type, 'boolean')
-        errors = [errors, {sprintf('At %s, boolean true does not match type %s', path, booleanStrings{value+1}, type)}];
+        errors = [errors, {sprintf('At %s boolean true does not match type %s', path, booleanStrings{value+1}, type)}];
+        return;
     end
 end
 

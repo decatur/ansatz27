@@ -2,13 +2,15 @@
 % Origin is https://github.com/decatur/ansatz27.
 
 function mergedObject = mergeDefaults(object, schema)
+assert(isstruct(object));
+
 mergedObject = object;
 
-if ~isfield(schema, 'properties')
+properties = getPath(schema, 'properties');
+if ~isstruct(properties)
     return
 end
 
-properties = schema.properties;
 propertyNames = fieldnames(properties);
 
 for i=1:length(propertyNames)

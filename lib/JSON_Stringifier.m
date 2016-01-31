@@ -13,12 +13,9 @@ classdef JSON_Stringifier < JSON_Handler
     end
     
     methods (Static)
-        function [json, errors] = stringify(value, rootschema, space)
-            if nargin == 2
-                space = 0;
-            end
+        function [json, errors] = stringify(varargin)
             stringifier = JSON_Stringifier();
-            [json, errors] = stringifier.stringify_(value, rootschema, space);
+            [json, errors] = stringifier.stringify_(varargin{:});
         end
     end
     
@@ -51,26 +48,43 @@ classdef JSON_Stringifier < JSON_Handler
             %   Wolfgang Kuehn 2015, 2016
             %   Qianqian Fang 2011-09-09
             
-            if exist('rootschema', 'var') && ~isempty(rootschema)
+            if nargin < 2
+                json = [];
+                errors = [];
+                return;
+            end
+
+            if nargin < 3
+                rootschema = [];
+            end
+
+            if nargin < 4
+                % Default is 4 spaces indentation per level.
+                space = 4;
+            end
+
+            this.schemaURL = [];
+
+            if exist('rootschema', 'var') 
                 [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
             else
                 rootschema = [];
-                this.schemaURL = [];
             end
             
             this.errors = {};
             context = struct();
             
+            this.indent = '';
             if exist('space', 'var')
                 if isnumeric(space)
                     this.indent = repmat(' ', 1, space);
-                else
+                elseif ischar(space)
                     this.indent = space;
                 end
+            end
+
+            if ~isempty(this.indent)
                 this.nl = sprintf('\r\n');
-            else
-                this.indent = '';
-                this.nl = '';
             end
             
             context.gap = '';
@@ -165,7 +179,7 @@ classdef JSON_Stringifier < JSON_Handler
                             elseif strcmp(type, 'array') && strcmp(getPath(schema, 'items/items/type'), 'number')
                                 json = this.matrix2json(value, context, schema.items.items);
                             elseif strcmp(type, 'object')
-                                json = this.objArray2json(value, context, schema.items);
+                                json = this.objArray2json(value, context, getPath(schema, 'items'));
                             end
                         end
                     else
@@ -190,7 +204,7 @@ classdef JSON_Stringifier < JSON_Handler
                 elseif isstruct(value)
                     if strcmp(type, 'array')
                         value = this.validate_(value, 'array', schema, context.path);
-                        json = this.objArray2json(value, context, schema.items);
+                        json = this.objArray2json(value, context, getPath(schema, 'items'));
                     else
                         if n == 1
                             value = this.validate_(value, type, schema, context.path);
@@ -203,11 +217,11 @@ classdef JSON_Stringifier < JSON_Handler
                     end
                 elseif iscell(value)
                     value = this.validate_(value, 'array', schema, context.path);
-                    json = this.objArray2json(value, context, schema.items);
+                    json = this.objArray2json(value, context, getPath(schema, 'items'));
                 elseif ischar(value)
                     if strcmp(type, 'array')
                         value = this.validate_(value, 'array', schema, context.path);
-                        json = this.objArray2json(value, context, schema.items);
+                        json = this.objArray2json(value, context, getPath(schema, 'items'));
                     else
                         value = this.validate_(value, 'string', schema, context.path);
                         json = this.quote(value);
@@ -233,7 +247,7 @@ classdef JSON_Stringifier < JSON_Handler
             assert(isstruct(value), 'input is not a struct');
             
             if ~isempty(schema)
-                schema = mergeSchemas(schema, this.getRootDir());
+                schema = mergeSchemas(schema);
             end
             
             txt = sprintf('{%s', this.nl);

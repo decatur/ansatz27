@@ -34,13 +34,17 @@ classdef JSON_Handler < handle
             fclose(fid);
         end
 
-        function [ schema, schemaURL ] = loadSchema(this, schemaURL )
-            if ischar(schemaURL)
-                if regexp(schemaURL, '^file:')
-                    schemaURL = regexprep(schemaURL, '^file:', '');
-                    schema = this.readFileToString(schemaURL, 'latin1');
-                end
+        function [ schema, schemaURL ] = loadSchema(this, schema)
+            schemaURL = [];
+
+            if isempty(schema) || isstruct(schema)
+                return;
+            elseif ischar(schema) && regexp(schema, '^file:')
+                schemaURL = regexprep(schema, '^file:', '');
+                schema = this.readFileToString(schemaURL, 'latin1');
                 schema = JSON_Parser.parse(schema);
+            else
+                error('Illegal type for schema');
             end
         end
 
@@ -72,6 +76,34 @@ classdef JSON_Handler < handle
             if strcmp(s(1).type, '()')
                 ind = s(1).subs;
                 b = ind;
+            end
+        end
+
+        function [ mergedSchema ] = mergeSchemas(this, schema)
+            %MERGESCHEMAS Summary of this function goes here
+            %   Detailed explanation goes here
+
+            if ~isfield(schema, 'allOf')
+                mergedSchema = schema;
+                return
+            end
+
+            % Merge properties and required fields of all schemas.
+            mergedSchema = struct;
+            mergedSchema.type = 'object';
+            mergedSchema.properties = struct;
+            mergedSchema.required = {};
+
+            rootDir = this.getRootDir();
+
+            for i=1:length(schema.allOf)
+                subSchema = schema.allOf{i};
+                if isfield(subSchema, 'x_ref')
+                    subSchema = JSON_parseValidate(readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
+                end
+                
+                mergedSchema.properties = mixInStruct( mergedSchema.properties, subSchema.properties);
+                mergedSchema.required = [mergedSchema.required subSchema.required];
             end
         end
         
