@@ -96,14 +96,25 @@ classdef JSON_Handler < handle
 
             rootDir = this.getRootDir();
 
-            for i=1:length(schema.allOf)
-                subSchema = schema.allOf{i};
+            for k=1:length(schema.allOf)
+                subSchema = schema.allOf{k};
                 if isfield(subSchema, 'x_ref')
-                    subSchema = JSON_parseValidate(readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
+                    subSchema = JSON_Parser.parse(this.readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
                 end
                 
-                mergedSchema.properties = mixInStruct( mergedSchema.properties, subSchema.properties);
-                mergedSchema.required = [mergedSchema.required subSchema.required];
+                keys = fieldnames(subSchema.properties)
+                for l=1:length(keys)
+                    key = keys{l};
+                    mergedSchema.properties.(key) = subSchema.properties.(key);
+                end
+
+                if isfield(subSchema, 'required')
+                    if isfield(mergedSchema, 'required')
+                        mergedSchema.required = [mergedSchema.required subSchema.required];
+                    else
+                        mergedSchema.required = subSchema.required;
+                    end
+                end
             end
         end
         

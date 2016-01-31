@@ -164,9 +164,11 @@ classdef JSON_Stringifier < JSON_Handler
                     end
                 end
             else % ~isempty(schema)
+                schema = this.mergeSchemas(schema);
+
                 type = getPath(schema, 'type');
                 format = getPath(schema, 'format');
-                
+    
                 if isempty(type)
                     this.errors = [this.errors, {sprintf('Missing schema type for path %s', context.path)}];
                 elseif isnumeric(value) || islogical(value)
@@ -245,10 +247,6 @@ classdef JSON_Stringifier < JSON_Handler
         
         function txt = struct2json(this, value, context, schema)
             assert(isstruct(value), 'input is not a struct');
-            
-            if ~isempty(schema)
-                schema = mergeSchemas(schema);
-            end
             
             txt = sprintf('{%s', this.nl);
             mind = context.gap;

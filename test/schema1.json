@@ -1,0 +1,21 @@
+{
+    "allOf": [
+        {
+            "$ref": "schema2.json"
+        },
+        {
+            "type": "object",
+            "required": ["DI"],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "foo": {
+                    "type": "string",
+                    "default": ""
+                }
+            }
+        }
+    ]
+}
+ 

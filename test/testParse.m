@@ -10,12 +10,13 @@ expectedErrors = { ...
     'At /minNumber/ value is smaller than minimum 3.000000', ...
     'At /matrix/2/2 value is smaller than minimum 0.000000', ...
     'At /myArray/2/myNumber/ value is smaller than minimum 0.000000', ...
-    'At /invalidSchema/ no type specified'
+    'At /invalidSchema/ no type specified',
+    'At / missing required field ID'
 };
 
 assert(isequal(errors, expectedErrors));
 
-[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json', 4);
+[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
 
 [obj, errors] = JSON_Parser.parse('["foo"]')
 assert(isequal(obj, cellstr('foo')))
@@ -54,3 +55,7 @@ assert(strcmp(json, sprintf('{\r\n\r\n}')));
 [json, errors] = JSON_Stringifier.stringify(struct(), [], 0);
 assert(isempty(errors));
 assert(strcmp(json, sprintf('{}')));
+
+[obj, errors] = JSON_Parser.parse('{"foo":1}', 'file:schema1.json')
+
+[json, errors] = JSON_Stringifier.stringify(struct(), 'file:schema1.json');

@@ -123,16 +123,12 @@ classdef JSON_Parser < JSON_Handler
         
         function parse_object(this, holder, index, holderKey, context)
             
-            if isfield(context, 'schema')
-                context.schema = mergeSchemas(context.schema);
-            end
-            
             this.parse_char('{');
             
-            if strcmp(class(holder), 'StructHolder')
-                c = StructHolder();
-            else
+            if strcmp(class(holder), 'StructArrayHolder')
                 c = holder;
+            else
+                c = StructHolder();
             end
             
             if this.next_char() ~= '}'
@@ -149,7 +145,7 @@ classdef JSON_Parser < JSON_Handler
             end
             this.parse_char('}');
             
-            if strcmp(class(holder), 'StructHolder')
+            if ~strcmp(class(holder), 'StructArrayHolder')
                 holder.setVal(index, holderKey, c.value);
             end
             
@@ -347,6 +343,9 @@ classdef JSON_Parser < JSON_Handler
                     end
                 case '{'
                     actType = 'object';
+                    if isfield(context, 'schema')
+                        context.schema = this.mergeSchemas(context.schema);
+                    end
                     this.parse_object(holder, index, key, context);
                     val = holder.getVal(index, key);
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
