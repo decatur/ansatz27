@@ -92,6 +92,34 @@
                     "type": "integer"
                 }
             ]
+        },
+        "b": {
+            "type": "array",
+            "items": {
+                "type": "array",
+                "items": [
+                    {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    {
+                        "type": "integer"
+                    },
+                    {
+                        "type": "integer"
+                    }
+                ]
+            }
+        },
+        "c": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
         }
     }
 }

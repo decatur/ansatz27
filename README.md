@@ -62,6 +62,12 @@ JSON               MATLAB
 
 Defaults are ignored when stringifying.
 
+# Schema
+
+JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
+```
+schema = JSON_Parser.parse('file:schema.json')
+```
 
 # Octave Limitations
 Encoding of files
