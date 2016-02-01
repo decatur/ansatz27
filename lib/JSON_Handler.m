@@ -57,16 +57,6 @@ classdef JSON_Handler < handle
             rootDir = fileparts(this.schemaURL);
         end
 
-        function [ date_num ] = datetime(this, date_str)
-            if regexp(date_str, '^\d{4}-\d{2}-\d{2}$')
-                format = java.text.SimpleDateFormat('yyyy-MM-dd');
-            else
-                format = java.text.SimpleDateFormat('yyyy-MM-dd''T''HH:mmZ');
-            end
-
-            date_num = 719529 + format.parse(date_str).getTime()/1000/60/60/24;
-        end
-
         function [ mergedSchema ] = mergeSchemas(this, schema)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
