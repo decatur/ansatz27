@@ -55,18 +55,6 @@ classdef JSON_Handler < handle
             rootDir = fileparts(this.schemaURL);
         end
 
-        function b = subsref (a, s)
-            if (isempty (s))
-                error ("polynomial: missing index");
-            end
-
-            b = [];
-            if strcmp(s(1).type, '()')
-                ind = s(1).subs;
-                b = ind;
-            end
-        end
-
         function [ mergedSchema ] = mergeSchemas(this, schema)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
@@ -90,7 +78,7 @@ classdef JSON_Handler < handle
                     subSchema = JSON_Parser.parse(this.readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
                 end
                 
-                keys = fieldnames(subSchema.properties)
+                keys = fieldnames(subSchema.properties);
                 for l=1:length(keys)
                     key = keys{l};
                     mergedSchema.properties.(key) = subSchema.properties.(key);
