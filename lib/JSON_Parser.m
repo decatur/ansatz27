@@ -19,8 +19,8 @@ classdef JSON_Parser < JSON_Handler
     methods
         
         function this = JSON_Parser()
-            this@JSON_Handler();
-            this.formatters('date') = @(x) datestring2num(this, x);
+            %this@JSON_Handler();
+            this.formatters('date') = @(x) JSON_Handler.datestring2num(x);
             this.formatters('date-time') = this.formatters('date');
         end
     
@@ -277,7 +277,7 @@ classdef JSON_Parser < JSON_Handler
                                     this.error_pos('End of text reached in escaped unicode character');
                                 end
                                 
-                                if this.isoct
+                                if JSON_Handler.isoct
                                     str(nstr+(1:6)) = this.json(this.pos-1:this.pos+4);
                                 else
                                     str(nstr+1) = native2unicode( [0 0 hex2dec(this.json(this.pos+1:this.pos+2)) hex2dec(this.json(this.pos+3:this.pos+4))], 'utf-32');

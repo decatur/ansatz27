@@ -14,8 +14,8 @@ classdef JSON_Stringifier < JSON_Handler
     
     methods
         function this = JSON_Stringifier()
-            this@JSON_Handler();
-            this.formatters('date') = @(x) datenum2string(this, x);
+            %this@JSON_Handler();
+            this.formatters('date') = @(x) JSON_Handler.datenum2string(x);
             this.formatters('date-time') = this.formatters('date');
         end
     end
@@ -73,11 +73,7 @@ classdef JSON_Stringifier < JSON_Handler
 
             this.schemaURL = [];
 
-            if ischar(rootschema)function this = JSON_Parser()
-            this@JSON_Handler();
-            this.formatters('date') = @(x) datestring2num(this, x);
-            this.formatters('date-time') = this.formatters('date');
-        end
+            if ischar(rootschema)
                 [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
             else
                 rootschema = [];

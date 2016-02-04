@@ -3,10 +3,13 @@
 
 classdef JSON_Handler < handle
 
+    properties (Constant)
+        isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+    end
+
     properties %(Access = private)
         errors
         schemaURL
-        isoct
         formatters
     end
     
@@ -14,9 +17,7 @@ classdef JSON_Handler < handle
     methods
 
         function this = JSON_Handler()
-            keyboard
-            this.isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
-            if this.isoct
+            if JSON_Handler.isoct
                 this.formatters = ContainersMap();
             else
                 this.formatters = containers.Map();
@@ -24,7 +25,7 @@ classdef JSON_Handler < handle
         end
 
         function text = readFileToString(this, path, encoding )
-            if this.isoct
+            if JSON_Handler.isoct
                 fid = fopen(path, 'r');
             else
                 fid = fopen(path, 'r', 'l', encoding);
@@ -105,14 +106,18 @@ classdef JSON_Handler < handle
             end
         end
 
-        function s = datenum2string(this, n)
+    end
+
+    methods (Static)
+
+        function s = datenum2string(n)
             formatString = 'yyyy-MM-dd';
 
             if ( isnumeric(n) && rem(n, 1) ~=0 )
                 formatString = [formatString '''T''HH:mmZ'];
             end
 
-            if this.isoct
+            if JSON_Handler.isoct
                 format = javaObject('java.text.SimpleDateFormat' ,formatString);
             else
                 format = java.text.SimpleDateFormat(formatString);
@@ -125,14 +130,14 @@ classdef JSON_Handler < handle
 
         end
 
-        function d = datestring2num(this, s)
+        function d = datestring2num(s)
             formatString = 'yyyy-MM-dd';
 
             if ( isempty(regexp(s, '^\d{4}-\d{2}-\d{2}$')) )
                 formatString = [formatString '''T''HH:mmZ'];
             end
 
-            if this.isoct
+            if JSON_Handler.isoct
                 format = javaObject('java.text.SimpleDateFormat' ,formatString);
             else
                 format = java.text.SimpleDateFormat(formatString);
