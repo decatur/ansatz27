@@ -16,17 +16,23 @@ classdef JSON_Parser < JSON_Handler
         len_esc
     end
     
-    methods (Static)
+    methods
         
         function this = JSON_Parser()
             this@JSON_Handler();
-            
+            this.formatters('date') = @(x) datestring2num(this, x);
+            this.formatters('date-time') = this.formatters('date');
         end
-        
+    
+    end
+
+    methods (Static)
+
         function [value, errors] = parse(varargin)
             parser = JSON_Parser();
             [value, errors] = parser.parse_(varargin{:});
         end
+    
     end
     
     methods
@@ -53,7 +59,7 @@ classdef JSON_Parser < JSON_Handler
             context.path = '/';;
             this.schemaURL = [];
 
-            if exist('rootschema', 'var') 
+            if ischar(rootschema) 
                 [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
             end
             
@@ -109,7 +115,7 @@ classdef JSON_Parser < JSON_Handler
         end
         
         function newValue = validate_(this, value, actType, context)
-            if isfield(context, 'schema')
+            if ~isempty(getPath(context, 'schema'))
                 [newValue, this.errors] = validate(value, actType, context.schema, context.path, this.errors);
                 format = getPath(context.schema, 'format');
                 if this.formatters.isKey(format)

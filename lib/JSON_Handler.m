@@ -14,14 +14,13 @@ classdef JSON_Handler < handle
     methods
 
         function this = JSON_Handler()
+            keyboard
             this.isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
             if this.isoct
                 this.formatters = ContainersMap();
             else
                 this.formatters = containers.Map();
             end
-            this.formatters('date') = @datetime;
-            this.formatters('date-time') = this.formatters('date');
         end
 
         function text = readFileToString(this, path, encoding )
@@ -37,9 +36,7 @@ classdef JSON_Handler < handle
         function [ schema, schemaURL ] = loadSchema(this, schema)
             schemaURL = [];
 
-            if isempty(schema) || isstruct(schema)
-                return;
-            elseif ischar(schema) && regexp(schema, '^file:')
+            if ischar(schema) && regexp(schema, '^file:')
                 schemaURL = regexprep(schema, '^file:', '');
                 schema = this.readFileToString(schemaURL, 'latin1');
                 schema = JSON_Parser.parse(schema);
@@ -55,16 +52,6 @@ classdef JSON_Handler < handle
                 error('rootschema must be a url to a schema');
             end
             rootDir = fileparts(this.schemaURL);
-        end
-
-        function [ date_num ] = datetime(this, date_str)
-            if regexp(date_str, '^\d{4}-\d{2}-\d{2}$')
-                format = java.text.SimpleDateFormat('yyyy-MM-dd');
-            else
-                format = java.text.SimpleDateFormat('yyyy-MM-dd''T''HH:mmZ');
-            end
-
-            date_num = 719529 + format.parse(date_str).getTime()/1000/60/60/24;
         end
 
         function b = subsref (a, s)
@@ -116,6 +103,43 @@ classdef JSON_Handler < handle
                     end
                 end
             end
+        end
+
+        function s = datenum2string(this, n)
+            formatString = 'yyyy-MM-dd';
+
+            if ( isnumeric(n) && rem(n, 1) ~=0 )
+                formatString = [formatString '''T''HH:mmZ'];
+            end
+
+            if this.isoct
+                format = javaObject('java.text.SimpleDateFormat' ,formatString);
+            else
+                format = java.text.SimpleDateFormat(formatString);
+            end
+
+            millisPerDay = 1000*60*60*24;
+
+            d = javaObject('java.util.Date' , (n-719529)*millisPerDay);
+            s = char(format.format(d));
+
+        end
+
+        function d = datestring2num(this, s)
+            formatString = 'yyyy-MM-dd';
+
+            if ( isempty(regexp(s, '^\d{4}-\d{2}-\d{2}$')) )
+                formatString = [formatString '''T''HH:mmZ'];
+            end
+
+            if this.isoct
+                format = javaObject('java.text.SimpleDateFormat' ,formatString);
+            else
+                format = java.text.SimpleDateFormat(formatString);
+            end
+
+            millisPerDay = 1000*60*60*24;
+            d = 719529 + format.parse(s).getTime()/millisPerDay;
         end
         
     end

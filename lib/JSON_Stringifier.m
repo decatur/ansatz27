@@ -12,6 +12,14 @@ classdef JSON_Stringifier < JSON_Handler
         indent
     end
     
+    methods
+        function this = JSON_Stringifier()
+            this@JSON_Handler();
+            this.formatters('date') = @(x) datenum2string(this, x);
+            this.formatters('date-time') = this.formatters('date');
+        end
+    end
+
     methods (Static)
         function [json, errors] = stringify(varargin)
             stringifier = JSON_Stringifier();
@@ -65,7 +73,11 @@ classdef JSON_Stringifier < JSON_Handler
 
             this.schemaURL = [];
 
-            if exist('rootschema', 'var') 
+            if ischar(rootschema)function this = JSON_Parser()
+            this@JSON_Handler();
+            this.formatters('date') = @(x) datestring2num(this, x);
+            this.formatters('date-time') = this.formatters('date');
+        end
                 [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
             else
                 rootschema = [];
@@ -187,7 +199,8 @@ classdef JSON_Stringifier < JSON_Handler
                     else
                         if n == 1
                             if this.formatters.isKey(format)
-                                value = this.quote(this.formatters(format)(value));
+                                formatter = this.formatters(format);
+                                value = this.quote(formatter(value));
                                 json = this.validate_(value, 'string', schema, context.path);
                             else
                                 value = this.validate_(value, type, schema, context.path);

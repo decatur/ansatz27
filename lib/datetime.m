@@ -25,7 +25,7 @@ if ischar(date_str)
     date_num = 719529 + format.parse(date_str).getTime()/millisPerDay;
 else
     d = javaObject('java.util.Date' , (date_str-719529)*millisPerDay);
-    date_num = format.format(d);
+    date_num = char(format.format(d));
 end
 
 end

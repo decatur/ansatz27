@@ -76,7 +76,7 @@ elseif isnumeric(value)
     end
     
     if isfield(schema, 'maximum')
-        badPath = getBadPath(path, value > schema.minimum);
+        badPath = getBadPath(path, value > schema.maximum);
         if ~isempty(badPath)
             errors = [errors, {sprintf('At %s value %f is bigger than maximum %f', badPath, schema.maximum)}];
         end
