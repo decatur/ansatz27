@@ -55,14 +55,43 @@ classdef JSON_Handler < handle
             rootDir = fileparts(this.schemaURL);
         end
 
+        function schema = normalizeSchema(this, schema)
+            schema
+
+            if ~isstruct(schema)
+                return
+            end
+
+            if isfield(schema, 'allOf')
+                schema = this.mergeSchemas(schema);
+                return
+            end
+
+            if ~isfield(schema, 'type')
+                return
+            end
+
+            if strcmp(schema.type, 'object') && isfield(schema, 'properties')
+                props = schema.properties;
+                pNames = fieldnames(props);
+                for k=1:length(pNames)
+                    schema.properties.(pNames{k}) = this.normalizeSchema(props.(pNames{k}));
+                end
+            elseif strcmp(schema.type, 'array') && isfield(schema, 'items') 
+                if isstruct(schema.items)
+                    schema.items = this.normalizeSchema(schema.items);
+                elseif iscell(schema.items)
+                    for k=1:length(schema.items)
+                        schema.items{k} = this.normalizeSchema(schema.items{k});
+                    end
+                end
+            end
+
+        end
+
         function [ mergedSchema ] = mergeSchemas(this, schema)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
-
-            if ~isfield(schema, 'allOf')
-                mergedSchema = schema;
-                return
-            end
 
             % Merge properties and required fields of all schemas.
             mergedSchema = struct;

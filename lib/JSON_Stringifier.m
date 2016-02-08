@@ -75,8 +75,10 @@ classdef JSON_Stringifier < JSON_Handler
 
             if ischar(rootschema)
                 [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
-            else
-                rootschema = [];
+            end
+
+            if ~isempty(rootschema)
+                rootschema = this.normalizeSchema(rootschema);
             end
             
             this.errors = {};
@@ -172,10 +174,14 @@ classdef JSON_Stringifier < JSON_Handler
                     end
                 end
             else % ~isempty(schema)
-                schema = this.mergeSchemas(schema);
 
                 type = getPath(schema, 'type');
                 format = getPath(schema, 'format');
+
+                if this.formatters.isKey(format)
+                    formatter = this.formatters(format);
+                    value = formatter(value);
+                end
     
                 if isempty(type)
                     this.errors = [this.errors, {sprintf('Missing schema type for path %s', context.path)}];
@@ -194,17 +200,11 @@ classdef JSON_Stringifier < JSON_Handler
                         end
                     else
                         if n == 1
-                            if this.formatters.isKey(format)
-                                formatter = this.formatters(format);
-                                value = this.quote(formatter(value));
-                                json = this.validate_(value, 'string', schema, context.path);
-                            else
-                                value = this.validate_(value, type, schema, context.path);
-                                if strcmp(type, 'integer')
-                                    json = num2str(fix(this.normalize2nan(value)), '%i');
-                                else % number
-                                    json = this.nan2null(num2str(this.normalize2nan(value), this.numberFormat(schema)));
-                                end
+                            value = this.validate_(value, type, schema, context.path);
+                            if strcmp(type, 'integer')
+                                json = num2str(fix(this.normalize2nan(value)), '%i');
+                            else % number
+                                json = this.nan2null(num2str(this.normalize2nan(value), this.numberFormat(schema)));
                             end
                         elseif n == 0
                             json = 'null';
@@ -237,9 +237,6 @@ classdef JSON_Stringifier < JSON_Handler
                         value = this.validate_(value, 'string', schema, context.path);
                         json = this.quote(value);
                     end
-                elseif strcmp(format, 'date-time-values')
-                    error('TODO');
-                    json = this.quote(Timeseries_stringify(value));
                 end
             end
             

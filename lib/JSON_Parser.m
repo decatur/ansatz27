@@ -62,6 +62,10 @@ classdef JSON_Parser < JSON_Handler
             if ischar(rootschema) 
                 [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
             end
+
+            if isfield(context, 'schema')
+                context.schema = this.normalizeSchema(context.schema);
+            end
             
             this.errors = {};
             
@@ -349,9 +353,6 @@ classdef JSON_Parser < JSON_Handler
                     end
                 case '{'
                     actType = 'object';
-                    if isfield(context, 'schema')
-                        context.schema = this.mergeSchemas(context.schema);
-                    end
                     this.parse_object(holder, index, key, context);
                     val = holder.getVal(index, key);
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
