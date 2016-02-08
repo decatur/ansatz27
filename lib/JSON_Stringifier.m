@@ -16,7 +16,7 @@ classdef JSON_Stringifier < JSON_Handler
         function this = JSON_Stringifier()
             %this@JSON_Handler();
             this.formatters('date') = @(x) JSON_Handler.datenum2string(x);
-            this.formatters('date-time') = this.formatters('date');
+            this.formatters('date-time') = @(x) JSON_Handler.datentimeum2string(x);
         end
     end
 

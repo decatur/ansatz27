@@ -21,7 +21,7 @@ classdef JSON_Parser < JSON_Handler
         function this = JSON_Parser()
             %this@JSON_Handler();
             this.formatters('date') = @(x) JSON_Handler.datestring2num(x);
-            this.formatters('date-time') = this.formatters('date');
+            this.formatters('date-time') = @(x) JSON_Handler.datetimestring2num(x);
         end
     
     end

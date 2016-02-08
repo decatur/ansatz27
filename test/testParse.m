@@ -59,3 +59,39 @@ assert(strcmp(json, sprintf('{}')));
 [obj, errors] = JSON_Parser.parse('{"foo":1}', 'file:schema1.json')
 
 [json, errors] = JSON_Stringifier.stringify(struct(), 'file:schema1.json');
+
+
+
+
+s = JSON_Handler.datenum2string(736368);
+assert(strcmp(s, '2016-02-08'));
+
+s = JSON_Handler.datenum2string(736368.5);
+assert(s == 736368.5);
+
+s = JSON_Handler.datetimenum2string(736368.5);
+assert(strcmp(s, '2016-02-08T12:00Z'));
+
+
+n = JSON_Handler.datestring2num('2016-02-08');
+assert(n == 736368);
+
+n = JSON_Handler.datestring2num('2016-02-08T12:00Z');
+assert(strcmp(n, '2016-02-08T12:00Z'));
+
+n = JSON_Handler.datetimestring2num('2016-02-08T12:00Z');
+assert(n == 736368.5);
+
+n = JSON_Handler.datetimestring2num('2016-02-08T12:00+0000');
+assert(n == 736368.5);
+
+n = JSON_Handler.datetimestring2num('2016-02-08T13:00+0100');
+assert(n == 736368.5);
+
+n = JSON_Handler.datetimestring2num('2016-02-08T13:00+01:00');
+assert(strcmp(n, '2016-02-08T13:00+01:00'));
+
+
+
+
+

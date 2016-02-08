@@ -127,40 +127,61 @@ classdef JSON_Handler < handle
     methods (Static)
 
         function s = datenum2string(n)
-            formatString = 'yyyy-MM-dd';
-
-            if ( isnumeric(n) && rem(n, 1) ~=0 )
-                formatString = [formatString '''T''HH:mmZ'];
+            if ~isnumeric(n) || rem(n, 1) ~=0 
+                s = n;
+                return;
             end
 
-            if JSON_Handler.isoct
-                format = javaObject('java.text.SimpleDateFormat' ,formatString);
-            else
-                format = java.text.SimpleDateFormat(formatString);
+            s = datestr(n, 'yyyy-mm-dd');
+        end
+
+        function s = datetimenum2string(n)
+            if ~isnumeric(n)
+                s = n;
+                return;
             end
 
-            millisPerDay = 1000*60*60*24;
-
-            d = javaObject('java.util.Date' , (n-719529)*millisPerDay);
-            s = char(format.format(d));
-
+            s = datestr(n, 'yyyy-mm-ddTHH:MMZ');
         end
 
         function d = datestring2num(s)
-            formatString = 'yyyy-MM-dd';
+            % Example: s = '2016-01-26'
 
-            if ( isempty(regexp(s, '^\d{4}-\d{2}-\d{2}$')) )
-                formatString = [formatString '''T''HH:mmZ'];
+            m = regexp(s, '^(\d{4})-(\d{2})-(\d{2})$', 'tokens', 'once');
+
+            if isempty(m)
+                d = s;
+                return
             end
 
-            if JSON_Handler.isoct
-                format = javaObject('java.text.SimpleDateFormat' ,formatString);
-            else
-                format = java.text.SimpleDateFormat(formatString);
+            d = datenum(str2double(m{1}),str2double(m{2}),str2double(m{3}));
+        end
+
+        function d = datetimestring2num(s)
+            % Example: s = '2016-01-26T00:00+0200'
+
+            m = regexp(s, '^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})((\+|-)(\d{2})(\d{2})|Z)$', 'tokens', 'once');
+
+            if isempty(m)
+                d = s;
+                return
             end
 
-            millisPerDay = 1000*60*60*24;
-            d = 719529 + format.parse(s).getTime()/millisPerDay;
+            minutes = str2double(m{5});
+
+            if m{6} ~= 'Z'
+                % Offset from UTC in minutes.
+                offset = str2double(m{8})*60+str2double(m{9});
+                if m{7} == '+'
+                    % Note: Positive offset means point in time is earlier than UTC.
+                    minutes = minutes - offset;
+                else
+                    minutes = minutes + offset;
+                end
+            end
+
+            % Note: minutes in access to 60 are rolled over to hours by datenum().
+            d = datenum(str2double(m{1}), str2double(m{2}), str2double(m{3}), str2double(m{4}), minutes, 0);
         end
         
     end
