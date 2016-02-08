@@ -56,15 +56,14 @@ classdef JSON_Handler < handle
         end
 
         function schema = normalizeSchema(this, schema)
-            schema
-
+        %normalizeSchema recursively descends the schema and resolves allOf references.
+            
             if ~isstruct(schema)
                 return
             end
 
             if isfield(schema, 'allOf')
                 schema = this.mergeSchemas(schema);
-                return
             end
 
             if ~isfield(schema, 'type')
