@@ -4,10 +4,10 @@ The well established JSON schema specification http://json-schema.org/ is used t
 For all use cases of ansatz27, schemas are optional. However, their use is strongly encouraged.
 
 Without schemas, roundtripping may break structure, for example
-```
-    JSON                 MATLAB               JSON
-{ "foo": [1] }  ->  struct('foo', 1)  ->  { "foo": 1 } 
-```
+
+|     JSON   ->  |     MATLAB   ->  |   JSON       |
+|----------------|------------------|--------------|
+| { "foo": [1] } | struct('foo', 1) | { "foo": 1 } |
 
 # Requirements
 GNU Octave version minimum 4.0 or MATLAB about version 2006 (verified for 2013b).
@@ -68,16 +68,19 @@ There are two predefined formatters
 | JSON                  | MATLAB    |
 |-----------------------|-----------|
 | string                | numerical |
-| 2016-02-08T12:00Z     | 736368.5  |
+| 2016-02-08T12Z        | 736368.5  |
 | 2016-02-08T12:00+0000 | 736368.5  |
 | 2016-02-08T13:00+0100 | 736368.5  |
+| 2016-02-08T12:30:30Z  | 736368.521181  |
 
 
 # Array comprehensions
 
-* schemaless -> cell array
-* items is array -> cell array
-* items is object -> struct array
+| Schema       | JSON     | MATLAB       | Motivation                 |
+|--------------|----------|--------------|----------------------------|
+| no schema    |  [...]   | cell array   | Array may be inhomogenious |
+| items: [...] |  [...]   | cell array   | Array is inhomogenious     |
+| items: {...} |  [...]   | struct array | Array is homogenious       |
 
 # Defaults
 
@@ -89,15 +92,15 @@ In each schema you may specify a default value.
         "foo": { "type": "string", "default": "bar" }
     }
 }
-
-JSON               MATLAB
- {}    ->    struct('foo', 'bar')
 ```
+
+| JSON              | MATLAB    |
+|-------------------|-----------|
+| {}                | struct('foo', 'bar') |
 
 Defaults are ignored when stringifying.
 
 # Schema
-
 
 JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 ```

@@ -141,11 +141,14 @@ classdef JSON_Handler < handle
                 return;
             end
 
-            s = datestr(n, 'yyyy-mm-ddTHH:MMZ');
+            s = datestr(n, 'yyyy-mm-ddTHH:MM:SSZ');
         end
 
         function d = datestring2num(s)
-            % Example: s = '2016-01-26'
+            % Parse date into a numerical date according MATLABs datenum().
+            % The argument is returned if it is not a valid date.
+            %
+            % Example: '2016-01-26'
 
             m = regexp(s, '^(\d{4})-(\d{2})-(\d{2})$', 'tokens', 'once');
 
@@ -158,30 +161,53 @@ classdef JSON_Handler < handle
         end
 
         function d = datetimestring2num(s)
-            % Example: s = '2016-01-26T00:00+0200'
+            % Parse date-time with timezone offset into a numerical date according MATLABs datenum().
+            % Minutes and seconds are optional. Timezone offset is Z (meaning +0000) or of the form +-02:00 or +-0200.
+            % The argument is returned if it is not a valid date-time.
+            %
+            % Example: '2016-02-02 12:30:35+02:00'
+            
+            %  y = 2016     m = 02     d = 02
+            %  h = 12      mi = :30  sec = :35
+            %  o = +02:00  oh = 02   omi = 00
 
-            m = regexp(s, '^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})((\+|-)(\d{2})(\d{2})|Z)$', 'tokens', 'once');
+            % Note: This regexp is tuned for some Octave bugs with named tokens!
+            names = regexp(s, '^(?<y>\d{4})-(?<m>\d{2})-(?<d>\d{2})(T|\s)(?<h>\d{2})(?<mi>:\d{2})?(?<sec>:\d{2})?(?<o>(\+|-)(?<oh>\d{2}):?(?<omi>\d{2})|Z)$', 'names', 'once');
 
-            if isempty(m)
+
+            if isempty(names.y)
                 d = s;
                 return
             end
 
-            minutes = str2double(m{5});
+            y = str2double(names.y);
+            m = str2double(names.m);
+            d = str2double(names.d);
+            h = str2double(names.h);
 
-            if m{6} ~= 'Z'
-                % Offset from UTC in minutes.
-                offset = str2double(m{8})*60+str2double(m{9});
-                if m{7} == '+'
-                    % Note: Positive offset means point in time is earlier than UTC.
-                    minutes = minutes - offset;
-                else
-                    minutes = minutes + offset;
+            mi = 0;
+            if ~isempty(names.mi)
+                mi = str2double(names.mi(2:end));
+            end
+
+            sec = 0;
+            if ~isempty(names.sec)
+                sec = str2double(names.sec(2:end));
+            end
+
+            if names.o == 'Z'
+                offset = 0;
+            else
+                % Offset from Z in minutes.
+                offset = str2double(names.oh)*60+str2double(names.omi);
+                if names.o(1) == '+'
+                    % Note: Positive offset means point in time is earlier than Z.
+                    offset = -offset;
                 end
             end
 
             % Note: minutes in access to 60 are rolled over to hours by datenum().
-            d = datenum(str2double(m{1}), str2double(m{2}), str2double(m{3}), str2double(m{4}), minutes, 0);
+            d = datenum(y, m, d, h, mi + offset, sec);
         end
         
     end
