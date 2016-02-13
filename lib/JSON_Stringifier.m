@@ -16,7 +16,7 @@ classdef JSON_Stringifier < JSON_Handler
         function this = JSON_Stringifier()
             %this@JSON_Handler();
             this.formatters('date') = @(x) JSON_Handler.datenum2string(x);
-            this.formatters('date-time') = @(x) JSON_Handler.datentimeum2string(x);
+            this.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
         end
     end
 
@@ -85,22 +85,22 @@ classdef JSON_Stringifier < JSON_Handler
             context = struct();
             
             this.indent = '';
-            if exist('space', 'var')
-                if isnumeric(space)
-                    this.indent = repmat(' ', 1, space);
-                elseif ischar(space)
-                    this.indent = space;
-                end
+            if isnumeric(space)
+                this.indent = repmat(' ', 1, space);
+            elseif ischar(space)
+                this.indent = space;
             end
 
-            if ~isempty(this.indent)
+            if isempty(this.indent)
+                this.nl = '';
+            else
                 this.nl = sprintf('\r\n');
             end
-            
+
             context.gap = '';
-            context.path = '';
+            context.path = '/';
             
-            json = this.str([], value, context, rootschema);
+            json = this.str(value, context, rootschema);
             errors = this.errors;
         end
         
@@ -120,35 +120,8 @@ classdef JSON_Stringifier < JSON_Handler
             [newValue, this.errors] = validate(value, actType, schema, path, this.errors);
         end
         
-        function json = str(this, key, holder, context, schema)
-            %
-            % key
-            % holder
+        function json = str(this, value, context, schema)
             json = [];
-            context.path = [context.path num2str(key) '/'];
-            
-            if isempty(key)
-                value = holder;
-            elseif iscell(holder)
-                s = size(holder);
-                if length(s) > 3
-                    value = holder(key, :);
-                    value = reshape(value, s(2), s(end));
-                elseif s(1) == 2
-                    value = holder(key, :);
-                elseif s(1) == 1
-                    value = holder{1, key};
-                end
-            elseif isstruct(holder)
-                if isnumeric(key)
-                    % holder is struct array.
-                    value = holder(key);
-                else
-                    % holder is struct.
-                    value = holder.(key);
-                end
-            end
-
             n = numel(value);
             
             if isempty(schema)
@@ -243,12 +216,13 @@ classdef JSON_Stringifier < JSON_Handler
         end
         
         function fmt = numberFormat(this, schema)
-            fixedPrecision = 10;
             if isfield(schema, 'fixedPrecision') && isnumeric(schema.fixedPrecision)
-                fixedPrecision = schema.fixedPrecision;
+                % Note: '%.nf' means n number of digits to the right of the decimal point
+                fmt = sprintf('%%.%if', fix(schema.fixedPrecision));
+            else
+                fmt = '%.11g';
             end
-            % Note: '%.nf' means n number of digits to the right of the decimal point
-            fmt = sprintf('%%.%if', fix(fixedPrecision));
+            
         end
         
         function txt = struct2json(this, value, context, schema)
@@ -257,6 +231,7 @@ classdef JSON_Stringifier < JSON_Handler
             txt = sprintf('{%s', this.nl);
             mind = context.gap;
             context.gap = [context.gap this.indent];
+            path = context.path;
             
             names = fieldnames(value);
             l = length(names);
@@ -264,7 +239,8 @@ classdef JSON_Stringifier < JSON_Handler
             
             for i=1:l
                 key = names{i};
-                item_str = this.str(key, value, context, this.childSchema(schema, key));
+                context.path = [path key '/'];
+                item_str = this.str(value.(key), context, this.childSchema(schema, key));
                 if isempty(item_str)
                     continue;
                 end
@@ -278,7 +254,7 @@ classdef JSON_Stringifier < JSON_Handler
             end
             
             if ~isempty(this.indent)
-                txt = sprintf('%s\r\n%s}', txt, mind);
+                txt = sprintf('%s%s%s}', txt, this.nl, mind);
             else
                 txt = sprintf('%s}', txt);
             end
@@ -291,6 +267,7 @@ classdef JSON_Stringifier < JSON_Handler
             txt = sprintf('[%s', this.nl);
             mind = context.gap;
             context.gap = [context.gap this.indent];
+            path = context.path;
             l = length(value);
             
             for i=1:l
@@ -301,7 +278,14 @@ classdef JSON_Stringifier < JSON_Handler
                     schema = itemsSchema;
                 end
 
-                item_str = this.str(i, value, context, schema);
+                if isstruct(value)
+                    item = value(i);
+                else
+                    item = value{i};
+                end
+                
+                context.path = [path num2str(i) '/'];
+                item_str = this.str(item, context, schema);
                 
                 if isempty(item_str)
                     item_str = 'null';
@@ -315,7 +299,7 @@ classdef JSON_Stringifier < JSON_Handler
             end
             
             if ~isempty(this.indent)
-                txt = sprintf('%s\r\n%s]', txt, mind);
+                txt = sprintf('%s%s%s]', txt, this.nl, mind);
             else
                 txt = sprintf('%s]', txt);
             end
@@ -341,7 +325,7 @@ classdef JSON_Stringifier < JSON_Handler
             % Remove last separator
             txt(end-1:end) = '';
             
-            txt = sprintf('[\r\n%s%s\r\n%s]', gap, txt, context.gap);
+            txt = sprintf('[%s%s%s%s%s]', this.nl, gap, txt, this.nl, context.gap);
             
         end
         
@@ -351,21 +335,19 @@ classdef JSON_Stringifier < JSON_Handler
             
             if ~isempty(this.indent)
                 sep = ', ';
-                %gap = sprintf('\n%s%s', this.indent, context.gap);
             else
                 sep = ',';
-                %gap = '';
             end
 
             fmt = this.numberFormat(schema);
             
             colCount = size(value, 2);
-            fmt = sprintf(' [\r\n%s%s%s%s\r\n%s],', gap, this.indent, repmat([fmt sep], 1, colCount-1), fmt, gap);
+            fmt = sprintf(' [%s%s%s%s%s%s%s],', this.nl, gap, this.indent, repmat([fmt sep], 1, colCount-1), fmt, this.nl, gap);
             nd = ndims (value);
             txt = sprintf (fmt, permute (value, [2, 1, 3:nd]));
             txt(1) = '';
             txt(end) = '';
-            txt = sprintf('[\r\n%s%s\r\n%s]', gap, txt, context.gap);
+            txt = sprintf('[%s%s%s%s%s]', this.nl, gap, txt, this.nl, context.gap);
             
         end
         
@@ -383,7 +365,7 @@ classdef JSON_Stringifier < JSON_Handler
             
             if length(s) > 2
                 context.gap = [context.gap this.indent];
-                txt = sprintf('[\r\n%s', context.gap);
+                txt = sprintf('[%s%s', this.nl, context.gap);
                 sep = '';
                 for i=1:s(1)
                     m = value(i, :);
@@ -391,7 +373,7 @@ classdef JSON_Stringifier < JSON_Handler
                     txt = sprintf('%s%s%s%s', txt, sep, this.matrix2json(m, context, itemSchema));
                     sep = ',';
                 end
-                txt = sprintf('%s\r\n%s]', txt, mindGap);
+                txt = sprintf('%s%s%s]', txt, this.nl, mindGap);
             elseif s(1) == 1
                 txt = this.vector2json(value, context, itemSchema);
             elseif s(2) == 1

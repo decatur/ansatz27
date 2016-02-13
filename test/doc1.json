@@ -1,0 +1,36 @@
+{
+    "fixNumber": 3.14,
+    "number": 3.1415926536,
+    "integer": 3,
+    "nan": null,
+    "vector": [
+        1, null, 2, null, 3, null, 4
+    ],
+    "vector1": [
+        1, null, 2, null, 3, null, 4
+    ],
+    "matrix": [
+        [
+            1.00, 2.00
+        ], [
+            3.00, 4.00
+        ]
+    ],
+    "matrix3D": [
+        [
+            [
+                1, 2
+            ], [
+                3, 4
+            ]
+        ],[
+            [
+                5, 6
+            ], [
+                7, 8
+            ]
+        ]
+    ],
+    "minNumber": 1,
+    "foo": ""
+}

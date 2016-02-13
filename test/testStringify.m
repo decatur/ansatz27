@@ -14,11 +14,12 @@ obj.matrix3D(2,:,:) = 4+obj.matrix3D(1,:,:);
 obj.minNumber = 1;
 
 [json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
+json = regexprep(json, '\n|\r', '');
 
-tokens = regexp(json, ':\s*(\d+(\.\d*)?)', 'tokens');
-assert(strcmp(tokens{1}, '3.14'));
-assert(strcmp(tokens{2}, '3.1415926536'));
-assert(strcmp(tokens{3}, '3'));
+expectedJSON = JSON_Stringifier.readFileToString('doc1.json', 'latin1');
+expectedJSON = regexprep(expectedJSON, '\n|\r', '');
+assert(strcmp(json, expectedJSON));
+
 
 % Test struct arrays
 obj = struct;
@@ -36,7 +37,7 @@ s(2).ende = d+3;
 
 obj.myArray = s;
 
-json1 = JSON_Stringifier.stringify(obj, 'file:schema.json')
+json1 = JSON_Stringifier.stringify(obj, 'file:schema.json');
 
 % Test cell arrays
 s = {struct, struct};
@@ -50,6 +51,58 @@ s{2}.ende = d+3;
 
 obj.myArray = s;
 
-[json2, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json')
+[json2, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
 
-assert(strcmp(json1, json2))
+assert(strcmp(json1, json2));
+
+[json, errors] = JSON_Stringifier.stringify('foo', struct('type', 'number'));
+assert(strcmp(json, '"foo"'));
+assert(isequal(errors, cellstr('At / value foo does not match type number')));
+
+[json, errors] = JSON_Stringifier.stringify(pi, struct('type', 'number'));
+assert(isempty(errors));
+assert(strcmp(num2str(pi, 11), json));
+
+[json, errors] = JSON_Stringifier.stringify(struct('foo', 'bar'), [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '{"foo": "bar"}'));
+
+[json, errors] = JSON_Stringifier.stringify(cellstr('foo'), struct('type', 'object'));
+
+[json, errors] = JSON_Stringifier.stringify(struct(), struct('type', 'object', 'properties', []));
+assert(isempty(errors));
+
+[json, errors] = JSON_Stringifier.stringify(cellstr(['foo'; 'bar']), [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '["foo","bar"]'));
+
+[json, errors] = JSON_Stringifier.stringify(struct());
+assert(isempty(errors));
+assert(strcmp(json, sprintf('{\r\n\r\n}')));
+
+[json, errors] = JSON_Stringifier.stringify(struct(), [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '{}'));
+
+[json, errors] = JSON_Stringifier.stringify(struct('foo', {1 2}), [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '[{"foo": 1},{"foo": 2}]'));
+
+[json, errors] = JSON_Stringifier.stringify([1 2], [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '[1, 2]'));
+
+[json, errors] = JSON_Stringifier.stringify(1, [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '1'));
+
+[json, errors] = JSON_Stringifier.stringify(true, [], 0);
+assert(isempty(errors));
+assert(strcmp(json, 'true'));
+
+[json, errors] = JSON_Stringifier.stringify('foo', [], 0);
+assert(isempty(errors));
+assert(strcmp(json, '"foo"'));
+
+[json, errors] = JSON_Stringifier.stringify(struct(), 'file:schema1.json', 0);
+assert(strcmp(json, '{"foo": ""}'));

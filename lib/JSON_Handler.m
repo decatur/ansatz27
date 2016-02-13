@@ -24,22 +24,12 @@ classdef JSON_Handler < handle
             end
         end
 
-        function text = readFileToString(this, path, encoding )
-            if JSON_Handler.isoct
-                fid = fopen(path, 'r');
-            else
-                fid = fopen(path, 'r', 'l', encoding);
-            end
-            text = fscanf(fid, '%c');
-            fclose(fid);
-        end
-
         function [ schema, schemaURL ] = loadSchema(this, schema)
             schemaURL = [];
 
             if ischar(schema) && regexp(schema, '^file:')
                 schemaURL = regexprep(schema, '^file:', '');
-                schema = this.readFileToString(schemaURL, 'latin1');
+                schema = JSON_Handler.readFileToString(schemaURL, 'latin1');
                 schema = JSON_Parser.parse(schema);
             else
                 error('Illegal type for schema');
@@ -70,7 +60,7 @@ classdef JSON_Handler < handle
                 return
             end
 
-            if strcmp(schema.type, 'object') && isfield(schema, 'properties')
+            if strcmp(schema.type, 'object') && isfield(schema, 'properties') && ~isempty(schema.properties)
                 props = schema.properties;
                 pNames = fieldnames(props);
                 for k=1:length(pNames)
@@ -103,7 +93,7 @@ classdef JSON_Handler < handle
             for k=1:length(schema.allOf)
                 subSchema = schema.allOf{k};
                 if isfield(subSchema, 'x_ref')
-                    subSchema = JSON_Parser.parse(this.readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
+                    subSchema = JSON_Parser.parse(JSON_Handler.readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
                 end
                 
                 keys = fieldnames(subSchema.properties);
@@ -125,6 +115,16 @@ classdef JSON_Handler < handle
     end
 
     methods (Static)
+
+        function text = readFileToString(path, encoding )
+            if JSON_Handler.isoct
+                fid = fopen(path, 'r');
+            else
+                fid = fopen(path, 'r', 'l', encoding);
+            end
+            text = fscanf(fid, '%c');
+            fclose(fid);
+        end
 
         function s = datenum2string(n)
             if ~isnumeric(n) || rem(n, 1) ~=0 

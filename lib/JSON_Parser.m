@@ -47,7 +47,7 @@ classdef JSON_Parser < JSON_Handler
             end
 
             if regexp(json, '^file:')
-                this.json = this.readFileToString(regexprep(json, '^file:', ''), 'latin1');
+                this.json = JSON_Handler.readFileToString(regexprep(json, '^file:', ''), 'latin1');
             else
                 this.json = json;
             end
@@ -61,6 +61,8 @@ classdef JSON_Parser < JSON_Handler
 
             if ischar(rootschema) 
                 [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
+            elseif isstruct(rootschema)
+                context.schema = rootschema;
             end
 
             if isfield(context, 'schema')
@@ -86,9 +88,9 @@ classdef JSON_Parser < JSON_Handler
             
             value = holder.value.value;
             
-            if isstruct(value) && ~isempty(this.schemaURL)
-                value.validationSchema = this.schemaURL;
-            end
+            %if isstruct(value) && ~isempty(this.schemaURL)
+            %    value.validationSchema = this.schemaURL;
+            %end
             
             errors = this.errors;
         end

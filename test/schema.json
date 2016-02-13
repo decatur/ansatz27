@@ -14,7 +14,7 @@
             "fixedPrecision": 2
         },
         "null": {
-            "type": "number"
+            "type": "null"
         },
         "number": {
             "type": "number"
