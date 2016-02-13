@@ -83,7 +83,7 @@ classdef JSON_Parser < JSON_Handler
             
             if this.pos ~= this.len+1
                 % Not all text was consumed.
-                this.error_pos('Unexpected char at position %d');
+                this.error_pos('Unexpected char');
             end
             
             value = holder.value.value;
@@ -122,7 +122,7 @@ classdef JSON_Parser < JSON_Handler
         
         function newValue = validate_(this, value, actType, context)
             if ~isempty(getPath(context, 'schema'))
-                [newValue, this.errors] = validate(value, actType, context.schema, context.path, this.errors);
+                newValue = validate(this, value, actType, context.schema, context.path);
                 format = getPath(context.schema, 'format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);
@@ -183,32 +183,27 @@ classdef JSON_Parser < JSON_Handler
         
         function vec = json1D2array(this, path)
             s = this.json(this.pos:end); % '[1, 2, 3]...'
-            
-            p = '\s*(-?\d+(\.\d+)?(e(\+|\-)?\d+)?|null)\s*';
-            
-            pp = [ '^\[(' p ',)*' p '\]' ];
-            
-            [t, e] = regexp(s, pp, 'tokens', 'end', 'once');
-            
-            if isempty(t)
-                this.errors = [this.errors, {sprintf('At %s, value is not a numerical vector', path)}];
-                return
-            end
-            
-            s = s(2:e-1);
-            
+
+            endPos = regexp(s, '\]', 'once'); % Note: strfind(s, ']') finds all occurences!
+            s = strtrim(s(2:endPos-1));
             s = strrep(s, 'null', 'NaN');
-            
-            % nElem = 1+sum(s==',');
-            
-            vec = sscanf(s, '%g ,').';
-            this.pos = this.pos + e;
+
+            [vec, COUNT, ERRMSG, POS] = sscanf(s, '%g,');
+
+            if POS ~= length(s)+1
+                vec = [];
+                return 
+            end
+
+            this.pos = this.pos + endPos;
+            this.skip_whitespace();
+            vec = vec';
         end
         
         function parse_char(this, c)
             this.skip_whitespace();
             if this.pos > this.len || this.json(this.pos) ~= c
-                this.error_pos(sprintf('Expected %c at position %%d', c));
+                this.error_pos(['Expected ' c]);
             else
                 this.pos = this.pos + 1;
                 this.skip_whitespace();
@@ -234,17 +229,12 @@ classdef JSON_Parser < JSON_Handler
         end
         
         function str = parseStr(this, context)
-            assert(this.json(this.pos) == '"', 'Precondition for parseStr()');
-            
-            function assertInvalidChars(str)
-                startIndices = regexp(str, '[\x0-\x1f]');
-                if startIndices
-                    this.error_pos('Not a valid string character at %d', -length(str) + startIndices(1) - 1);
-                end
-            end
-            
+            assert(this.json(this.pos) == '"');
+
+            startPos = this.pos;            
             this.pos = this.pos + 1;
             str = '';
+            closed = false;
             
             while this.pos <= this.len
                 while this.index_esc <= this.len_esc && this.esc(this.index_esc) < this.pos
@@ -263,9 +253,9 @@ classdef JSON_Parser < JSON_Handler
                 nstr = length(str);
                 switch this.json(this.pos)
                     case '"'
+                        closed = true;
                         this.pos = this.pos + 1;
-                        % assertInvalidChars(str);
-                        return;
+                        break;
                     case '\'
                         if this.pos+1 > this.len
                             this.error_pos('End of text reached right after escape character');
@@ -296,17 +286,23 @@ classdef JSON_Parser < JSON_Handler
                 end
             end
             
-            % First check for invalid chars. This will report missing closing quote much more accurately.
-            assertInvalidChars(str);
-            
-            this.error_pos('Expected closing quote at end of text');
+            % Check for invalid chars.
+            startIndices = regexp(str, '[\x0-\x1f]');
+            if startIndices
+                this.pos = startPos + startIndices(1);
+                this.error_pos('Invalid char found in range #00-#1F');
+            end
+
+            if ~closed
+                this.error_pos('Expected closing quote at end of text');
+            end
         end
         
         function num = parse_number(this, context)
             [num, count, ~, nextIndex] = sscanf(this.json(this.pos: end), '%f', 1);
             
             if count ~= 1
-                this.error_pos('Error reading number at position %d');
+                this.error_pos('Error reading number');
             end
             
             this.pos = this.pos + nextIndex - 1;
@@ -328,12 +324,22 @@ classdef JSON_Parser < JSON_Handler
                     val = this.parseStr(context);
                 case '['
                     actType = 'array';
-                    type = getPath(context, 'schema/items/type');
-                    if strcmp(type, 'number')
+                    itemSchema = getPath(context, 'schema/items');
+                    type = getPath(itemSchema, 'type');
+                    if ~isempty(type) && all(ismember(type, {'null','integer','number'}))
                         val = this.json1D2array(context.path);
-                        c = context;
-                        c.schema = context.schema.items;
-                        val = this.validate_(val, 'number', c);
+                        if isempty(val)
+                            c = CellArrayHolder();
+                            this.parse_array(c, context);
+                            val = c.value;
+                        else
+                            %if ~ismember('null', type) && any(isnan, vec)
+                            %    this.errors = [this.errors ''];
+                            %end
+                            c = context;
+                            c.schema = itemSchema;
+                            val = this.validate_(val, type, c);
+                        end
                     else
                         if strcmp(type, 'object')
                             c = StructArrayHolder();
@@ -344,7 +350,9 @@ classdef JSON_Parser < JSON_Handler
                         this.parse_array(c, context);
                         val = c.value;
                         
-                        if strcmp(getPath(context, 'schema/items/items/type'), 'number')
+                        type = getPath(itemSchema, 'items/type');
+
+                        if ~isempty(type) && ismember(type, {'null','integer','number'})
                             try
                                 % TODO: Eliminate try/catch by checking that dimensions of matrices are consistent.
                                 val = cell2mat(val');
@@ -366,7 +374,7 @@ classdef JSON_Parser < JSON_Handler
                         val = true;
                         this.pos = this.pos + 4;
                     else
-                        this.error_pos('Token true expected at position %d');
+                        this.error_pos('Token true expected');
                     end
                 case 'f'
                     actType = 'boolean';
@@ -374,45 +382,34 @@ classdef JSON_Parser < JSON_Handler
                         val = false;
                         this.pos = this.pos + 5;
                     else
-                        this.error_pos('Token false expected at position %d');
+                        this.error_pos('Token false expected');
                     end
                 case 'n'
-                    actType = 'object';
+                    actType = 'null';
                     if this.parse_null()
                         val = [];
                     else
-                        this.error_pos('Token null expected at position %d');
+                        this.error_pos('Token null expected');
                     end
+                otherwise
+                    this.error_pos('Illegal token');
             end
             val = this.validate_(val, actType, context);
             holder.setVal(index, key, val);
         end
         
-        function error_pos(this, msg, offset)
-            
-            if strfind(msg, '%d')
-                % Report position and proximity text.
-                index = this.pos;
-                if nargin > 2
-                    index = this.pos + offset;
-                end
-                
-                if index > 1
-                    pre = this.json(max(1, index-15):(index-1));
-                else
-                    pre = '';
-                end
-                
-                if index <= this.len
-                    post = this.json(index:min(this.len, index+20));
-                else
-                    post = '';
-                end
-                msg = [msg ': %s<error>%s'];
-                error('JSONparser:invalidFormat', msg, index, pre, post);
-            else
-                error('JSONparser:invalidFormat', msg);
+        function error_pos(this, msg)
+            startPos = max(1, this.pos-15);
+            endPos   = min(this.len, this.pos+15);
+
+            part = this.json(startPos:endPos);
+            index = min(length(part), this.pos-startPos+1);
+            msg = [msg ' ' part(1:index) '^^^'];
+            if index < length(part)
+                msg = [msg part(index+1:end)];
             end
+
+            error('JSONparser:invalidFormat', msg);
         end % function error_pos
         
         function validKey = valid_field(this, key)

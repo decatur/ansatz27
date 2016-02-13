@@ -117,7 +117,7 @@ classdef JSON_Stringifier < JSON_Handler
         end
         
         function newValue = validate_(this, value, actType, schema, path)
-            [newValue, this.errors] = validate(value, actType, schema, path, this.errors);
+            newValue = validate(this, value, actType, schema, path);
         end
         
         function json = str(this, value, context, schema)
@@ -157,7 +157,7 @@ classdef JSON_Stringifier < JSON_Handler
                 end
     
                 if isempty(type)
-                    this.errors = [this.errors, {sprintf('Missing schema type for path %s', context.path)}];
+                    this.addErrors(sprintf('Missing schema type for path %s', context.path));
                 elseif isnumeric(value) || islogical(value)
                     if strcmp(type, 'array')
                         value = this.validate_(value, 'array', schema, context.path);
@@ -182,7 +182,7 @@ classdef JSON_Stringifier < JSON_Handler
                         elseif n == 0
                             json = 'null';
                         else
-                            this.errors = [this.errors, {sprintf('At %s, value has more than one element', path)}];
+                            this.addErrors(sprintf('At %s, value has more than one element', path));
                         end
                     end
                 elseif isstruct(value)
@@ -196,7 +196,7 @@ classdef JSON_Stringifier < JSON_Handler
                         elseif n == 0
                             json = 'null';
                         else
-                            this.errors = [this.errors, {sprintf('At %s, value has more than one element', path)}];
+                            this.addErrors(sprintf('At %s, value has more than one element', path));
                         end
                     end
                 elseif iscell(value)

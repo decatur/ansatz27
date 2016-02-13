@@ -45,11 +45,19 @@ classdef JSON_Handler < handle
             rootDir = fileparts(this.schemaURL);
         end
 
-        function schema = normalizeSchema(this, schema)
+        function addError(this, msg)
+            this.errors{end+1} = msg;
+        end
+
+        function schema = normalizeSchema(this, schema, path)
         %normalizeSchema recursively descends the schema and resolves allOf references.
             
             if ~isstruct(schema)
                 return
+            end
+
+            if nargin < 2
+                path = '/';
             end
 
             if isfield(schema, 'allOf')
@@ -64,14 +72,25 @@ classdef JSON_Handler < handle
                 props = schema.properties;
                 pNames = fieldnames(props);
                 for k=1:length(pNames)
-                    schema.properties.(pNames{k}) = this.normalizeSchema(props.(pNames{k}));
+                    subPath = [path pNames{k} '/'];
+                    schema.properties.(pNames{k}) = this.normalizeSchema(props.(pNames{k}), subPath);
                 end
             elseif strcmp(schema.type, 'array') && isfield(schema, 'items') 
                 if isstruct(schema.items)
-                    schema.items = this.normalizeSchema(schema.items);
+                    schema.items = this.normalizeSchema(schema.items, [path 'items' '/']);
                 elseif iscell(schema.items)
                     for k=1:length(schema.items)
-                        schema.items{k} = this.normalizeSchema(schema.items{k});
+                        subPath = [path num2str(k) '/'];
+                        schema.items{k} = this.normalizeSchema(schema.items{k}, subPath);
+                    end
+                end
+            elseif (strcmp(schema.type, 'number') || strcmp(schema.type, 'integer'))
+                if isfield(schema, 'enum')
+                    if all(cellfun(@isnumeric, schema.enum))
+                        schema.enum = cell2mat(schema.enum);
+                    else
+                        schema = rmfield(schema, 'enum');
+                        error('Invalid enum at %s');
                     end
                 end
             end
