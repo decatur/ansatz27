@@ -9,11 +9,11 @@ assert(obj.date == 736355)
 assert(obj.datetime == 736355.5)
 
 expectedErrors = { ...
-    'At /minNumber/ value is smaller than minimum 3.000000', ...
-    'At /matrix/2/2 value is smaller than minimum 0.000000', ...
-    'At /myArray/2/myNumber/ value is smaller than minimum 0.000000', ...
-    'At /invalidSchema/ no type specified', ...
-    'At / missing required field ID'};
+    {'/minNumber/', 'is smaller than minimum 3.000000', '1'}, ...
+    {'/matrix/2/2', 'is smaller than minimum 0.000000', '4  -5   6'}, ...
+    {'/myArray/2/myNumber/', 'is smaller than minimum 0.000000', '-3.1415'}, ...
+    {'/invalidSchema/', 'has no type specified', '3'}, ...
+};
 
 assert(isequal(errors, expectedErrors));
 
@@ -26,7 +26,7 @@ assert(isequal(obj, cellstr('foo')));
 [obj, errors] = JSON_Parser.parse('["foo"]', struct('type', 'object'));
 assert(isequal(obj, cellstr('foo')));
 assert(numel(errors) == 1);
-assert(strcmp(errors{1}, 'At / value does not match type'));
+assert(isequal(errors{1}, {'/' 'does not match type object' '[array]'}));
 
 [obj, errors] = JSON_Parser.parse('["foo"]', struct('type', 'array'));
 assert(isempty(errors));
@@ -60,7 +60,7 @@ assert(isempty(errors));
 
 [obj, errors] = JSON_Parser.parse('"foo1"', schema);
 assert(numel(errors) == 1);
-assert(strcmp(errors{1}, 'At / value is not contained in enumeration'));
+assert(isequal(errors{1}, {'/' 'is not contained in enumeration' 'foo1'}));
 
 schema = struct('type', 'integer');
 schema.enum = {1, 2};
@@ -69,7 +69,7 @@ assert(numel(errors) == 0);
 
 [obj, errors] = JSON_Parser.parse('3', schema);
 assert(numel(errors) == 1);
-assert(strcmp(errors{1}, 'At / value is not contained in enumeration'));
+assert(isequal(errors{1}, {'/' 'is not contained in enumeration' '3'}));
 
 [obj, errors] = JSON_Parser.parse('[1,2]');
 assert(isequal(obj, {1 2}));

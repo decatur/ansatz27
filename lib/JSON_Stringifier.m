@@ -157,7 +157,7 @@ classdef JSON_Stringifier < JSON_Handler
                 end
     
                 if isempty(type)
-                    this.addErrors(sprintf('Missing schema type for path %s', context.path));
+                    this.addError(context.path, 'missing schema type', value);
                 elseif isnumeric(value) || islogical(value)
                     if strcmp(type, 'array')
                         value = this.validate_(value, 'array', schema, context.path);
@@ -182,7 +182,7 @@ classdef JSON_Stringifier < JSON_Handler
                         elseif n == 0
                             json = 'null';
                         else
-                            this.addErrors(sprintf('At %s, value has more than one element', path));
+                            this.addError(context.path, 'has more than one element', value);
                         end
                     end
                 elseif isstruct(value)
@@ -196,7 +196,7 @@ classdef JSON_Stringifier < JSON_Handler
                         elseif n == 0
                             json = 'null';
                         else
-                            this.addErrors(sprintf('At %s, value has more than one element', path));
+                            this.addError(context.path, 'has more than one element', value);
                         end
                     end
                 elseif iscell(value)

@@ -184,7 +184,7 @@ classdef JSON_Parser < JSON_Handler
         function vec = json1D2array(this, path)
             s = this.json(this.pos:end); % '[1, 2, 3]...'
 
-            endPos = regexp(s, '\]', 'once'); % Note: strfind(s, ']') finds all occurences!
+            endPos = strchr(s, ']', 1);
             s = strtrim(s(2:endPos-1));
             s = strrep(s, 'null', 'NaN');
 

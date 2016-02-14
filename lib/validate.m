@@ -6,7 +6,7 @@ function newValue = validate(this, value, actType, schema, path)
 newValue = value;
 
 if ~isfield(schema, 'type')
-    this.addError(sprintf('At %s no type specified', path));
+    this.addError(path, 'has no type specified', value);
     return
 end
 
@@ -14,23 +14,23 @@ type = schema.type;
 
 if strcmp(actType, 'string')
     if ~strcmp(type, 'string')
-        this.addError(sprintf('At %s value %s does not match type %s', path, value, type));
+        this.addError(path, sprintf('does not match type %s', type), value);
         return;
     end
 elseif strcmp(actType, 'object') || strcmp(actType, 'array')
     if ~ismember(actType, type)
-        this.addError(sprintf('At %s value does not match type', path));
+        this.addError(path, sprintf('does not match type %s', type), value);
         return;
     end
 elseif strcmp(actType, 'number')
     if ~strcmp(type, 'number') && ~strcmp(type, 'integer')
-        this.addError(sprintf('At %s value %f does not match type %s', path, value, type));
+        this.addError(path, sprintf('does not match type %s', type), value);
         return;
     end
 elseif strcmp(actType, 'boolean')
     booleanStrings = {'false', 'true'};
     if ~strcmp(type, 'boolean')
-        this.addError(sprintf('At %s boolean true does not match type %s', path, booleanStrings{value+1}, type));
+        this.addError(path, sprintf('does not match type %s', type), value);
         return;
     end
 end
@@ -39,7 +39,7 @@ if strcmp(type, 'object')
     if isfield(schema, 'required')
         for i=1:length(schema.required)
             if ~isfield(value, schema.required{i})
-                this.addError(sprintf('At %s missing required field %s', path, schema.required{i}));
+                this.addError(path, sprintf('is missing required field %s', schema.required{i}), value);
             end
         end
     end
@@ -47,7 +47,7 @@ if strcmp(type, 'object')
 elseif strcmp(type, 'string')
     if isfield(schema, 'pattern')
         if ~regexp(value, schema.pattern)
-            this.addError(sprintf('At %s value %s does not match %s', path, value, schema.pattern));
+            this.addError(path, sprintf('does not match pattern %s', schema.pattern), value);
         end
     end
     
@@ -55,7 +55,7 @@ elseif strcmp(type, 'string')
     
     if strcmp(format, 'date')
         if ~regexp(value, '^\d{4}-\d{2}-\d{2}$')
-            this.addError(sprintf('At %s value is not a date: %s', path, value));
+            this.addError(path, 'is not a date', value);
         end
     end
     
@@ -64,28 +64,28 @@ elseif isnumeric(value)
     if strcmp(type, 'integer')
         badPath = getBadPath(path, rem(value, 1));
         if ~isempty(badPath)
-            this.addError(sprintf('At %s value is not an integer', badPath));
+            this.addError(badPath, 'is not an integer', value);
         end
     end
     
     if isfield(schema, 'minimum')
         badPath = getBadPath(path, value < schema.minimum);
         if ~isempty(badPath)
-            this.addError(sprintf('At %s value is smaller than minimum %f', badPath, schema.minimum));
+            this.addError(badPath, sprintf('is smaller than minimum %f', schema.minimum), value);
         end
     end
     
     if isfield(schema, 'maximum')
         badPath = getBadPath(path, value > schema.maximum);
         if ~isempty(badPath)
-            this.addError(sprintf('At %s value %f is bigger than maximum %f', badPath, schema.maximum));
+            this.addError(badPath, sprintf('is bigger than maximum %f', schema.maximum), value);
         end
     end
 end
 
 if isfield(schema, 'enum')
     if ~ismember(value, schema.enum)
-        this.addError(sprintf('At %s value is not contained in enumeration', path));
+        this.addError(path, 'is not contained in enumeration', value);
     end
 end
 

@@ -14,10 +14,7 @@ obj.matrix3D(2,:,:) = 4+obj.matrix3D(1,:,:);
 obj.minNumber = 1;
 
 [json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
-json = regexprep(json, '\n|\r', '');
-
 expectedJSON = JSON_Stringifier.readFileToString('doc1.json', 'latin1');
-expectedJSON = regexprep(expectedJSON, '\n|\r', '');
 assert(strcmp(json, expectedJSON));
 
 
@@ -57,7 +54,7 @@ assert(strcmp(json1, json2));
 
 [json, errors] = JSON_Stringifier.stringify('foo', struct('type', 'number'));
 assert(strcmp(json, '"foo"'));
-assert(isequal(errors, cellstr('At / value foo does not match type number')));
+assert(isequal(errors{1}, {'/' 'does not match type number' 'foo'}));
 
 [json, errors] = JSON_Stringifier.stringify(pi, struct('type', 'number'));
 assert(isempty(errors));
@@ -106,3 +103,5 @@ assert(strcmp(json, '"foo"'));
 
 [json, errors] = JSON_Stringifier.stringify(struct(), 'file:schema1.json', 0);
 assert(strcmp(json, '{"foo": ""}'));
+
+[json, errors] = JSON_Stringifier.stringify([1 2], struct('type', 'object'));

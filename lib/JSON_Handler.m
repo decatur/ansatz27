@@ -45,8 +45,21 @@ classdef JSON_Handler < handle
             rootDir = fileparts(this.schemaURL);
         end
 
-        function addError(this, msg)
-            this.errors{end+1} = msg;
+        function addError(this, path, msg, value)
+            if isstruct(value)
+                value = '{object}';
+            elseif iscell(value)
+                value = '[array]';
+            elseif islogical(value)
+                if value
+                    value = 'true';
+                else
+                    value = 'false';
+                end
+            else
+                value = num2str(value);
+            end
+            this.errors{end+1} = {path msg value};
         end
 
         function schema = normalizeSchema(this, schema, path)

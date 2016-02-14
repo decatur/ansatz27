@@ -1,6 +1,5 @@
 {
     "type": "object",
-    "required": ["ID"],
     "properties": {
         "id": {
             "type": "string"
@@ -33,7 +32,7 @@
         "vector": {
             "type": "array",
             "items": {
-                "type": "number",
+                "type": ["number", "null"],
                 "fixedPrecision": 2
             }
         },
@@ -80,11 +79,11 @@
             "items": [
                 {
                     "type": "string",
-                    "format": "date-time"
+                    "format": "date"
                 },
                 {
                     "type": "string",
-                    "format": "date-time"
+                    "format": "date"
                 },
                 {
                     "type": "integer"
@@ -101,11 +100,11 @@
                 "items": [
                     {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date"
                     },
                     {
                         "type": "string",
-                        "format": "date-time"
+                        "format": "date"
                     },
                     {
                         "type": "integer"
