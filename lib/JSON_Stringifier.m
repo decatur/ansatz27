@@ -9,6 +9,7 @@ classdef JSON_Stringifier < JSON_Handler
     
     properties (Access = private)
         nl
+        sepPostfix
         indent
     end
     
@@ -85,6 +86,7 @@ classdef JSON_Stringifier < JSON_Handler
             context = struct();
             
             this.indent = '';
+            
             if isnumeric(space)
                 this.indent = repmat(' ', 1, space);
             elseif ischar(space)
@@ -93,15 +95,18 @@ classdef JSON_Stringifier < JSON_Handler
 
             if isempty(this.indent)
                 this.nl = '';
+                this.sepPostfix = '';
             else
                 this.nl = sprintf('\r\n');
+                this.sepPostfix = ' ';
             end
 
             context.gap = '';
             context.path = '/';
             
-            json = this.str(value, context, rootschema);
+            json = this.value2json(value, context, rootschema);
             errors = this.errors;
+            assert(~isempty(rootschema) || isempty(errors));
         end
         
     end
@@ -109,110 +114,72 @@ classdef JSON_Stringifier < JSON_Handler
     methods (Access=private)
         
         function schema = childSchema(this, schema, key)
-            if isfield(schema, 'type') && strcmp(schema.type, 'object') && isfield(schema, 'properties') && isfield(schema.properties, key)
+            if ~isempty(schema) && strcmp(schema.type, 'object') && isfield(schema, 'properties') && isfield(schema.properties, key)
                 schema = schema.properties.(key);
             else
                 schema = [];
             end
         end
         
-        function newValue = validate_(this, value, actType, schema, path)
-            newValue = validate(this, value, actType, schema, path);
+        function pType = validate_(this, value, schema, path)
+            pType = validate(this, value, schema, path);
         end
         
-        function json = str(this, value, context, schema)
-            json = [];
-            n = numel(value);
-            
+        
+        function json = value2json(this, value, context, schema)
             if isempty(schema)
-                if ischar(value)
-                    json = this.quote(value);
-                elseif iscell(value)
-                    json = this.objArray2json(value, context, []);
-                elseif n == 0
-                    json = 'null';
-                elseif n == 1
-                    if isnumeric(value)
-                        json = this.nan2null(num2str(this.normalize2nan(value), this.numberFormat([])));
-                    elseif islogical(value)
-                        json = mat2str(value);
-                    elseif isstruct(value)
-                        json = this.struct2json(value, context, []);
-                    end
-                else % n > 1
-                    if isnumeric(value)
-                        json = this.matrix2json(value, context, []);
-                    else
-                        json = this.objArray2json(value, context, []);
-                    end
-                end
-            else % ~isempty(schema)
+                type = {};
+            else
+                type = schema.type;
+            end
 
-                type = getPath(schema, 'type');
-                format = getPath(schema, 'format');
+            json = [];
+            pType = [];
 
-                if this.formatters.isKey(format)
-                    formatter = this.formatters(format);
-                    value = formatter(value);
+            if ~isempty(type)
+                %[json, pType] = str_(this, value, context, schema);
+
+                pType = this.validate_(value, schema, context.path);
+                isarray = strcmp(pType, 'array');
+                
+                if ~isempty(json)
+                    return;
                 end
-    
-                if isempty(type)
-                    this.addError(context.path, 'missing schema type', value);
-                elseif isnumeric(value) || islogical(value)
-                    if strcmp(type, 'array')
-                        value = this.validate_(value, 'array', schema, context.path);
-                        type = getPath(schema, 'items/type');
-                        if ~isempty(type)
-                            if strcmp(type, 'number') || strcmp(type, 'integer') 
-                              json = this.matrix2json(value, context, schema);
-                            elseif strcmp(type, 'array') && strcmp(getPath(schema, 'items/items/type'), 'number')
-                                json = this.matrix2json(value, context, schema.items.items);
-                            elseif strcmp(type, 'object')
-                                json = this.objArray2json(value, context, getPath(schema, 'items'));
-                            end
-                        end
-                    else
-                        if n == 1
-                            value = this.validate_(value, type, schema, context.path);
-                            if strcmp(type, 'integer')
-                                json = num2str(fix(this.normalize2nan(value)), '%i');
-                            else % number
-                                json = this.nan2null(num2str(this.normalize2nan(value), this.numberFormat(schema)));
-                            end
-                        elseif n == 0
-                            json = 'null';
-                        else
-                            this.addError(context.path, 'has more than one element', value);
-                        end
-                    end
-                elseif isstruct(value)
-                    if strcmp(type, 'array')
-                        value = this.validate_(value, 'array', schema, context.path);
-                        json = this.objArray2json(value, context, getPath(schema, 'items'));
-                    else
-                        if n == 1
-                            value = this.validate_(value, type, schema, context.path);
-                            json = this.struct2json(value, context, schema);
-                        elseif n == 0
-                            json = 'null';
-                        else
-                            this.addError(context.path, 'has more than one element', value);
-                        end
-                    end
-                elseif iscell(value)
-                    value = this.validate_(value, 'array', schema, context.path);
+            else
+                isarray = (numel(value) > 1);
+            end
+
+            if ischar(value)
+                json = this.quote(value);
+            elseif iscell(value)
+                json = this.objArray2json(value, context, getPath(schema, 'items'));
+            elseif isstruct(value)
+                if isarray
                     json = this.objArray2json(value, context, getPath(schema, 'items'));
-                elseif ischar(value)
-                    if strcmp(type, 'array')
-                        value = this.validate_(value, 'array', schema, context.path);
-                        json = this.objArray2json(value, context, getPath(schema, 'items'));
-                    else
-                        value = this.validate_(value, 'string', schema, context.path);
-                        json = this.quote(value);
-                    end
+                else
+                    json = this.struct2json(value, context, schema);
+                end
+            %elseif islogical(value) % Note that logical is also numeric so it must preceed numeric treatment
+            %    json = mat2str(value);
+            elseif isnumeric(value) || islogical(value) % Note empty [] is numeric
+                if isnumeric(value)
+                    value = this.normalize2nan(value);
+                end
+
+                if isarray
+                    json = this.foo(value, context, schema);
+                    %json = this.matrix2json(value, context, schema);
+                elseif isempty(value)
+                    json = 'null';
+                else
+                    json = this.nan2null(num2str(value, this.numberFormat(schema)));
+                end
+
+                if islogical(value)
+                    json = strrep(json, '1', 'true');
+                    json = strrep(json, '0', 'false');
                 end
             end
-            
         end
         
         function fmt = numberFormat(this, schema)
@@ -240,7 +207,7 @@ classdef JSON_Stringifier < JSON_Handler
             for i=1:l
                 key = names{i};
                 context.path = [path key '/'];
-                item_str = this.str(value.(key), context, this.childSchema(schema, key));
+                item_str = this.value2json(value.(key), context, this.childSchema(schema, key));
                 if isempty(item_str)
                     continue;
                 end
@@ -250,7 +217,7 @@ classdef JSON_Stringifier < JSON_Handler
                 end
                 
                 isFirstItem = false;
-                txt = sprintf('%s%s"%s": %s', txt, context.gap, key, item_str);
+                txt = sprintf('%s%s"%s":%s%s', txt, context.gap, key, this.sepPostfix, item_str);
             end
             
             if ~isempty(this.indent)
@@ -260,7 +227,6 @@ classdef JSON_Stringifier < JSON_Handler
             end
         end
         
-        % This is a copy of struct2json with obvious modifications.
         function txt = objArray2json(this, value, context, itemsSchema)
             assert(iscell(value) || isstruct(value));
 
@@ -285,7 +251,7 @@ classdef JSON_Stringifier < JSON_Handler
                 end
                 
                 context.path = [path num2str(i) '/'];
-                item_str = this.str(item, context, schema);
+                item_str = this.value2json(item, context, schema);
                 
                 if isempty(item_str)
                     item_str = 'null';
@@ -329,63 +295,35 @@ classdef JSON_Stringifier < JSON_Handler
             
         end
         
-        function txt = matrix2D2json(this, value, context, schema)
-            
-            gap = sprintf('%s%s', context.gap, this.indent);
-            
-            if ~isempty(this.indent)
-                sep = ', ';
-            else
-                sep = ',';
-            end
-
-            fmt = this.numberFormat(schema);
-            
-            colCount = size(value, 2);
-            fmt = sprintf(' [%s%s%s%s%s%s%s],', this.nl, gap, this.indent, repmat([fmt sep], 1, colCount-1), fmt, this.nl, gap);
-            nd = ndims (value);
-            txt = sprintf (fmt, permute (value, [2, 1, 3:nd]));
-            txt(1) = '';
-            txt(end) = '';
-            txt = sprintf('[%s%s%s%s%s]', this.nl, gap, txt, this.nl, context.gap);
-            
-        end
-        
-        function txt = matrix2json(this, value, context, itemSchema)
-            
-            if ~isnumeric(value)
-                txt = [];
-                return;
-            end
-            
-            value = this.normalize2nan(value);
-            
+        function txt = foo(this, value, context, schema)
+            assert(ismatrix(value));
             s = size(value);
-            mindGap = context.gap;
             
-            if length(s) > 2
-                context.gap = [context.gap this.indent];
-                txt = sprintf('[%s%s', this.nl, context.gap);
-                sep = '';
-                for i=1:s(1)
-                    m = value(i, :);
-                    m = reshape(m, s(2), s(end));
-                    txt = sprintf('%s%s%s%s', txt, sep, this.matrix2json(m, context, itemSchema));
+            itemsSchema = getPath(schema, 'items');
+
+            mindGap = context.gap;  
+            context.gap = [context.gap this.indent];
+            
+            txt = sprintf('[%s%s', this.nl, context.gap);
+            sep = '';
+
+            if s(1) > 1
+                for k=1:s(1)
+                    row = value(k, :);
+                    txt = sprintf('%s%s%s', txt, sep, this.value2json(row, context, itemsSchema));
                     sep = ',';
                 end
-                txt = sprintf('%s%s%s]', txt, this.nl, mindGap);
-            elseif s(1) == 1
-                txt = this.vector2json(value, context, itemSchema);
-            elseif s(2) == 1
-                txt = this.vector2json(value', context, itemSchema);
             else
-                txt = this.matrix2D2json(value, context, itemSchema);
+                for k=1:s(2)
+                    row = value(k);
+                    txt = sprintf('%s%s%s', txt, sep, this.value2json(row, context, itemsSchema));
+                    sep = ',';
+                end
             end
             
-            txt = this.nan2null(txt);
-            
+            txt = sprintf('%s%s%s]', txt, this.nl, mindGap);
         end
-        
+
         function txt = quote(this, value)
             assert(ischar(value), 'input is not a string');
             
@@ -401,5 +339,3 @@ classdef JSON_Stringifier < JSON_Handler
     end
     
 end
-
-

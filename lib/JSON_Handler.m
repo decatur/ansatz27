@@ -51,11 +51,7 @@ classdef JSON_Handler < handle
             elseif iscell(value)
                 value = '[array]';
             elseif islogical(value)
-                if value
-                    value = 'true';
-                else
-                    value = 'false';
-                end
+                value = mat2str(value);
             else
                 value = num2str(value);
             end
@@ -69,7 +65,7 @@ classdef JSON_Handler < handle
                 return
             end
 
-            if nargin < 2
+            if nargin < 3
                 path = '/';
             end
 
@@ -77,18 +73,31 @@ classdef JSON_Handler < handle
                 schema = this.mergeSchemas(schema);
             end
 
-            if ~isfield(schema, 'type')
+            if ~isfield(schema, 'type') || isempty(schema.type)
+                schema.type = {};
                 return
             end
 
-            if strcmp(schema.type, 'object') && isfield(schema, 'properties') && ~isempty(schema.properties)
+            type = schema.type;
+
+            if ischar(type)
+                type = {type};
+            end
+
+            schema.type = type;
+
+            if isfield(schema, 'required') && ~iscell(schema.required)
+                error('Invalid required at %s', path);
+            end
+
+            if ismember('object', type) && isfield(schema, 'properties') && ~isempty(schema.properties)
                 props = schema.properties;
                 pNames = fieldnames(props);
                 for k=1:length(pNames)
                     subPath = [path pNames{k} '/'];
                     schema.properties.(pNames{k}) = this.normalizeSchema(props.(pNames{k}), subPath);
                 end
-            elseif strcmp(schema.type, 'array') && isfield(schema, 'items') 
+            elseif ismember('array', type) && isfield(schema, 'items') 
                 if isstruct(schema.items)
                     schema.items = this.normalizeSchema(schema.items, [path 'items' '/']);
                 elseif iscell(schema.items)
@@ -97,7 +106,7 @@ classdef JSON_Handler < handle
                         schema.items{k} = this.normalizeSchema(schema.items{k}, subPath);
                     end
                 end
-            elseif (strcmp(schema.type, 'number') || strcmp(schema.type, 'integer'))
+            elseif any(ismember({'number' 'integer'}, type))
                 if isfield(schema, 'enum')
                     if all(cellfun(@isnumeric, schema.enum))
                         schema.enum = cell2mat(schema.enum);
@@ -159,7 +168,7 @@ classdef JSON_Handler < handle
         end
 
         function s = datenum2string(n)
-            if ~isnumeric(n) || rem(n, 1) ~=0 
+            if ~isnumeric(n) || rem(n, 1)~=0 
                 s = n;
                 return;
             end

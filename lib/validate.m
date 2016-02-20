@@ -1,41 +1,58 @@
 % COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
-function newValue = validate(this, value, actType, schema, path)
+function pType = validate(this, value, schema, path)
 
-newValue = value;
+type = schema.type;
+pType = [];
+n = numel(value);
 
-if ~isfield(schema, 'type')
-    this.addError(path, 'has no type specified', value);
+if ischar(value)
+    if ismember('string', type)
+        pType = 'string';
+    end
+elseif isstruct(value)
+    if n==1 && ismember('object', type)
+        pType = 'object';
+    elseif ismember('array', type)
+        pType = 'array';
+    end
+elseif iscell(value)
+    if ismember('array', type)
+        pType = 'array';
+    end
+elseif isnumeric(value)
+    if n == 1
+        if rem(value, 1) == 0 % integer value
+            if ismember('integer', type)
+                pType = 'integer';
+            elseif ismember('number', type) 
+                pType = 'number';
+            end
+        elseif ismember('number', type)
+            pType = 'number';
+        end
+    end
+
+    if isempty(pType) && ismember('array', type)
+        pType = 'array';
+    end
+elseif islogical(value)
+    if n == 1 && ismember('boolean', type)
+        pType = 'boolean';
+    elseif ismember('array', type)
+        pType = 'array';
+    end
+elseif isempty(value) && ismember('null', type)
+    pType = 'null';
+end
+
+if isempty(pType)
+    this.addError(path, 'does not match type', value);
     return
 end
 
-type = schema.type;
-
-if strcmp(actType, 'string')
-    if ~strcmp(type, 'string')
-        this.addError(path, sprintf('does not match type %s', type), value);
-        return;
-    end
-elseif strcmp(actType, 'object') || strcmp(actType, 'array')
-    if ~ismember(actType, type)
-        this.addError(path, sprintf('does not match type %s', type), value);
-        return;
-    end
-elseif strcmp(actType, 'number')
-    if ~strcmp(type, 'number') && ~strcmp(type, 'integer')
-        this.addError(path, sprintf('does not match type %s', type), value);
-        return;
-    end
-elseif strcmp(actType, 'boolean')
-    booleanStrings = {'false', 'true'};
-    if ~strcmp(type, 'boolean')
-        this.addError(path, sprintf('does not match type %s', type), value);
-        return;
-    end
-end
-
-if strcmp(type, 'object')
+if isstruct(value)
     if isfield(schema, 'required')
         for i=1:length(schema.required)
             if ~isfield(value, schema.required{i})
@@ -43,10 +60,9 @@ if strcmp(type, 'object')
             end
         end
     end
-    newValue = mergeDefaults(value, schema);
-elseif strcmp(type, 'string')
+elseif ischar(value)
     if isfield(schema, 'pattern')
-        if ~regexp(value, schema.pattern)
+        if isempty(regexp(value, schema.pattern))
             this.addError(path, sprintf('does not match pattern %s', schema.pattern), value);
         end
     end
