@@ -296,7 +296,7 @@ classdef JSON_Stringifier < JSON_Handler
         end
         
         function txt = foo(this, value, context, schema)
-            assert(ismatrix(value));
+            %assert(ismatrix(value));
             s = size(value);
             
             itemsSchema = getPath(schema, 'items');

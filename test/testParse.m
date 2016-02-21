@@ -1,23 +1,6 @@
 addpath('../lib');
-debug_on_error(false);
-clear all;
-
-[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json');
-
-assert(isempty(obj.foo))
-assert(obj.date == 736355)
-assert(obj.datetime == 736355.5)
-
-expectedErrors = { ...
-    {'/minNumber/', 'is smaller than minimum 3.000000', '1'}, ...
-    {'/matrix/2/2', 'is smaller than minimum 0.000000', '4  -5   6'}, ...
-    {'/myArray/2/myNumber/', 'is smaller than minimum 0.000000', '-3.1415'}, ...
-    {'/invalidSchema/', 'has no type specified', '3'}, ...
-};
-
-assert(isequal(errors, expectedErrors));
-
-%[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
+%debug_on_error(false);
+clear classes;
 
 [obj, errors] = JSON_Parser.parse('["foo"]');
 assert(isempty(errors));
@@ -72,7 +55,7 @@ assert(numel(errors) == 1);
 assert(isequal(errors{1}, {'/' 'is not contained in enumeration' '3'}));
 
 [obj, errors] = JSON_Parser.parse('[1,2]');
-assert(isequal(obj, {1 2}));
+assert(isequal(obj, [1 2]));
 
 schema = struct('type', 'array');
 schema.items.type = {'number', 'object'};
@@ -86,19 +69,13 @@ schema = struct('type', 'array');
 schema.items.type = 'number';
 [obj, errors] = JSON_Parser.parse('[1,2]', schema);
 assert(isempty(errors));
-assert(isequal(obj, [1, 2]));
-
-schema = struct('type', 'array');
-schema.items.type = 'number';
-[obj, errors] = JSON_Parser.parse('[1,null,2]', schema);
-assert(isempty(errors));
-assert(isequaln(obj, [1, NaN, 2]));
+assert(isequal(obj, [1 2]));
 
 schema = struct('type', 'array');
 schema.items.type = {'number', 'null'};
 [obj, errors] = JSON_Parser.parse('[1,null,2]', schema);
-assert(numel(errors) == 0);
-assert(isequaln(obj, [1, NaN, 2]));
+assert(isempty(errors));
+assert(isequaln(obj, [1 NaN 2]));
 
 try
     [obj, errors] = JSON_Parser.parse('[1,2]a');
@@ -137,4 +114,24 @@ schema.items.type = 'array';
 schema.items.items.type = {'number', 'null'};
 [obj, errors] = JSON_Parser.parse('[ [1, 2, 3], [4, null, 6] ]', schema);
 assert(isequaln(obj, [ [1 2 3]; [4 NaN 6] ]));
+
+
+%%% Comprehensive Tests
+
+[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json');
+
+assert(isempty(obj.foo))
+assert(obj.date == 736355)
+assert(obj.datetime == 736355.5)
+
+expectedErrors = { ...
+    {'/minNumber/', 'is smaller than minimum 3', '1'}, ...
+    {'/matrix/2/2/', 'is smaller than minimum 0', '-5'}, ...
+    {'/myArray/2/myNumber/', 'is smaller than minimum 0', '-3.1415'}, ...
+};
+
+assert(isequal(errors, expectedErrors));
+
+
+%[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json');
 

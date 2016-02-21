@@ -5,6 +5,14 @@ function pType = validate(this, value, schema, path)
 
 type = schema.type;
 pType = [];
+
+if isempty(type); return; end;
+
+if isempty(value)
+    pType = type{1};
+    return
+end
+
 n = numel(value);
 
 if ischar(value)
@@ -43,12 +51,10 @@ elseif islogical(value)
     elseif ismember('array', type)
         pType = 'array';
     end
-elseif isempty(value) && ismember('null', type)
-    pType = 'null';
 end
 
 if isempty(pType)
-    this.addError(path, 'does not match type', value);
+    this.addError(path, sprintf('does not match type %s', strjoin(type, ' or ')), value);
     return
 end
 
@@ -87,14 +93,14 @@ elseif isnumeric(value)
     if isfield(schema, 'minimum')
         badPath = getBadPath(path, value < schema.minimum);
         if ~isempty(badPath)
-            this.addError(badPath, sprintf('is smaller than minimum %f', schema.minimum), value);
+            this.addError(badPath, sprintf('is smaller than minimum %g', schema.minimum), value);
         end
     end
     
     if isfield(schema, 'maximum')
         badPath = getBadPath(path, value > schema.maximum);
         if ~isempty(badPath)
-            this.addError(badPath, sprintf('is bigger than maximum %f', schema.maximum), value);
+            this.addError(badPath, sprintf('is bigger than maximum %g', schema.maximum), value);
         end
     end
 end

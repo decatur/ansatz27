@@ -55,7 +55,6 @@ matrix3D(2,:,:) = 4 + matrix3D(1,:,:);
 
 [json, errors] = JSON_Stringifier.stringify(pi, struct('type', 'integer'), 0);
 
-clear classes
 schema = struct();
 schema.type = 'array';
 schema.items.type = {'number' 'null'};
@@ -80,7 +79,6 @@ schema.items.fixedPrecision = 2;
 assert(isempty(errors));
 assert(strcmp(json, '[1.00]'));
 
-clear classes
 schema = struct();
 schema.type = 'object';
 schema.properties = struct('foo', struct('type', 'array'));
@@ -88,7 +86,6 @@ schema.properties = struct('foo', struct('type', 'array'));
 assert(isempty(errors));
 assert(strcmp(json, '{"foo":[1]}'));
 
-clear classes
 schema = struct();
 schema.type = 'array';
 schema.items.type = 'array';
@@ -105,7 +102,6 @@ assert(strcmp(json, '[[1.00]]'));
 [json, errors] = JSON_Stringifier.stringify([1 NaN; Inf 2], schema, 0);
 assert(strcmp(json, '[[1.00,null],[null,2.00]]'));
 
-clear classes
 schema = struct();
 schema.type = {'array' 'null'};
 schema.items.type = 'object';
@@ -133,7 +129,6 @@ assert(strcmp(json, '[{"foo":1},{"foo":2}]'));
 assert(isempty(errors));
 assert(strcmp(num2str(pi, 11), json));
 
-clear classes
 schema = struct();
 schema.type = 'array';
 schema.items.type = 'string';
@@ -141,7 +136,6 @@ schema.items.type = 'string';
 assert(isempty(errors));
 assert(strcmp(json, '["foo","bar"]'));
 
-clear classes
 schema = struct();
 schema.type = 'object';
 schema.required = {'bar'};
@@ -152,22 +146,22 @@ assert(isequal(errors{1}, {'/' 'is missing required field bar' '{object}'}));
 
 
 [json, errors] = JSON_Stringifier.stringify([1 2], struct('type', 'object'));
-assert(isequal(errors{1}(1:2), {'/' 'does not match type'}));
+assert(isequal(errors{1}(1:2), {'/' 'does not match type object'}));
 
 [json, errors] = JSON_Stringifier.stringify('foo', struct('type', 'number'));
-assert(isequal(errors{1}(1:2), {'/' 'does not match type'}));
+assert(isequal(errors{1}(1:2), {'/' 'does not match type number'}));
 
 [json, errors] = JSON_Stringifier.stringify([1 2], struct('type', 'number'));
-assert(isequal(errors{1}(1:2), {'/' 'does not match type'}));
+assert(isequal(errors{1}(1:2), {'/' 'does not match type number'}));
 
 [json, errors] = JSON_Stringifier.stringify(1, struct('type', 'number'));
 assert(isempty(errors));
 
 [json, errors] = JSON_Stringifier.stringify([1 2], struct('type', 'number'));
-assert(isequal(errors{1}(1:2), {'/' 'does not match type'}));
+assert(isequal(errors{1}(1:2), {'/' 'does not match type number'}));
 
 [json, errors] = JSON_Stringifier.stringify(true, struct('type', 'number'));
-assert(isequal(errors{1}(1:2), {'/' 'does not match type'}));
+assert(isequal(errors{1}(1:2), {'/' 'does not match type number'}));
 
 [json, errors] = JSON_Stringifier.stringify('Hello', struct('type', 'string', 'pattern', '^\w+$'));
 assert(isempty(errors));

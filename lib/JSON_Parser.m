@@ -120,18 +120,7 @@ classdef JSON_Parser < JSON_Handler
             end
         end
         
-        function newValue = validate_(this, value, actType, context)
-            if ~isempty(getPath(context, 'schema'))
-                newValue = validate(this, value, actType, context.schema, context.path);
-                format = getPath(context.schema, 'format');
-                if this.formatters.isKey(format)
-                    formatter = this.formatters(format);
-                    newValue = formatter(newValue);
-                end
-            else
-                newValue = value;
-            end
-        end
+        
         
         function parse_object(this, holder, index, holderKey, context)
             
@@ -318,58 +307,37 @@ classdef JSON_Parser < JSON_Handler
         end
         
         function parse_value(this, holder, index, key, context)
+            schema = getPath(context, 'schema');
+            
             switch(this.json(this.pos))
                 case '"'
-                    actType = 'string';
                     val = this.parseStr(context);
                 case '['
-                    actType = 'array';
-                    itemSchema = getPath(context, 'schema/items');
-                    type = getPath(itemSchema, 'type');
-                    if ~isempty(type) && all(ismember(type, {'null','integer','number'}))
-                        val = this.json1D2array(context.path);
-                        if isempty(val)
-                            c = CellArrayHolder();
-                            this.parse_array(c, context);
-                            val = c.value;
-                        else
-                            %if ~ismember('null', type) && any(isnan, vec)
-                            %    this.errors = [this.errors ''];
-                            %end
-                            c = context;
-                            c.schema = itemSchema;
-                            val = this.validate_(val, type, c);
-                        end
-                    else
-                        if strcmp(type, 'object')
-                            c = StructArrayHolder();
-                        else
-                            c = CellArrayHolder();
-                        end
-                        
-                        this.parse_array(c, context);
-                        val = c.value;
-                        
-                        type = getPath(itemSchema, 'items/type');
+                    pType = 'array';
+                    itemSchema = getPath(schema, 'items');
+                    itemType = getPath(itemSchema, 'type');
 
-                        if ~isempty(type) && ismember(type, {'null','integer','number'})
-                            try
-                                % TODO: Eliminate try/catch by checking that dimensions of matrices are consistent.
-                                val = cell2mat(val');
-                                %context.schema = context.schema.items.items;
-                            catch e
-                            end
-                        end
+                    if strcmp(itemType, 'object')
+                        c = StructArrayHolder();
+                    else
+                        c = CellArrayHolder();
+                    end
+
+                    this.parse_array(c, context);
+                    val = c.value;
+
+                    if strcmp(class(c), 'CellArrayHolder')
+                        val = cellToMat(val);
                     end
                 case '{'
-                    actType = 'object';
                     this.parse_object(holder, index, key, context);
                     val = holder.getVal(index, key);
+                    if ~isempty(schema)
+                        val = mergeDefaults(val, schema);
+                    end
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
-                    actType = 'number';
                     val = this.parse_number(context);
                 case 't'
-                    actType = 'boolean';
                     if this.pos+3 <= this.len && strcmp(this.json(this.pos:this.pos+3), 'true')
                         val = true;
                         this.pos = this.pos + 4;
@@ -377,7 +345,6 @@ classdef JSON_Parser < JSON_Handler
                         this.error_pos('Token true expected');
                     end
                 case 'f'
-                    actType = 'boolean';
                     if this.pos+4 <= this.len && strcmp(this.json(this.pos:this.pos+4), 'false')
                         val = false;
                         this.pos = this.pos + 5;
@@ -385,7 +352,6 @@ classdef JSON_Parser < JSON_Handler
                         this.error_pos('Token false expected');
                     end
                 case 'n'
-                    actType = 'null';
                     if this.parse_null()
                         val = [];
                     else
@@ -394,7 +360,16 @@ classdef JSON_Parser < JSON_Handler
                 otherwise
                     this.error_pos('Illegal token');
             end
-            val = this.validate_(val, actType, context);
+            
+            if ~isempty(schema)
+                validate(this, val, schema, context.path);
+                format = getPath(schema, 'format');
+                if this.formatters.isKey(format)
+                    formatter = this.formatters(format);
+                    val = formatter(val);
+                end
+            end
+
             holder.setVal(index, key, val);
         end
         
