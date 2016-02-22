@@ -114,28 +114,20 @@ schema = JSON_Parser.parse('file:schema.json')
 |--------|--------|------|--------|
 | Simple object |
 | struct('foo', 'bar') |  | {"foo":"bar"} |  |
-|--------|--------|------|--------|
 | Array with one string |
-| {'foo'} | { "type": "object" } | ["foo"] | / $ does not match type object $ [array] |
-|--------|--------|------|--------|
+| {'foo'} | { "type": "object" } | ["foo"] | / $ does not match type object $ [array] <br/> foo |
 | Empty object |
 | struct() | { "type": "object", "properties": {} } | {} |  |
-|--------|--------|------|--------|
 | Empty object |
 | struct() |  | {} |  |
-|--------|--------|------|--------|
 | Structure array |
 | struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |  |
-|--------|--------|------|--------|
 | Row vector |
 | [1 2] |  | [1,2] |  |
-|--------|--------|------|--------|
 | Matrix 2x2 |
 | [1 2;3 4] |  | [[1,2],[3,4]] |  |
-|--------|--------|------|--------|
 | Column vector |
 | [1; 2] |  | [[1],[2]] |  |
-|--------|--------|------|--------|
 
 # Octave Limitations
 Encoding of files
