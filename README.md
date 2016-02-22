@@ -113,21 +113,15 @@ schema = JSON_Parser.parse('file:schema.json')
 | MATLAB | Schema | JSON | Errors |
 |--------|--------|------|--------|
 | Simple object |
-| struct('foo', 'bar') |  | {"foo":"bar"} |  |
-| Array with one string |
-| {'foo'} | { "type": "object" } | ["foo"] | / $ does not match type object $ [array] <br/> foo |
-| Empty object |
-| struct() | { "type": "object", "properties": {} } | {} |  |
-| Empty object |
-| struct() |  | {} |  |
-| Structure array |
-| struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |  |
-| Row vector |
-| [1 2] |  | [1,2] |  |
-| Matrix 2x2 |
-| [1 2;3 4] |  | [[1,2],[3,4]] |  |
-| Column vector |
-| [1; 2] |  | [[1],[2]] |  |
+| struct('foo', 'bar') |  | {"foo":"bar"} |  || Array with one string |
+| {'foo'} | { "type": "object" } | ["foo"] | / $ does not match type object $ [array] || Empty object |
+| struct() | { "type": "object", "properties": {} } | {} |  || Empty object |
+| struct() |  | {} |  || Structure array |
+| struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |  || Row vector |
+| [1 2] |  | [1,2] |  || Matrix 2x2 |
+| [1 2;3 4] |  | [[1,2],[3,4]] |  || Column vector |
+| [1; 2] |  | [[1],[2]] |  || Row vector with NaNs |
+| [NaN 1] | { "type": "array",<br/>  "items": [{ "type": "number" }, { "type": "null"}]<br/>} | [null,1] | /1/ $ does not match type number $ NaN<br/>/2/ $ does not match typenull $ 1 |
 
 # Octave Limitations
 Encoding of files
