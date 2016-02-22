@@ -20,52 +20,14 @@ for k=1:length(tests)
     end
     schema = strtrim(parts{3});
     json = strtrim(parts{4});
-    errorLines = strtrim(parts{5});
+    errorText = strtrim(parts{5});
 
-    errorLines = strsplit(errorLines, '\n');
-    expectedErrors = {};
-
-    for l=1:length(errorLines)
-        if isempty(errorLines{l})
-            continue;
-        end
-        expectedErrors{end+1} = strsplit(errorLines{l}, '\s*\$\s*', 'delimitertype', 'regularexpression');
-    end
+    expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
     [jsonOut, errors] = JSON_Stringifier.stringify(eval(code), schema, 0);
 
     fprintf(1, '| %s |\n', desc);
-
-    lines = cell();
-    lines{1} = strsplit(code, '\n');
-    lines{2} = strsplit(schema, '\n');
-    lines{3} = strsplit(json, '\n');
-    lines{4} = errorLines;
-
-    %if isempty(errors)
-     %   
-    %else
-    %    for l=1:length(errors)
-    %        lines{4}{l} = strjoin(errors{l});
-    %    end
-    %end
-
-
-    lineCount = max([numel(lines{1}) numel(lines{2}) numel(lines{3}) numel(lines{4})]);
-
-
-    for l=1:lineCount
-        for m=1:4
-            if l<=length(lines{m})
-                fprintf(1, '| %s ', lines{m}{l});
-            else
-                fprintf(1, '|   ');
-            end
-        end
-    end
-    
-    fprintf(1, '|\n');
-    fprintf(1, '|--------|--------|------|--------|\n');
+    fprintf(1, '| %s | %s | %s | %s |', strrep(code, sprintf('\n'), '<br/>'), strrep(schema, sprintf('\n'), '<br/>'), strrep(json, sprintf('\n'), '<br/>'), strrep(errorText, sprintf('\n'), '<br/>'));
 
     if isempty(errors)
         errors = {};
@@ -75,3 +37,5 @@ for k=1:length(tests)
     assert(isequal(expectedErrors, errors));
 
 end
+
+fprintf(1, '\n\n');

@@ -16,7 +16,7 @@ Array with one string
 #
 ["foo"]
 #
-/ $ does not match type object $ [array]
+{'/' 'does not match type object' '[array]'}
 
 #### Description
 Empty object
@@ -72,3 +72,20 @@ Column vector
 #
 [[1],[2]]
 #
+
+#### Description
+Row vector with NaNs
+#
+[NaN 1]
+#
+{ "type": "array",
+  "items": [
+    { "type": "number" },
+    { "type": "null"}]
+}
+#
+[null,1]
+#
+{'/1/' 'does not match type number' 'NaN'}
+{'/2/' 'does not match type null' '1'}
+
