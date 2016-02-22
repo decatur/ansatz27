@@ -1,0 +1,74 @@
+#### Description
+Simple object
+#
+struct('foo', 'bar')
+#
+#
+{"foo":"bar"}
+#
+
+#### Description
+Array with one string
+#
+{'foo'}
+#
+{ "type": "object" }
+#
+["foo"]
+#
+/ $ does not match type object $ [array]
+
+#### Description
+Empty object
+#
+struct()
+#
+{ "type": "object", "properties": {} }
+#
+{}
+#
+
+#### Description
+Empty object
+#
+struct()
+#
+#
+{}
+#
+
+#### Description
+Structure array
+#
+struct('foo', {1 2})
+#
+#
+[{"foo":1},{"foo":2}]
+#
+
+#### Description
+Row vector
+#
+[1 2]
+#
+#
+[1,2]
+#
+
+#### Description
+Matrix 2x2
+#
+[1 2;3 4]
+#
+#
+[[1,2],[3,4]]
+#
+
+#### Description
+Column vector
+#
+[1; 2]
+#
+#
+[[1],[2]]
+#

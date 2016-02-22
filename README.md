@@ -19,7 +19,7 @@ There are no dependencies.
 
 # Parser
 
-## Examples
+## Usage
 ```
 [obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
 [obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', 'file:schema.json')
@@ -33,10 +33,11 @@ Object keys which are not valid MATLAB variable names are mapped, for example $r
 
 # Stringifier
 
-## Examples
+## Usage
 ```
 [obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
 [obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', 'file:schema.json')
+[obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', '{ "type": "object" }')
 ```
 
 # Formatter
@@ -107,8 +108,41 @@ JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 schema = JSON_Parser.parse('file:schema.json')
 ```
 
+# Examples
+
+| MATLAB | Schema | JSON | Errors |
+|--------|--------|------|--------|
+| Simple object |
+| struct('foo', 'bar') |  | {"foo":"bar"} |  |
+|--------|--------|------|--------|
+| Array with one string |
+| {'foo'} | { "type": "object" } | ["foo"] | / $ does not match type object $ [array] |
+|--------|--------|------|--------|
+| Empty object |
+| struct() | { "type": "object", "properties": {} } | {} |  |
+|--------|--------|------|--------|
+| Empty object |
+| struct() |  | {} |  |
+|--------|--------|------|--------|
+| Structure array |
+| struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |  |
+|--------|--------|------|--------|
+| Row vector |
+| [1 2] |  | [1,2] |  |
+|--------|--------|------|--------|
+| Matrix 2x2 |
+| [1 2;3 4] |  | [[1,2],[3,4]] |  |
+|--------|--------|------|--------|
+| Column vector |
+| [1; 2] |  | [[1],[2]] |  |
+|--------|--------|------|--------|
+
 # Octave Limitations
 Encoding of files
 
 Design
 We do not functions in private directories. Octave Version 4.0 cannot resolve those from a class member function.
+
+# Testing
+
+The schemas and documents in the tests where validated with http://jsonschemalint.com/draft4/
