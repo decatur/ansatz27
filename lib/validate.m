@@ -31,7 +31,11 @@ elseif iscell(value)
     end
 elseif isnumeric(value)
     if n == 1
-        if rem(value, 1) == 0 % integer value
+        if isnan(value) 
+            if ismember('null', type)
+                pType = 'null';
+            end
+        elseif rem(value, 1) == 0 % integer value
             if ismember('integer', type)
                 pType = 'integer';
             elseif ismember('number', type) 
