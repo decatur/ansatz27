@@ -75,7 +75,10 @@ classdef JSON_Stringifier < JSON_Handler
             this.schemaURL = [];
 
             if ischar(rootschema)
-                [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
+                rootschema = strtrim(rootschema);
+                if ~isempty(rootschema)
+                    [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
+                end
             end
 
             if ~isempty(rootschema)
@@ -127,6 +130,17 @@ classdef JSON_Stringifier < JSON_Handler
         
         
         function json = value2json(this, value, context, schema)
+            if isnumeric(value)
+                value = this.normalize2nan(value);
+            end
+
+            format = getPath(schema, 'format');
+            if this.formatters.isKey(format)
+                formatter = this.formatters(format);
+                value = formatter(value);
+            end
+
+
             if isempty(schema)
                 type = {};
             else
@@ -137,8 +151,6 @@ classdef JSON_Stringifier < JSON_Handler
             pType = [];
 
             if ~isempty(type)
-                %[json, pType] = str_(this, value, context, schema);
-
                 pType = this.validate_(value, schema, context.path);
                 isarray = strcmp(pType, 'array');
                 
@@ -150,25 +162,23 @@ classdef JSON_Stringifier < JSON_Handler
             end
 
             if ischar(value)
-                json = this.quote(value);
+                json = this.string2json(value);
             elseif iscell(value)
-                json = this.objArray2json(value, context, getPath(schema, 'items'));
+                json = this.objArray2json(value, context, schema);
             elseif isstruct(value)
                 if isarray
-                    json = this.objArray2json(value, context, getPath(schema, 'items'));
+                    json = this.objArray2json(value, context, schema);
                 else
                     json = this.struct2json(value, context, schema);
                 end
-            %elseif islogical(value) % Note that logical is also numeric so it must preceed numeric treatment
-            %    json = mat2str(value);
             elseif isnumeric(value) || islogical(value) % Note empty [] is numeric
-                if isnumeric(value)
-                    value = this.normalize2nan(value);
-                end
-
                 if isarray
-                    json = this.foo(value, context, schema);
-                    %json = this.matrix2json(value, context, schema);
+                    if isrow(value) || isempty(value)
+                        % A row vector, possibly empty.
+                        json = this.row2json(value, context, schema);
+                    else
+                        json = this.tensor2json(value, context, schema);
+                    end
                 elseif isempty(value)
                     json = 'null';
                 else
@@ -204,8 +214,8 @@ classdef JSON_Stringifier < JSON_Handler
             l = length(names);
             isFirstItem = true;
             
-            for i=1:l
-                key = names{i};
+            for k=1:l
+                key = names{k};
                 context.path = [path key '/'];
                 item_str = this.value2json(value.(key), context, this.childSchema(schema, key));
                 if isempty(item_str)
@@ -227,45 +237,45 @@ classdef JSON_Stringifier < JSON_Handler
             end
         end
         
-        function txt = objArray2json(this, value, context, itemsSchema)
+        function txt = objArray2json(this, value, context, schema)
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            mind = context.gap;
-            context.gap = [context.gap this.indent];
-            path = context.path;
+            items = getPath(schema, 'items');    
+            itemContext = context;
+            itemContext.gap = [context.gap this.indent];
             l = length(value);
             
-            for i=1:l
+            for k=1:l
 
-                if iscell(itemsSchema)
-                    schema = itemsSchema{i};
+                if iscell(items)
+                    itemSchema = items{k};
                 else
-                    schema = itemsSchema;
+                    itemSchema = items;
                 end
 
                 if isstruct(value)
-                    item = value(i);
+                    item = value(k);
                 else
-                    item = value{i};
+                    item = value{k};
                 end
                 
-                context.path = [path num2str(i) '/'];
-                item_str = this.value2json(item, context, schema);
+                itemContext.path = [context.path num2str(k) '/'];
+                item_str = this.value2json(item, itemContext, itemSchema);
                 
                 if isempty(item_str)
                     item_str = 'null';
                 end
                 
-                txt = sprintf('%s%s%s', txt, context.gap, item_str);
+                txt = sprintf('%s%s%s', txt, itemContext.gap, item_str);
                 
-                if i<l
+                if k<l
                     txt = sprintf('%s,%s', txt, this.nl);
                 end
             end
             
             if ~isempty(this.indent)
-                txt = sprintf('%s%s%s]', txt, this.nl, mind);
+                txt = sprintf('%s%s%s]', txt, this.nl, context.gap);
             else
                 txt = sprintf('%s]', txt);
             end
@@ -278,56 +288,83 @@ classdef JSON_Stringifier < JSON_Handler
         end
         
         function txt = nan2null(this, txt)
-            txt = regexprep(txt, 'NaN', 'null');
+            txt = strrep(txt, 'NaN', 'null');
         end
         
-        function txt = vector2json(this, row, context, schema)
+        function txt = tensor2json(this, tensor, context, schema)
+            % Loop over the first dimension of a tensor and call value2json on tensor(k, :, ...)
+            s = size(tensor);
+            assert(s(1) > 0);
             
-            gap = sprintf('%s%s', context.gap, this.indent);
-            
-            fmt = [this.numberFormat(schema) ', '];
-            
-            txt = sprintf(fmt, row);
-            % Remove last separator
-            txt(end-1:end) = '';
-            
-            txt = sprintf('[%s%s%s%s%s]', this.nl, gap, txt, this.nl, context.gap);
-            
-        end
-        
-        function txt = foo(this, value, context, schema)
-            %assert(ismatrix(value));
-            s = size(value);
-            
-            itemsSchema = getPath(schema, 'items');
+            items = getPath(schema, 'items');
+            if isempty(items)
+                % Make sure a column vector such as [1;2] is generated as [[1],[2]].
+                items = struct('type', 'array');
+            end
 
-            mindGap = context.gap;  
-            context.gap = [context.gap this.indent];
-            
-            txt = sprintf('[%s%s', this.nl, context.gap);
+            itemContext = context;
+            itemContext.gap = [context.gap this.indent];
+
+            txt = sprintf('[%s%s', this.nl, itemContext.gap);
             sep = '';
 
-            if s(1) > 1
-                for k=1:s(1)
-                    row = value(k, :);
-                    txt = sprintf('%s%s%s', txt, sep, this.value2json(row, context, itemsSchema));
-                    sep = ',';
+            indx = struct('type', '()');
+
+            for k=1:s(1)
+                % We have to use subsref because tensor may have any dimension >= 2.
+                % Example tensor=[1 2;3 4]
+                %   cat(1, { 2 }, cellstr(repmat(':', ndims(tensor)-1, 1))) -> { 2 ':' }
+                %   squeeze(subsref(tensor, indx)) -> [3 4]
+                indx.subs = cat(1, { k }, cellstr(repmat(':', ndims(tensor)-1, 1)));
+                m = squeeze(subsref(tensor, indx));
+
+                if iscell(items)
+                    itemSchema = items{k};
+                else
+                    itemSchema = items;
                 end
-            else
-                for k=1:s(2)
-                    row = value(k);
-                    txt = sprintf('%s%s%s', txt, sep, this.value2json(row, context, itemsSchema));
-                    sep = ',';
-                end
+
+                itemContext.path = [context.path num2str(k) '/'];
+
+                txt = sprintf('%s%s%s', txt, sep, this.value2json(m, itemContext, itemSchema));
+                sep = ',';
             end
-            
-            txt = sprintf('%s%s%s]', txt, this.nl, mindGap);
+
+            txt = sprintf('%s%s%s]', txt, this.nl, context.gap);
         end
 
-        function txt = quote(this, value)
-            assert(ischar(value), 'input is not a string');
+        function txt = row2json(this, row, context, schema)
+            assert(isrow(row) || isempty(row))
             
-            txt = strrep(value, '\', '\\');
+            items = getPath(schema, 'items');
+
+            itemContext = context;
+            itemContext.gap = [context.gap this.indent];
+            
+            txt = sprintf('[%s%s', this.nl, itemContext.gap);
+            sep = '';
+
+
+            for k=1:numel(row)
+                if iscell(items)
+                    itemSchema = items{k};
+                else
+                    itemSchema = items;
+                end
+
+                itemContext.path = [context.path num2str(k) '/'];
+
+                txt = sprintf('%s%s%s', txt, sep, this.value2json(row(k), itemContext, itemSchema));
+                sep = ',';
+            end
+
+            txt = sprintf('%s%s%s]', txt, this.nl, context.gap);
+        end
+
+        function txt = string2json(this, s)
+            assert(ischar(s), 'input is not a string');
+            
+            txt = strrep(s, '\', '\\');
             txt = strrep(txt, '"', '\"');
             txt = strrep(txt, sprintf('\n'), '\n');
             txt = strrep(txt, sprintf('\r'), '\r');
