@@ -27,9 +27,11 @@ classdef JSON_Handler < handle
         function [ schema, schemaURL ] = loadSchema(this, schema)
             schemaURL = [];
 
-            if ischar(schema) && regexp(schema, '^file:')
-                schemaURL = regexprep(schema, '^file:', '');
-                schema = JSON_Handler.readFileToString(schemaURL, 'latin1');
+            if ischar(schema)
+                if regexp(schema, '^file:')
+                    schemaURL = regexprep(schema, '^file:', '');
+                    schema = JSON_Handler.readFileToString(schemaURL, 'latin1');
+                end
                 schema = JSON_Parser.parse(schema);
             else
                 error('Illegal type for schema');
