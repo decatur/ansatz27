@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tests>
+    <test>
+        <description>Simple object</description>
+        <matlab>struct('foo', 'bar')</matlab>
+        <schema></schema>
+        <json>{"foo":"bar"}</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Array with one string</description>
+        <matlab>{'foo'}</matlab>
+        <schema>{ "type": "object" }</schema>
+        <json>["foo"]</json>
+        <errors>{'/' 'does not match type object' '[array]'}</errors>
+    </test>
+    <test>
+        <description>Empty object, no schema</description>
+        <matlab>struct()</matlab>
+        <schema></schema>
+        <json>{}</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Empty object</description>
+        <matlab>struct()</matlab>
+        <schema>{ "type": "object", "properties": {} }</schema>
+        <json>{}</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Cell array</description>
+        <matlab>{struct('foo',1) struct('foo',2)}</matlab>
+        <schema></schema>
+        <json>[{"foo":1},{"foo":2}]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Structure array</description>
+        <matlab>struct('foo', {1 2})</matlab>
+        <schema></schema>
+        <json>[{"foo":1},{"foo":2}]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Row vector</description>
+        <matlab>[1 2]</matlab>
+        <schema></schema>
+        <json>[1,2]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Matrix 2x2</description>
+        <matlab>[1 2;3 4]</matlab>
+        <schema></schema>
+        <json>[[1,2],[3,4]]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Column vector</description>
+        <matlab>[1; 2]</matlab>
+        <schema></schema>
+        <json>[[1],[2]]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Row vector with NaNs</description>
+        <matlab>[NaN 1]</matlab>
+        <schema>
+            { "type": "array",
+              "items": [
+                { "type": "number" },
+                { "type": "null"}]
+            }
+        </schema>
+        <json>[null,1]</json>
+        <errors>
+            {'/1/' 'does not match type number' 'NaN'}
+            {'/2/' 'does not match type null' '1'}
+        </errors>
+    </test>
+    <test>
+        <description>Array of strings</description>
+        <matlab>{'foo' 'bar'}</matlab>
+        <schema></schema>
+        <json>["foo","bar"]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Single number</description>
+        <matlab>1</matlab>
+        <schema></schema>
+        <json>1</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Single boolean</description>
+        <matlab>true</matlab>
+        <schema></schema>
+        <json>true</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Single string</description>
+        <matlab>'Hello World'</matlab>
+        <schema></schema>
+        <json>"Hello World"</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Treatment of Inf</description>
+        <matlab>Inf</matlab>
+        <schema></schema>
+        <json>null</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Treatment of special numbers</description>
+        <matlab>[1 Inf -Inf NaN 2]</matlab>
+        <schema></schema>
+        <json>[1,null,null,null,2]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Boolean array</description>
+        <matlab>[true false]</matlab>
+        <schema></schema>
+        <json>[true,false]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Hint array</description>
+        <matlab>1</matlab>
+        <schema>
+            { "type": "array",
+              "items": { "type": ["number", "null"] }
+            }
+        </schema>
+        <json>[1]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Hint array of arrays</description>
+        <matlab>1</matlab>
+        <schema>
+            { 
+              "type": "array",
+              "items": {
+                "type": "array",  
+                "items": { "type": ["number", "null"] }
+              }
+            }
+        </schema>
+        <json>[[1]]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>[1 NaN Inf -Inf 2]</matlab>
+        <schema>
+            { "type": "array",
+              "items": { "type": ["number", "null"] }
+            }
+        </schema>
+        <json>[1,null,null,null,2]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>NaN</matlab>
+        <schema>
+            { "type": "array",
+              "items": { "type": ["number", "null"] }
+            }
+        </schema>
+        <json>null</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Empty array</description>
+        <matlab>[]</matlab>
+        <schema>
+            { "type": ["array", "null"] }
+        </schema>
+        <json>[]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Empty array</description>
+        <matlab>[]</matlab>
+        <schema>
+            { "type": ["null", "array"] }
+        </schema>
+        <json>null</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab></matlab>
+        <schema></schema>
+        <json></json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab></matlab>
+        <schema></schema>
+        <json></json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>3D matrix</description>
+        <matlab>
+            m = NaN(2,2,2);
+            m(1,:,:) = [1 2; 3 4];
+            m(2,:,:) = [5 6; 7 8];
+            m;
+        </matlab>
+        <schema></schema>
+        <json>[[[1,2],[3,4]],[[5,6],[7,8]]]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Fixed precision</description>
+        <matlab>pi</matlab>
+        <schema>
+            {
+                "type": "number",
+                "fixedPrecision": 2
+            }
+        </schema>
+        <json>3.14</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Array of arrays with fixed precision</description>
+        <matlab>pi</matlab>
+        <schema>
+            { 
+                "type": "array",
+                "items": {
+                    "type": "array",  
+                    "items": {
+                        "type": ["number", "null"], 
+                        "fixedPrecision": 2
+                    }
+                }
+            }
+        </schema>
+        <json>[[3.14]]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>[1 NaN]</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": [{"type": "number"}, {"type": "null"}]
+            }
+        </schema>
+        <json>[1,null]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>From-till-value list</description>
+        <matlab>{"2016-01-01" "2016-01-31" 13}</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": [
+                    {"type": "string", "format": "date"},
+                    {"type": "string", "format": "date"},
+                    {"type": ["number", "null"] }
+                ]
+            }
+        </schema>
+        <json>["2016-01-01","2016-01-31",13]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>List of from-till-value lists</description>
+        <matlab>
+            {
+                {"2016-01-01" "2016-01-31" 13.13}
+                {"2016-02-01" "2016-02-29" 42.42}
+            }
+        </matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": [
+                        {"type": "string", "format": "date"},
+                        {"type": "string", "format": "date"},
+                        {"type": ["number", "null"] }
+                    ]
+                }
+            }
+        </schema>
+        <json>[["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]]</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>struct('foo', 1)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "foo": { "type": "array" }
+                }
+            }
+        </schema>
+        <json>{"foo":[1]}</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>struct('foo', 1)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "required": ["bar"]
+            }
+        </schema>
+        <json>{"foo":1}</json>
+        <errors>{'/' 'is missing required field bar' '{object}'}</errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>[1 2]</matlab>
+        <schema>
+            {
+                "type": "object"
+            }
+        </schema>
+        <json>{"foo":1}</json>
+        <errors>{'/' 'does not match type object' '[1 2]'}</errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>'foo'</matlab>
+        <schema>
+            {
+                "type": "number"
+            }</schema>
+        <json>"foo"</json>
+        <errors>{'/' 'does not match type number' 'foo'}</errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>true</matlab>
+        <schema>
+            {
+                "type": "number"
+            }
+        </schema>
+        <json>"foo"</json>
+        <errors>{'/' 'does not match type number' 'true'}</errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>'Hello'</matlab>
+        <schema>
+            {
+                "type": "string",
+                "pattern": "^\w+$"
+            }
+        </schema>
+        <json>"Hello"</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab>'Hello World'</matlab>
+        <schema>
+            {
+                "type": "string",
+                "pattern": "^\w+$"
+            }
+        </schema>
+        <json>"Hello World"</json>
+        <errors>{'/' 'does not match pattern ^\w+$' 'Hello World'}</errors>
+    </test>
+    <test>
+        <description>Date formater</description>
+        <matlab>struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02'))</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "myDate": { 
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "myDateTime": { 
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+        </schema>
+        <json>{"myDate":"2016-01-03","myDateTime":"2016-01-03T12:00:00Z"}</json>
+        <errors></errors>
+    </test>
+    <test>
+        <description>Comprehensive</description>
+        <matlab>
+            obj = struct('id', '4711');
+            obj.portfolio.index = 3;
+            obj.portfolio.value = 4.32;
+            obj.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});
+            obj.dealValues = [13.13 42.42];
+            obj;
+        </matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "portfolio": {
+                        "type": "object",
+                        "properties": {
+                            "index": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "value": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "deals": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "pattern": "^DEAL-[A-Z]+$"
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        </schema>
+        <json>
+            {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]}
+        </json>
+        <errors></errors>
+    </test>
+    <test>
+        <description></description>
+        <matlab></matlab>
+        <schema></schema>
+        <json></json>
+        <errors></errors>
+    </test>
+</tests>
