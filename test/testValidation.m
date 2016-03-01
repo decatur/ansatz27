@@ -1,15 +1,15 @@
-function markup = testErrors(description)
+function testValidation(description)
+
+fid = fopen ('../build/validation.md', 'w');
 
 function append(format, varargin)
-    markup = [markup sprintf(format, varargin{:}) sprintf('\n')];
+    fprintf(fid, [format '\n'], varargin{:});
 end
-
-markup = '';
 
 factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
 builder = factory.newDocumentBuilder();
 
-file = javaObject('java.io.File', 'testErrors.xml');
+file = javaObject('java.io.File', 'testValidation.xml');
 document = builder.parse(file);
 
 tests = document.getDocumentElement().getElementsByTagName('test');
@@ -55,5 +55,7 @@ for k=1:tests.getLength()
     end
 
 end
+
+fclose(fid);
 
 end

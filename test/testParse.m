@@ -1,5 +1,11 @@
 function testParse(description)
 
+fid = fopen ('../build/parse.md', 'w');
+
+function append(format, varargin)
+    fprintf(fid, [format '\n'], varargin{:});
+end
+
 factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
 builder = factory.newDocumentBuilder();
 
@@ -9,10 +15,8 @@ document = builder.parse(file);
 tests = document.getDocumentElement().getElementsByTagName('test');
 nl = @(text) strrep(text, sprintf('\n'), '<br/>');
 
-fprintf(1, '# Parsing Examples\n\n');
-
-fprintf(1, '| MATLAB <-|<- Schema <-|<- JSON |\n');
-fprintf(1, '|--------|--------|------|\n');
+append('| MATLAB <-|<- Schema <-|<- JSON |');
+append('|--------|--------|------|');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -32,8 +36,8 @@ for k=1:tests.getLength()
 
     [actual, errors] = JSON_Parser.parse(json, schema);
 
-    fprintf(1, '| %s |\n', desc);
-    fprintf(1, '| %s | %s | %s |\n', nl(code), nl(schema), nl(json));
+    append('| %s |', desc);
+    append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
 
     if ~isempty(errors)
         keyboard
@@ -47,4 +51,7 @@ for k=1:tests.getLength()
 
 end
 
-fprintf(1, '\n\n');
+
+fclose(fid);
+
+end

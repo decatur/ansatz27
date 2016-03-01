@@ -4,7 +4,18 @@ addpath('../lib');
 testRoundtrip();
 testStringify();
 testParse();
+testValidation();
 
-markup = testErrors();
+testMisc();
 
-%testMisc();
+% README.md must be ASCII!
+
+%readme = JSON_Handler.readFileToString('../README.md', 'latin1');
+%readme = strPartRep(readme, 'ROUNDTRIP', errorMarkup);
+%readme = strPartRep(readme, 'VALIDATION', errorMarkup);
+
+
+
+
+
+
