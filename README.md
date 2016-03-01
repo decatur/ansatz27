@@ -20,6 +20,8 @@ There are no dependencies.
 # Parser
 
 ## Usage
+
+[//]: # "Comment"
 ```
 [obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
 [obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', 'file:schema.json')
@@ -35,9 +37,9 @@ Object keys which are not valid MATLAB variable names are mapped, for example $r
 
 ## Usage
 ```
-[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
-[obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', 'file:schema.json')
 [obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', '{ "type": "object" }')
+[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
+
 ```
 
 # Formatter
@@ -108,20 +110,171 @@ JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 schema = JSON_Parser.parse('file:schema.json')
 ```
 
-# Examples
+# Roundtrip
 
-| MATLAB | Schema | JSON | Errors |
-|--------|--------|------|--------|
+[//]: # "ROUNDTRIP"
+
+| MATLAB | Schema | JSON |
+|--------|--------|------|
+| Comprehensive |
+| obj = struct('id', '4711');<br/>obj.portfolio.index = 3;<br/>obj.portfolio.value = 4.32;<br/>obj.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>obj.dealValues = [13.13 42.42];<br/>obj; | {<br/>"type": "object",<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"portfolio": {<br/>"type": "object",<br/>"properties": {<br/>"index": {<br/>"type": "integer",<br/>"minimum": 1<br/>},<br/>"value": {<br/>"type": "number"<br/>}<br/>}<br/>},<br/>"deals": {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"additionalProperties": false,<br/>"properties": {<br/>"name": {<br/>"type": "string",<br/>"pattern": "^DEAL-\\w+$"<br/>},<br/>"value": {<br/>"type": "number",<br/>"minimum": 0<br/>}<br/>}<br/>}<br/>}<br/>}<br/>} | {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]} |
+| Cell array |
+| {struct('foo', 1) struct('bar', 2)} | {<br/>"type": "array",<br/>"items": {<br/>"type": "object"<br/>}<br/>} | [{"foo":1},{"bar":2}] |
+| Structure array |
+| struct('foo', {1 2}, 'bar', {3 4}) | {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"additionalProperties": false<br/>}<br/>} | [{"foo":1,"bar":3},{"foo":2,"bar":4}] |
+| Array of strings |
+| {'foo'} |  | ["foo"] |
+| Scalar number |
+| 1 | {<br/>"type": "number",<br/>"enum": [1, 2]<br/>} | 1 |
+| Scalar boolean |
+| true | {<br/>"type": "boolean"<br/>} | true |
+| Null or NaN |
+| NaN | {<br/>"type": "null"<br/>} | null |
+| Single string with enumeration |
+| 'foo' | {<br/>"type": "string",<br/>"enum": ["bar", "foo"]<br/>} | "foo" |
+| Row vector |
+| [1 2] |  | [1,2] |
+| Mixed array |
+| {1, struct(), 2} | {<br/>"type": "array",<br/>"items": {"type": ["number", "object"]}<br/>} | [1,{},2] |
+| Row vector with NaN |
+| [1 NaN 2] | {<br/>"type": "array",<br/>"items": {<br/>"type": ["number", "null"]<br/>}<br/>} | [1,null,2] |
+| Matrix |
+| [ [1 2 NaN]; [4 -5 6] ] | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": {<br/>"type": ["number", "null"]<br/>}<br/>}<br/>} | [[1,2,null],[4,-5,6]] |
+
+
+[//]: # "ROUNDTRIP"
+
+
+# Validation
+
+[//]: # "VALIDATION"
+
+| MATLAB |  JSON  | Schema | Errors |
+|--------|--------|--------|--------|
+| Array with one string |
+| {'foo'} | ["foo"] | { "type": "object" } | {'/' 'does not match type object' '[array]'} |
+| Row vector with NaNs |
+| [NaN 1] | [null,1] | { "type": "array",<br/>    "items": [<br/>      { "type": "number" },<br/>      { "type": "null"}]<br/>  } | {'/1/' 'does not match type number' 'NaN'}<br/>  {'/2/' 'does not match type null' '1'} |
+| Foo1 |
+| struct('foo', 1) | {"foo":1} | {<br/>      "type": "object",<br/>      "required": ["bar"]<br/>  } | {'/' 'is missing required field bar' '{object}'} |
+| Foo2 |
+| [1 2] | [1, 2] | {<br/>      "type": "object"<br/>  } | {'/' 'does not match type object' '1  2'} |
+| Foo3 |
+| 'foo' | "foo" | {<br/>      "type": "number"<br/>  } | {'/' 'does not match type number' 'foo'} |
+| Foo4 |
+| true | true | {<br/>      "type": "number"<br/>  } | {'/' 'does not match type number' 'true'} |
+| Foo4 |
+| {'foo'} | ["foo"] | {<br/>      "type": "object"<br/>  } | {'/' 'does not match type object' '[array]'} |
+| Foo6 |
+| 'Hello World' | "Hello World" | {<br/>      "type": "string",<br/>      "pattern": "^\\w+$"<br/>  } | {'/' 'does not match pattern ^\w+$' 'Hello World'} |
+| Foo6 |
+| 'Hello World' | "Hello World" | {<br/>      "type": "string",<br/>      "enum": ["foo", "bar"]<br/>  } | {'/' 'is not contained in enumeration' 'Hello World'} |
+| Foo6 |
+| 4711 | 4711 | {<br/>      "type": "integer",<br/>      "enum": [1, 2, 3, 4]<br/>  } | {'/' 'is not contained in enumeration' '4711'} |
+
+
+[//]: # "VALIDATION"
+
+# Parse
+
+[//]: # "PARSE"
+
+| MATLAB <-|<- Schema <-|<- JSON |
+|--------|--------|------|
+| Structure array |
+| {'foo'} |  | ["foo"] |
+
+
+[//]: # "PARSE"
+
+# Stringify
+
+[//]: # "STRINGIFY"
+
+| MATLAB | Schema | JSON |
+|--------|--------|------|
 | Simple object |
-| struct('foo', 'bar') |  | {"foo":"bar"} |  || Array with one string |
-| {'foo'} | { "type": "object" } | ["foo"] | / $ does not match type object $ [array] || Empty object |
-| struct() | { "type": "object", "properties": {} } | {} |  || Empty object |
-| struct() |  | {} |  || Structure array |
-| struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |  || Row vector |
-| [1 2] |  | [1,2] |  || Matrix 2x2 |
-| [1 2;3 4] |  | [[1,2],[3,4]] |  || Column vector |
-| [1; 2] |  | [[1],[2]] |  || Row vector with NaNs |
-| [NaN 1] | { "type": "array",<br/>  "items": [{ "type": "number" }, { "type": "null"}]<br/>} | [null,1] | /1/ $ does not match type number $ NaN<br/>/2/ $ does not match typenull $ 1 |
+
+| struct('foo', 'bar') |  | {"foo":"bar"} |
+| Empty object, no schema |
+
+| struct() |  | {} |
+| Empty object |
+
+| struct() | { "type": "object", "properties": {} } | {} |
+| Cell array |
+
+| {struct('foo',1) struct('foo',2)} |  | [{"foo":1},{"foo":2}] |
+| Structure array |
+
+| struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |
+| Row vector |
+
+| [1 2] |  | [1,2] |
+| Matrix 2x2 |
+
+| [1 2;3 4] |  | [[1,2],[3,4]] |
+| Column vector |
+
+| [1; 2] |  | [[1],[2]] |
+| Array of strings |
+
+| {'foo' 'bar'} |  | ["foo","bar"] |
+| Single number |
+
+| 1 |  | 1 |
+| Single boolean |
+
+| true |  | true |
+| Single string |
+
+| 'Hello World' |  | "Hello World" |
+| Treatment of Inf |
+
+| Inf |  | null |
+| Treatment of special numbers |
+
+| [1 Inf -Inf NaN 2] |  | [1,null,null,null,2] |
+| Boolean array |
+
+| [true false] |  | [true,false] |
+| Hint array |
+
+| 1 | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1] |
+| Hint array of arrays |
+
+| 1 | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": { "type": ["number", "null"] }<br/>}<br/>} | [[1]] |
+| Empty array |
+
+| [] | { "type": ["array", "null"] } | [] |
+| Empty array |
+
+| [] | { "type": ["null", "array"] } | null |
+| 3D matrix |
+
+| m = NaN(2,2,2);<br/>m(1,:,:) = [1 2; 3 4];<br/>m(2,:,:) = [5 6; 7 8];<br/>m; |  | [[[1,2],[3,4]],[[5,6],[7,8]]] |
+| Fixed precision |
+
+| pi | {<br/>"type": "number",<br/>"fixedPrecision": 2<br/>} | 3.14 |
+| Array of arrays with fixed precision |
+
+| pi | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": {<br/>"type": ["number", "null"], <br/>"fixedPrecision": 2<br/>}<br/>}<br/>} | [[3.14]] |
+| From-till-value list |
+
+| {"2016-01-01" "2016-01-31" 13} | {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>} | ["2016-01-01","2016-01-31",13] |
+| List of from-till-value lists |
+
+| {<br/>{"2016-01-01" "2016-01-31" 13.13}<br/>{"2016-02-01" "2016-02-29" 42.42}<br/>} | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>}<br/>} | [["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]] |
+| Date formater |
+
+| struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02')) | {<br/>"type": "object",<br/>"properties": {<br/>"myDate": { <br/>"type": "string",<br/>"format": "date"<br/>},<br/>"myDateTime": { <br/>"type": "string",<br/>"format": "date-time"<br/>}<br/>}<br/>} | {"myDate":"2016-01-03","myDateTime":"2016-01-03T12:00:00+0100"} |
+| Comprehensive |
+
+| obj = struct('id', '4711');<br/>obj.portfolio.index = 3;<br/>obj.portfolio.value = 4.32;<br/>obj.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>obj.dealValues = [13.13 42.42];<br/>obj; | {<br/>"type": "object",<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"portfolio": {<br/>"type": "object",<br/>"properties": {<br/>"index": {<br/>"type": "integer",<br/>"minimum": 1<br/>},<br/>"value": {<br/>"type": "number"<br/>}<br/>}<br/>},<br/>"deals": {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"properties": {<br/>"name": {<br/>"type": "string",<br/>"pattern": "^DEAL-[A-Z]+$"<br/>},<br/>"value": {<br/>"type": "number",<br/>"minimum": 0<br/>}<br/>}<br/>}<br/>}<br/>}<br/>} | {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]} |
+
+
+[//]: # "STRINGIFY"
+
 
 # Octave Limitations
 Encoding of files
