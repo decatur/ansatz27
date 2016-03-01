@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tests>
+    <test>
+        <description>Comprehensive</description>
+        <matlab>
+            obj = struct('id', '4711');
+            obj.portfolio.index = 3;
+            obj.portfolio.value = 4.32;
+            obj.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});
+            obj.dealValues = [13.13 42.42];
+            obj;
+        </matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "portfolio": {
+                        "type": "object",
+                        "properties": {
+                            "index": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "value": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "deals": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "pattern": "^DEAL-\\w+$"
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        </schema>
+        <json>
+            {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]}
+        </json>
+    </test>
+    <test>
+        <description>Cell array</description>
+        <matlab>{struct('foo', 1) struct('bar', 2)}</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "object"
+                }
+            }
+        </schema>
+        <json>[{"foo":1},{"bar":2}]</json>
+    </test>
+    <test>
+        <description>Structure array</description>
+        <matlab>struct('foo', {1 2}, 'bar', {3 4})</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "additionalProperties": false
+                }
+            }
+        </schema>
+        <json>[{"foo":1,"bar":3},{"foo":2,"bar":4}]</json>
+    </test>
+    <test>
+        <description>Array of strings</description>
+        <matlab>{'foo'}</matlab>
+        <schema></schema>
+        <json>["foo"]</json>
+    </test>
+    <test>
+        <description>Scalar number</description>
+        <matlab>1</matlab>
+        <schema>
+            {
+                "type": "number",
+                "enum": [1, 2]
+            }
+        </schema>
+        <json>1</json>
+    </test>
+    <test>
+        <description>Scalar boolean</description>
+        <matlab>true</matlab>
+        <schema>
+            {
+                "type": "boolean"
+            }
+        </schema>
+        <json>true</json>
+    </test>
+    <test>
+        <description>Null or NaN</description>
+        <matlab>NaN</matlab>
+        <schema>
+            {
+                "type": "null"
+            }
+        </schema>
+        <json>null</json>
+    </test>
+    <test>
+        <description>Single string with enumeration</description>
+        <matlab>'foo'</matlab>
+        <schema>
+            {
+                "type": "string",
+                "enum": ["bar", "foo"]
+            }
+        </schema>
+        <json>"foo"</json>
+    </test>
+    <test>
+        <description>Row vector</description>
+        <matlab>[1 2]</matlab>
+        <schema></schema>
+        <json>[1,2]</json>
+    </test>
+    <test>
+        <description>Mixed array</description>
+        <matlab>{1, struct(), 2}</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {"type": ["number", "object"]}
+            }
+        </schema>
+        <json>[1,{},2]</json>
+    </test>
+    <test>
+        <description>Row vector with NaN</description>
+        <matlab>[1 NaN 2]</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": ["number", "null"]
+                }
+            }
+        </schema>
+        <json>[1,null,2]</json>
+    </test>
+    <test>
+        <description>Matrix</description>
+        <matlab>[ [1 2 NaN]; [4 -5 6] ]</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": ["number", "null"]
+                    }
+                }
+            }
+        </schema>
+        <json>[[1,2,null],[4,-5,6]]</json>
+    </test>
+    <test>
+        <description></description>
+        <matlab></matlab>
+        <schema></schema>
+        <json></json>
+    </test>
+    <test>
+        <description></description>
+        <matlab></matlab>
+        <schema></schema>
+        <json></json>
+    </test>
+</tests>

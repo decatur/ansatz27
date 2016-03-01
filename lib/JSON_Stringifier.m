@@ -116,14 +116,6 @@ classdef JSON_Stringifier < JSON_Handler
     
     methods (Access=private)
         
-        function schema = childSchema(this, schema, key)
-            if ~isempty(schema) && strcmp(schema.type, 'object') && isfield(schema, 'properties') && isfield(schema.properties, key)
-                schema = schema.properties.(key);
-            else
-                schema = [];
-            end
-        end
-        
         function pType = validate_(this, value, schema, path)
             pType = validate(this, value, schema, path);
         end
@@ -217,7 +209,7 @@ classdef JSON_Stringifier < JSON_Handler
             for k=1:l
                 key = names{k};
                 context.path = [path key '/'];
-                item_str = this.value2json(value.(key), context, this.childSchema(schema, key));
+                item_str = this.value2json(value.(key), context, this.getChildSchema(schema, key));
                 if isempty(item_str)
                     continue;
                 end

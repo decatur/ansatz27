@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tests>
+    <test>
+        <description>Array with one string</description>
+        <matlab>{'foo'}</matlab>
+        <schema>{ "type": "object" }</schema>
+        <json>["foo"]</json>
+        <errors>{'/' 'does not match type object' '[array]'}</errors>
+    </test>
+    <test>
+        <description>Row vector with NaNs</description>
+        <matlab>[NaN 1]</matlab>
+        <schema>
+            { "type": "array",
+              "items": [
+                { "type": "number" },
+                { "type": "null"}]
+            }
+        </schema>
+        <json>[null,1]</json>
+        <errors>
+            {'/1/' 'does not match type number' 'NaN'}
+            {'/2/' 'does not match type null' '1'}
+        </errors>
+    </test>
+    <test>
+        <description>Foo1</description>
+        <matlab>struct('foo', 1)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "required": ["bar"]
+            }
+        </schema>
+        <json>{"foo":1}</json>
+        <errors>{'/' 'is missing required field bar' '{object}'}</errors>
+    </test>
+    <test>
+        <description>Foo2</description>
+        <matlab>[1 2]</matlab>
+        <schema>
+            {
+                "type": "object"
+            }
+        </schema>
+        <json>[1, 2]</json>
+        <errors>{'/' 'does not match type object' '1  2'}</errors>
+    </test>
+    <test>
+        <description>Foo3</description>
+        <matlab>'foo'</matlab>
+        <schema>
+            {
+                "type": "number"
+            }</schema>
+        <json>"foo"</json>
+        <errors>{'/' 'does not match type number' 'foo'}</errors>
+    </test>
+    <test>
+        <description>Foo4</description>
+        <matlab>true</matlab>
+        <schema>
+            {
+                "type": "number"
+            }
+        </schema>
+        <json>true</json>
+        <errors>{'/' 'does not match type number' 'true'}</errors>
+    </test>
+    <test>
+        <description>Foo4</description>
+        <matlab>{'foo'}</matlab>
+        <schema>
+            {
+                "type": "object"
+            }
+        </schema>
+        <json>["foo"]</json>
+        <errors>{'/' 'does not match type object' '[array]'}</errors>
+    </test>
+    <test>
+        <description>Foo6</description>
+        <matlab>'Hello World'</matlab>
+        <schema>
+            {
+                "type": "string",
+                "pattern": "^\\w+$"
+            }
+        </schema>
+        <json>"Hello World"</json>
+        <errors>{'/' 'does not match pattern ^\w+$' 'Hello World'}</errors>
+    </test>
+    <test>
+        <description>Foo6</description>
+        <matlab>'Hello World'</matlab>
+        <schema>
+            {
+                "type": "string",
+                "enum": ["foo", "bar"]
+            }
+        </schema>
+        <json>"Hello World"</json>
+        <errors>{'/' 'is not contained in enumeration' 'Hello World'}</errors>
+    </test>
+    <test>
+        <description>Foo6</description>
+        <matlab>4711</matlab>
+        <schema>
+            {
+                "type": "integer",
+                "enum": [1, 2, 3, 4]
+            }
+        </schema>
+        <json>4711</json>
+        <errors>{'/' 'is not contained in enumeration' '4711'}</errors>
+    </test>
+</tests>

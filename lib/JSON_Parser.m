@@ -59,7 +59,7 @@ classdef JSON_Parser < JSON_Handler
             context.path = '/';;
             this.schemaURL = [];
 
-            if ischar(rootschema) 
+            if ~isempty(rootschema) && ischar(rootschema) 
                 [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
             elseif isstruct(rootschema)
                 context.schema = rootschema;
@@ -78,6 +78,7 @@ classdef JSON_Parser < JSON_Handler
             
             this.skip_whitespace();
             holder = StructHolder();
+
             this.parse_value(holder, [], 'value', context);
             this.skip_whitespace();
             
@@ -106,18 +107,7 @@ classdef JSON_Parser < JSON_Handler
                 return
             end
 
-            schema = context.schema;
-
-            if strcmp(getPath(schema, 'type'), 'object')
-                child.schema = getPath(schema, ['properties/' num2str(key)]);
-            else
-                items = getPath(schema, 'items');
-                if isstruct(items)
-                    child.schema = items;
-                elseif iscell(items)
-                    child.schema = items{key};
-                end
-            end
+            child.schema = this.getChildSchema(context.schema, key);
         end
         
         
@@ -313,11 +303,10 @@ classdef JSON_Parser < JSON_Handler
                 case '"'
                     val = this.parseStr(context);
                 case '['
-                    pType = 'array';
-                    itemSchema = getPath(schema, 'items');
-                    itemType = getPath(itemSchema, 'type');
+                    items = getPath(schema, 'items');
+                    itemType = getPath(items, 'type');
 
-                    if strcmp(itemType, 'object')
+                    if ~isempty(itemType) && ismember('object', itemType) && getPath(items, 'additionalProperties') == false
                         c = StructArrayHolder();
                     else
                         c = CellArrayHolder();
@@ -353,7 +342,7 @@ classdef JSON_Parser < JSON_Handler
                     end
                 case 'n'
                     if this.parse_null()
-                        val = [];
+                        val = NaN;
                     else
                         this.error_pos('Token null expected');
                     end

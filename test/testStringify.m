@@ -1,19 +1,16 @@
 function testStringify(description)
 
-%clear classes;
-%addpath('../lib');
-
-factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory')
+factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
 builder = factory.newDocumentBuilder();
-
-file = javaObject('java.io.File', 'stringify.xml')
+file = javaObject('java.io.File', 'testStringify.xml');
 document = builder.parse(file);
 
-tests = document.getChildNodes().item(0).getElementsByTagName('test');
+tests = document.getDocumentElement().getElementsByTagName('test');
+nl = @(text) strrep(text, sprintf('\n'), '<br/>');
 
 
-fprintf(1, '| MATLAB | Schema | JSON | Errors |\n');
-fprintf(1, '|--------|--------|------|--------|\n');
+fprintf(1, '| MATLAB | Schema | JSON |\n');
+fprintf(1, '|--------|--------|------|\n');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -28,28 +25,18 @@ for k=1:tests.getLength()
     code = getElem('matlab');
     schema = getElem('schema');
     json = getElem('json');
-    errorText = getElem('errors');
-
-    expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
     [jsonOut, errors] = JSON_Stringifier.stringify(eval(code), schema, 0);
 
     fprintf(1, '| %s |\n', desc);
-    fprintf(1, '| %s | %s | %s | %s |\n', strrep(code, sprintf('\n'), '<br/>'), strrep(schema, sprintf('\n'), '<br/>'), strrep(json, sprintf('\n'), '<br/>'), strrep(errorText, sprintf('\n'), '<br/>'));
+    fprintf(1, '| %s | %s | %s |\n', nl(code), nl(schema), nl(json));
 
-    if isempty(errors)
-        errors = {};
-    end
+    assert(isempty(errors));
 
     if ~strcmp(json, jsonOut)
         keyboard
         fprintf(1, 'Expected: %s\n', json);
         fprintf(1, 'Actual: %s\n', jsonOut);
-    end
-
-    if ~isequal(expectedErrors, errors)
-        celldisp(expectedErrors);
-        celldisp(errors);
     end
 
 end

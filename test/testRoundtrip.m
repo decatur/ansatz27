@@ -1,17 +1,16 @@
-function testParse(description)
+function testRoundtrip(description)
+
 
 factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
 builder = factory.newDocumentBuilder();
 
-file = javaObject('java.io.File', 'testParse.xml');
+file = javaObject('java.io.File', 'testRoundtrip.xml');
 document = builder.parse(file);
 
 tests = document.getDocumentElement().getElementsByTagName('test');
 nl = @(text) strrep(text, sprintf('\n'), '<br/>');
 
-fprintf(1, '# Parsing Examples\n\n');
-
-fprintf(1, '| MATLAB <-|<- Schema <-|<- JSON |\n');
+fprintf(1, '| MATLAB | Schema | JSON |\n');
 fprintf(1, '|--------|--------|------|\n');
 
 for k=1:tests.getLength()
@@ -26,22 +25,33 @@ for k=1:tests.getLength()
 
     code = getElem('matlab');
     schema = getElem('schema');
-    json = getElem('json')
-
-    expected = eval(code);
-
-    [actual, errors] = JSON_Parser.parse(json, schema);
+    json = getElem('json');
 
     fprintf(1, '| %s |\n', desc);
     fprintf(1, '| %s | %s | %s |\n', nl(code), nl(schema), nl(json));
 
+    obj = eval(code);
+    [jsonOut, errors] = JSON_Stringifier.stringify(obj, schema, 0);
     if ~isempty(errors)
+        errors
+        keyboard;
+    end
+
+    if ~strcmp(json, jsonOut)
+        fprintf(1, 'Expected: %s\n', json);
+        fprintf(1, 'Actual: %s\n', jsonOut);
         keyboard
     end
 
-    if ~isequal(expected, actual)
-        expected
-        actual
+    [objOut, errors] = JSON_Parser.parse(json, schema);
+    if ~isempty(errors)
+        errors
+        keyboard;
+    end
+
+    if ~isequaln(obj, objOut)
+        obj
+        objOut
         keyboard
     end
 

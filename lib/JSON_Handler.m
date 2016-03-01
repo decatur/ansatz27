@@ -59,6 +59,27 @@ classdef JSON_Handler < handle
             end
             this.errors{end+1} = {path msg value};
         end
+        
+        function childSchema = getChildSchema(this, schema, key)
+            childSchema = [];
+
+            if isempty(schema)
+                return;
+            end
+            
+            if ischar(key)
+                if ismember('object', getPath(schema, 'type'))
+                    childSchema = getPath(schema, ['properties/' key]);
+                end
+            elseif isnumeric(key)
+                items = getPath(schema, 'items');
+                if isstruct(items)
+                    childSchema = items;
+                elseif iscell(items)
+                    childSchema = items{key};
+                end
+            end
+        end
 
         function schema = normalizeSchema(this, schema, path)
         %normalizeSchema recursively descends the schema and resolves allOf references.
@@ -109,14 +130,11 @@ classdef JSON_Handler < handle
                     end
                 end
             elseif any(ismember({'number' 'integer'}, type))
-                if isfield(schema, 'enum')
-                    if all(cellfun(@isnumeric, schema.enum))
-                        schema.enum = cell2mat(schema.enum);
-                    else
-                        schema = rmfield(schema, 'enum');
-                        error('Invalid enum at %s');
-                    end
-                end
+                %if isfield(schema, 'enum') && iscell(schema.enum)
+                %    if all(cellfun(@isnumeric, schema.enum))
+                %        schema.enum = cell2mat(schema.enum);
+                %    end
+                %end
             end
 
         end
@@ -184,7 +202,16 @@ classdef JSON_Handler < handle
                 return;
             end
 
-            s = datestr(n, 'yyyy-mm-ddTHH:MM:SSZ');
+            javaDate = javaObject('java.util.Date');
+            offsetInMinutes = javaDate.getTimezoneOffset();
+            if offsetInMinutes < 0
+                sign = '+';
+                offsetInMinutes = -offsetInMinutes;
+            else
+                sign = '-';
+            end
+
+            s = [datestr(n, 'yyyy-mm-ddTHH:MM:SS') sprintf('%s%.2i%.2i', sign, fix(offsetInMinutes/60), rem(offsetInMinutes, 60))];
         end
 
         function d = datestring2num(s)
@@ -249,6 +276,9 @@ classdef JSON_Handler < handle
                 end
             end
 
+            javaDate = javaObject('java.util.Date');
+            offset = offset - javaDate.getTimezoneOffset();
+            
             % Note: minutes in access to 60 are rolled over to hours by datenum().
             d = datenum(y, m, d, h, mi + offset, sec);
         end
