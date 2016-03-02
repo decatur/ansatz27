@@ -40,11 +40,10 @@ classdef JSON_Handler < handle
 
         function rootDir = getRootDir(this)
             if isempty(this.schemaURL)
-                % TODO: We need a file url in order to load sub-schemas from the
-                % same location!
-                error('rootschema must be a url to a schema');
+                rootDir = '.';
+            else
+                rootDir = fileparts(this.schemaURL);
             end
-            rootDir = fileparts(this.schemaURL);
         end
 
         function addError(this, path, msg, value)
@@ -94,6 +93,10 @@ classdef JSON_Handler < handle
 
             if isfield(schema, 'allOf')
                 schema = this.mergeSchemas(schema);
+            end
+
+            if isfield(schema, 'x_ref')
+                schema = JSON_Parser.parse(JSON_Handler.readFileToString( fullfile(this.getRootDir(), schema.x_ref), 'latin1' ));
             end
 
             if ~isfield(schema, 'type') || isempty(schema.type)

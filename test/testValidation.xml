@@ -114,4 +114,20 @@
         <json>4711</json>
         <errors>{'/' 'is not contained in enumeration' '4711'}</errors>
     </test>
+    <test>
+        <description>External Schema</description>
+        <matlab>struct('id', '4711', 'bar', 2)</matlab>
+        <schema>
+            {
+                "$ref": "schema2.json"
+            }
+        </schema>
+        <json>
+            {
+                "id":"4711",
+                "bar":2
+            }
+        </json>
+        <errors>{'/bar/' 'does not match type string' '2'}</errors>
+    </test>
 </tests>

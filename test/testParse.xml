@@ -7,27 +7,18 @@
         <json>["foo"]</json>
     </test>
     <test>
-        <description></description>
-        <matlab></matlab>
-        <schema></schema>
-        <json></json>
-    </test>
-    <test>
-        <description></description>
-        <matlab></matlab>
-        <schema></schema>
-        <json></json>
-    </test>
-    <test>
-        <description></description>
-        <matlab></matlab>
-        <schema></schema>
-        <json></json>
-    </test>
-    <test>
-        <description></description>
-        <matlab></matlab>
-        <schema></schema>
-        <json></json>
+        <description>AllOf</description>
+        <matlab>struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL')</matlab>
+        <schema>
+            {
+                "$ref": "schema2.json"
+            }
+        </schema>
+        <json>
+            {
+                "id":"4711",
+                "foo":2
+            }
+        </json>
     </test>
 </tests>

@@ -32,7 +32,13 @@ for k=1:tests.getLength()
     schema = getElem('schema');
     json = getElem('json');
 
-    [jsonOut, errors] = JSON_Stringifier.stringify(evalin('base', code), schema, 0);
+    if isempty(regexp(code, '^a\s*='))
+        a = eval(code);
+    else
+        eval(code);
+    end
+
+    [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
 
     append('| %s |', desc);
     append('| %s | %s | %s |', nl(code), nl(schema), nl(json));

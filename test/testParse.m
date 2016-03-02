@@ -24,15 +24,21 @@ for k=1:tests.getLength()
     getElem = @(tagName) strrep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), repmat(' ', 1, 12), '');
 
     desc = getElem('description');
-    if isempty(desc) || (nargin >= 1 && ~strcmp(desc, description))
+    if nargin >= 1 && ~strcmp(desc, description)
         continue;
     end
 
     code = getElem('matlab');
     schema = getElem('schema');
-    json = getElem('json')
+    json = getElem('json');
 
-    expected = eval(code);
+    if isempty(regexp(code, '^a\s*='))
+        a = eval(code);
+    else
+        eval(code);
+    end
+
+    expected = a;
 
     [actual, errors] = JSON_Parser.parse(json, schema);
 
@@ -40,13 +46,12 @@ for k=1:tests.getLength()
     append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
 
     if ~isempty(errors)
-        keyboard
+        errors
     end
 
     if ~isequal(expected, actual)
         expected
         actual
-        keyboard
     end
 
 end

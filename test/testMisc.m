@@ -28,7 +28,7 @@ end
 
 %%% Comprehensive Tests
 
-[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json');
+[obj, errors] = JSON_Parser.parse('file:document.json', 'file:schema.json');
 
 assert(isempty(obj.foo))
 assert(obj.date == 736355)

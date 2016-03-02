@@ -24,40 +24,45 @@ for k=1:tests.getLength()
     getElem = @(tagName) strrep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), repmat(' ', 1, 12), '');
 
     desc = getElem('description');
-    if isempty(desc) || (nargin >= 1 && ~strcmp(desc, description))
+    if nargin >= 1 && ~strcmp(desc, description)
         continue;
     end
 
+    fprintf(1, '\n%s', desc);
+
     code = getElem('matlab');
     schema = getElem('schema');
-    json = getElem('json');
+    json = regexprep(getElem('json'), '\s', '');
 
     append('| %s |', desc);
     append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
 
-    obj = eval(code);
-    [jsonOut, errors] = JSON_Stringifier.stringify(obj, schema, 0);
+    if isempty(regexp(code, '^a\s*='))
+        a = eval(code);
+    else
+        eval(code);
+    end
+
+    fprintf(1, ' stringify ... ');
+    [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
     if ~isempty(errors)
         errors
-        keyboard;
     end
 
     if ~strcmp(json, jsonOut)
         fprintf(1, 'Expected: %s\n', json);
         fprintf(1, 'Actual: %s\n', jsonOut);
-        keyboard
     end
 
+    fprintf(1, ' parse ... ');
     [objOut, errors] = JSON_Parser.parse(json, schema);
     if ~isempty(errors)
         errors
-        keyboard;
     end
 
-    if ~isequaln(obj, objOut)
-        obj
+    if ~isequaln(a, objOut)
+        a
         objOut
-        keyboard
     end
 
 end

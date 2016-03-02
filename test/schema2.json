@@ -1,10 +1,9 @@
 {
     "type": "object",
-    "required": ["ID"],
     "properties": {
-        "foo": {
+        "bar": {
             "type": "string",
-            "default": ""
+            "default": "DEF_VAL"
         }
     }
 }

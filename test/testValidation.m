@@ -38,7 +38,13 @@ for k=1:tests.getLength()
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
-    [jsonOut, errors] = JSON_Stringifier.stringify(eval(code), schema, 0);
+    if isempty(regexp(code, '^a\s*='))
+        a = eval(code);
+    else
+        eval(code);
+    end
+
+    [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
 
     if ~isequal(expectedErrors, errors)
         fprintf(1, 'stringify\n');
