@@ -117,7 +117,9 @@ schema = JSON_Parser.parse('file:schema.json')
 | MATLAB | Schema | JSON |
 |--------|--------|------|
 | Comprehensive |
-| obj = struct('id', '4711');<br/>obj.portfolio.index = 3;<br/>obj.portfolio.value = 4.32;<br/>obj.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>obj.dealValues = [13.13 42.42];<br/>obj; | {<br/>"type": "object",<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"portfolio": {<br/>"type": "object",<br/>"properties": {<br/>"index": {<br/>"type": "integer",<br/>"minimum": 1<br/>},<br/>"value": {<br/>"type": "number"<br/>}<br/>}<br/>},<br/>"deals": {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"additionalProperties": false,<br/>"properties": {<br/>"name": {<br/>"type": "string",<br/>"pattern": "^DEAL-\\w+$"<br/>},<br/>"value": {<br/>"type": "number",<br/>"minimum": 0<br/>}<br/>}<br/>}<br/>}<br/>}<br/>} | {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]} |
+| a = struct('id', '4711');<br/>a.portfolio.index = 3;<br/>a.portfolio.value = 4.32;<br/>a.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>a.dealValues = [13.13 42.42]; | {<br/>"type": "object",<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"portfolio": {<br/>"type": "object",<br/>"properties": {<br/>"index": {<br/>"type": "integer",<br/>"minimum": 1<br/>},<br/>"value": {<br/>"type": "number"<br/>}<br/>}<br/>},<br/>"deals": {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"additionalProperties": false,<br/>"properties": {<br/>"name": {<br/>"type": "string",<br/>"pattern": "^DEAL-\\w+$"<br/>},<br/>"value": {<br/>"type": "number",<br/>"minimum": 0<br/>}<br/>}<br/>}<br/>}<br/>}<br/>} | {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]} |
+| AllOf |
+| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>"allOf": [<br/>{<br/>"$ref": "schema2.json"<br/>},<br/>{<br/>"type": "object",<br/>"required": ["id"],<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"foo": {<br/>"type": "number"<br/>}<br/>}<br/>}<br/>]<br/>} | {"id":"4711","foo":2,"bar":"DEF_VAL"} |
 | Cell array |
 | {struct('foo', 1) struct('bar', 2)} | {<br/>"type": "array",<br/>"items": {<br/>"type": "object"<br/>}<br/>} | [{"foo":1},{"bar":2}] |
 | Structure array |
@@ -140,6 +142,56 @@ schema = JSON_Parser.parse('file:schema.json')
 | [1 NaN 2] | {<br/>"type": "array",<br/>"items": {<br/>"type": ["number", "null"]<br/>}<br/>} | [1,null,2] |
 | Matrix |
 | [ [1 2 NaN]; [4 -5 6] ] | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": {<br/>"type": ["number", "null"]<br/>}<br/>}<br/>} | [[1,2,null],[4,-5,6]] |
+| Simple object |
+| struct('foo', 'bar') |  | {"foo":"bar"} |
+| Empty object, no schema |
+| struct() |  | {} |
+| Empty object |
+| struct() | { "type": "object", "properties": {} } | {} |
+| Cell array |
+| {struct('foo',1) struct('foo',2)} |  | [{"foo":1},{"foo":2}] |
+| Row vector (Fragile) |
+| [1 2] |  | [1,2] |
+| Matrix 2x2 (Fragile) |
+| [1 2;3 4] |  | [[1,2],[3,4]] |
+| :x: Column vector (Fragile) |
+| [1; 2] |  | [[1],[2]] |
+| Array of strings |
+| {'foo' 'bar'} |  | ["foo","bar"] |
+| Single number |
+| 1 |  | 1 |
+| Single boolean |
+| true |  | true |
+| Single string |
+| 'Hello-World' |  | "Hello-World" |
+| Single boolean |
+| true |  | true |
+| Single boolean |
+| false |  | false |
+| :x: Boolean array (Fragile) |
+| [true false] |  | [true,false] |
+| Hint array |
+| 1 | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1] |
+| Hint array of arrays |
+| 1 | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": { "type": ["number", "null"] }<br/>}<br/>} | [[1]] |
+| Foo |
+| [1 NaN 2] | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1,null,2] |
+| Empty array |
+| [] | { "type": ["array", "null"] } | [] |
+| :x: 3D matrix |
+| a = NaN(2,2,2);<br/>a(1,:,:) = [1 2; 3 4];<br/>a(2,:,:) = [5 6; 7 8]; |  | [[[1,2],[3,4]],[[5,6],[7,8]]] |
+| Foo |
+| [1 NaN] | {<br/>"type": "array",<br/>"items": [{"type": "number"}, {"type": "null"}]<br/>} | [1,null] |
+| From-till-value list |
+| [datenum("2016-01-01") datenum("2016-01-31") 13] | {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>} | ["2016-01-01","2016-01-31",13] |
+| List of from-till-value lists |
+| [<br/>[datenum("2016-01-01") datenum("2016-01-31") 13.13]<br/>[datenum("2016-02-01") datenum("2016-02-29") 42.42]<br/>] | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>}<br/>} | [["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]] |
+| Foo |
+| struct('foo', 1) | {<br/>"type": "object",<br/>"properties": {<br/>"foo": { "type": "array" }<br/>}<br/>} | {"foo":[1]} |
+| Foo |
+| 'Hello' | {<br/>"type": "string",<br/>"pattern": "^\\w+$"<br/>} | "Hello" |
+| Date formater |
+| struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02')) | {<br/>"type": "object",<br/>"properties": {<br/>"myDate": { <br/>"type": "string",<br/>"format": "date"<br/>},<br/>"myDateTime": { <br/>"type": "string",<br/>"format": "date-time"<br/>}<br/>}<br/>} | {"myDate":"2016-01-03","myDateTime":"2016-01-03T12:00:00+0100"} |
 
 
 [//]: # "ROUNDTRIP"
@@ -171,6 +223,8 @@ schema = JSON_Parser.parse('file:schema.json')
 | 'Hello World' | "Hello World" | {<br/>      "type": "string",<br/>      "enum": ["foo", "bar"]<br/>  } | {'/' 'is not contained in enumeration' 'Hello World'} |
 | Foo6 |
 | 4711 | 4711 | {<br/>      "type": "integer",<br/>      "enum": [1, 2, 3, 4]<br/>  } | {'/' 'is not contained in enumeration' '4711'} |
+| External Schema |
+| struct('id', '4711', 'bar', 2) | {<br/>      "id":"4711",<br/>      "bar":2<br/>  } | {<br/>      "$ref": "schema2.json"<br/>  } | {'/bar/' 'does not match type string' '2'} |
 
 
 [//]: # "VALIDATION"
@@ -183,6 +237,8 @@ schema = JSON_Parser.parse('file:schema.json')
 |--------|--------|------|
 | Structure array |
 | {'foo'} |  | ["foo"] |
+| AllOf |
+| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>"$ref": "schema2.json"<br/>} | {<br/>"id":"4711",<br/>"foo":2<br/>} |
 
 
 [//]: # "PARSE"
@@ -193,88 +249,27 @@ schema = JSON_Parser.parse('file:schema.json')
 
 | MATLAB | Schema | JSON |
 |--------|--------|------|
-| Simple object |
-
-| struct('foo', 'bar') |  | {"foo":"bar"} |
-| Empty object, no schema |
-
-| struct() |  | {} |
-| Empty object |
-
-| struct() | { "type": "object", "properties": {} } | {} |
-| Cell array |
-
-| {struct('foo',1) struct('foo',2)} |  | [{"foo":1},{"foo":2}] |
 | Structure array |
-
 | struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |
-| Row vector |
-
-| [1 2] |  | [1,2] |
-| Matrix 2x2 |
-
-| [1 2;3 4] |  | [[1,2],[3,4]] |
-| Column vector |
-
-| [1; 2] |  | [[1],[2]] |
-| Array of strings |
-
-| {'foo' 'bar'} |  | ["foo","bar"] |
-| Single number |
-
-| 1 |  | 1 |
-| Single boolean |
-
-| true |  | true |
-| Single string |
-
-| 'Hello World' |  | "Hello World" |
 | Treatment of Inf |
-
 | Inf |  | null |
 | Treatment of special numbers |
-
 | [1 Inf -Inf NaN 2] |  | [1,null,null,null,2] |
-| Boolean array |
-
-| [true false] |  | [true,false] |
-| Hint array |
-
-| 1 | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1] |
-| Hint array of arrays |
-
-| 1 | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": { "type": ["number", "null"] }<br/>}<br/>} | [[1]] |
-| Empty array |
-
-| [] | { "type": ["array", "null"] } | [] |
-| Empty array |
-
-| [] | { "type": ["null", "array"] } | null |
-| 3D matrix |
-
-| m = NaN(2,2,2);<br/>m(1,:,:) = [1 2; 3 4];<br/>m(2,:,:) = [5 6; 7 8];<br/>m; |  | [[[1,2],[3,4]],[[5,6],[7,8]]] |
+| Foo |
+| [1 NaN Inf -Inf 2] | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1,null,null,null,2] |
 | Fixed precision |
-
 | pi | {<br/>"type": "number",<br/>"fixedPrecision": 2<br/>} | 3.14 |
 | Array of arrays with fixed precision |
-
 | pi | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": {<br/>"type": ["number", "null"], <br/>"fixedPrecision": 2<br/>}<br/>}<br/>} | [[3.14]] |
-| From-till-value list |
-
-| {"2016-01-01" "2016-01-31" 13} | {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>} | ["2016-01-01","2016-01-31",13] |
-| List of from-till-value lists |
-
-| {<br/>{"2016-01-01" "2016-01-31" 13.13}<br/>{"2016-02-01" "2016-02-29" 42.42}<br/>} | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>}<br/>} | [["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]] |
-| Date formater |
-
-| struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02')) | {<br/>"type": "object",<br/>"properties": {<br/>"myDate": { <br/>"type": "string",<br/>"format": "date"<br/>},<br/>"myDateTime": { <br/>"type": "string",<br/>"format": "date-time"<br/>}<br/>}<br/>} | {"myDate":"2016-01-03","myDateTime":"2016-01-03T12:00:00+0100"} |
-| Comprehensive |
-
-| obj = struct('id', '4711');<br/>obj.portfolio.index = 3;<br/>obj.portfolio.value = 4.32;<br/>obj.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>obj.dealValues = [13.13 42.42];<br/>obj; | {<br/>"type": "object",<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"portfolio": {<br/>"type": "object",<br/>"properties": {<br/>"index": {<br/>"type": "integer",<br/>"minimum": 1<br/>},<br/>"value": {<br/>"type": "number"<br/>}<br/>}<br/>},<br/>"deals": {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"properties": {<br/>"name": {<br/>"type": "string",<br/>"pattern": "^DEAL-[A-Z]+$"<br/>},<br/>"value": {<br/>"type": "number",<br/>"minimum": 0<br/>}<br/>}<br/>}<br/>}<br/>}<br/>} | {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]} |
 
 
 [//]: # "STRINGIFY"
 
+# Building
+
+1. Execute `tests.m`
+2. Execute `build.py`
+3. Copy `build/README.md` to `README.md`
 
 # Octave Limitations
 Encoding of files
