@@ -21,7 +21,7 @@ append('|--------|--------|------|');
 for k=1:tests.getLength()
     test = tests.item(k-1);
     
-    getElem = @(tagName) strrep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), repmat(' ', 1, 12), '');
+    getElem = @(tagName) regexprep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), '\n\s{10}', '\n');
 
     desc = getElem('description');
     if nargin >= 1 && ~strcmp(desc, description)
@@ -32,10 +32,9 @@ for k=1:tests.getLength()
 
     code = getElem('matlab');
     schema = getElem('schema');
-    json = regexprep(getElem('json'), '\s', '');
+    json = getElem('json');
 
-    append('| %s |', desc);
-    append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
+    status = '';
 
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);
@@ -46,24 +45,31 @@ for k=1:tests.getLength()
     fprintf(1, ' stringify ... ');
     [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
     if ~isempty(errors)
+        status = ':x: ';
         errors
     end
 
-    if ~strcmp(json, jsonOut)
-        fprintf(1, 'Expected: %s\n', json);
-        fprintf(1, 'Actual: %s\n', jsonOut);
+    if ~strcmp(regexprep(json, '\s', ''), jsonOut)
+        status = ':x: ';
+        json
+        jsonOut
     end
 
     fprintf(1, ' parse ... ');
     [objOut, errors] = JSON_Parser.parse(json, schema);
     if ~isempty(errors)
+        status = ':x: ';
         errors
     end
 
     if ~isequaln(a, objOut)
+        status = ':x: ';
         a
         objOut
     end
+
+    append('| %s%s |', status, desc);
+    append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
 
 end
 

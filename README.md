@@ -117,31 +117,31 @@ schema = JSON_Parser.parse('file:schema.json')
 | MATLAB | Schema | JSON |
 |--------|--------|------|
 | Comprehensive |
-| a = struct('id', '4711');<br/>a.portfolio.index = 3;<br/>a.portfolio.value = 4.32;<br/>a.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>a.dealValues = [13.13 42.42]; | {<br/>"type": "object",<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"portfolio": {<br/>"type": "object",<br/>"properties": {<br/>"index": {<br/>"type": "integer",<br/>"minimum": 1<br/>},<br/>"value": {<br/>"type": "number"<br/>}<br/>}<br/>},<br/>"deals": {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"additionalProperties": false,<br/>"properties": {<br/>"name": {<br/>"type": "string",<br/>"pattern": "^DEAL-\\w+$"<br/>},<br/>"value": {<br/>"type": "number",<br/>"minimum": 0<br/>}<br/>}<br/>}<br/>}<br/>}<br/>} | {"id":"4711","portfolio":{"index":3,"value":4.32},"deals":[{"name":"DEAL-A","value":13.13},{"name":"DEAL-B","value":42.42}],"dealValues":[13.13,42.42]} |
+| a = struct('id', '4711');<br/>  a.portfolio.index = 3;<br/>  a.portfolio.value = 4.32;<br/>  a.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>  a.dealValues = [13.13 42.42]; | {<br/>      "type": "object",<br/>      "properties": {<br/>          "id": {<br/>              "type": "string"<br/>          },<br/>          "portfolio": {<br/>              "type": "object",<br/>              "properties": {<br/>                  "index": {<br/>                      "type": "integer",<br/>                      "minimum": 1<br/>                  },<br/>                  "value": {<br/>                      "type": "number"<br/>                  }<br/>              }<br/>          },<br/>          "deals": {<br/>              "type": "array",<br/>              "items": {<br/>                  "type": "object",<br/>                  "additionalProperties": false,<br/>                  "properties": {<br/>                      "name": {<br/>                          "type": "string",<br/>                          "pattern": "^DEAL-\\w+$"<br/>                      },<br/>                      "value": {<br/>                          "type": "number",<br/>                          "minimum": 0<br/>                      }<br/>                  }<br/>              }<br/>          }<br/>      }<br/>  } | {<br/>      "id": "4711",<br/>      "portfolio": {<br/>          "index": 3,<br/>          "value": 4.32<br/>      },<br/>      "deals": [<br/>          {<br/>              "name": "DEAL-A",<br/>              "value": 13.13<br/>          },<br/>          {<br/>              "name": "DEAL-B",<br/>              "value": 42.42<br/>          }<br/>      ],<br/>      "dealValues": [<br/>          13.13,<br/>          42.42<br/>      ]<br/>  } |
 | AllOf |
-| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>"allOf": [<br/>{<br/>"$ref": "schema2.json"<br/>},<br/>{<br/>"type": "object",<br/>"required": ["id"],<br/>"properties": {<br/>"id": {<br/>"type": "string"<br/>},<br/>"foo": {<br/>"type": "number"<br/>}<br/>}<br/>}<br/>]<br/>} | {"id":"4711","foo":2,"bar":"DEF_VAL"} |
+| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>      "allOf": [<br/>          {<br/>              "$ref": "schema2.json"<br/>          },<br/>          {<br/>              "type": "object",<br/>              "required": ["id"],<br/>              "properties": {<br/>                  "id": {<br/>                      "type": "string"<br/>                  },<br/>                  "foo": {<br/>                      "type": "number"<br/>                  }<br/>              }<br/>          }<br/>      ]<br/>  } | {<br/>      "id":"4711",<br/>      "foo":2,<br/>      "bar":"DEF_VAL"<br/>  } |
 | Cell array |
-| {struct('foo', 1) struct('bar', 2)} | {<br/>"type": "array",<br/>"items": {<br/>"type": "object"<br/>}<br/>} | [{"foo":1},{"bar":2}] |
+| {struct('foo', 1) struct('bar', 2)} | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "object"<br/>      }<br/>  } | [{"foo":1},{"bar":2}] |
 | Structure array |
-| struct('foo', {1 2}, 'bar', {3 4}) | {<br/>"type": "array",<br/>"items": {<br/>"type": "object",<br/>"additionalProperties": false<br/>}<br/>} | [{"foo":1,"bar":3},{"foo":2,"bar":4}] |
+| struct('foo', {1 2}, 'bar', {3 4}) | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "object",<br/>          "additionalProperties": false<br/>      }<br/>  } | [{"foo":1,"bar":3},{"foo":2,"bar":4}] |
 | Array of strings |
 | {'foo'} |  | ["foo"] |
 | Scalar number |
-| 1 | {<br/>"type": "number",<br/>"enum": [1, 2]<br/>} | 1 |
+| 1 | {<br/>      "type": "number",<br/>      "enum": [1, 2]<br/>  } | 1 |
 | Scalar boolean |
-| true | {<br/>"type": "boolean"<br/>} | true |
+| true | {<br/>      "type": "boolean"<br/>  } | true |
 | Null or NaN |
-| NaN | {<br/>"type": "null"<br/>} | null |
+| NaN | {<br/>      "type": "null"<br/>  } | null |
 | Single string with enumeration |
-| 'foo' | {<br/>"type": "string",<br/>"enum": ["bar", "foo"]<br/>} | "foo" |
+| 'foo' | {<br/>      "type": "string",<br/>      "enum": ["bar", "foo"]<br/>  } | "foo" |
 | Row vector |
 | [1 2] |  | [1,2] |
 | Mixed array |
-| {1, struct(), 2} | {<br/>"type": "array",<br/>"items": {"type": ["number", "object"]}<br/>} | [1,{},2] |
+| {1, struct(), 2} | {<br/>      "type": "array",<br/>      "items": {"type": ["number", "object"]}<br/>  } | [1,{},2] |
 | Row vector with NaN |
-| [1 NaN 2] | {<br/>"type": "array",<br/>"items": {<br/>"type": ["number", "null"]<br/>}<br/>} | [1,null,2] |
+| [1 NaN 2] | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": ["number", "null"]<br/>      }<br/>  } | [1,null,2] |
 | Matrix |
-| [ [1 2 NaN]; [4 -5 6] ] | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": {<br/>"type": ["number", "null"]<br/>}<br/>}<br/>} | [[1,2,null],[4,-5,6]] |
+| [ [1 2 NaN]; [4 -5 6] ] | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "array",<br/>          "items": {<br/>              "type": ["number", "null"]<br/>          }<br/>      }<br/>  } | [[1,2,null],[4,-5,6]] |
 | Simple object |
 | struct('foo', 'bar') |  | {"foo":"bar"} |
 | Empty object, no schema |
@@ -171,27 +171,27 @@ schema = JSON_Parser.parse('file:schema.json')
 | :x: Boolean array (Fragile) |
 | [true false] |  | [true,false] |
 | Hint array |
-| 1 | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1] |
+| 1 | { "type": "array",<br/>    "items": { "type": ["number", "null"] }<br/>  } | [1] |
 | Hint array of arrays |
-| 1 | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": { "type": ["number", "null"] }<br/>}<br/>} | [[1]] |
+| 1 | { <br/>    "type": "array",<br/>    "items": {<br/>      "type": "array",  <br/>      "items": { "type": ["number", "null"] }<br/>    }<br/>  } | [[1]] |
 | Foo |
-| [1 NaN 2] | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1,null,2] |
+| [1 NaN 2] | { "type": "array",<br/>    "items": { "type": ["number", "null"] }<br/>  } | [1, null, 2] |
 | Empty array |
 | [] | { "type": ["array", "null"] } | [] |
 | :x: 3D matrix |
-| a = NaN(2,2,2);<br/>a(1,:,:) = [1 2; 3 4];<br/>a(2,:,:) = [5 6; 7 8]; |  | [[[1,2],[3,4]],[[5,6],[7,8]]] |
+| a = NaN(2,2,2);<br/>  a(1,:,:) = [1 2; 3 4];<br/>  a(2,:,:) = [5 6; 7 8]; |  | [[[1,2],[3,4]],[[5,6],[7,8]]] |
 | Foo |
-| [1 NaN] | {<br/>"type": "array",<br/>"items": [{"type": "number"}, {"type": "null"}]<br/>} | [1,null] |
+| [1 NaN] | {<br/>      "type": "array",<br/>      "items": [{"type": "number"}, {"type": "null"}]<br/>  } | [1,null] |
 | From-till-value list |
-| [datenum("2016-01-01") datenum("2016-01-31") 13] | {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>} | ["2016-01-01","2016-01-31",13] |
+| [datenum("2016-01-01") datenum("2016-01-31") 13] | {<br/>      "type": "array",<br/>      "items": [<br/>          {"type": "string", "format": "date"},<br/>          {"type": "string", "format": "date"},<br/>          {"type": ["number", "null"] }<br/>      ]<br/>  } | ["2016-01-01","2016-01-31",13] |
 | List of from-till-value lists |
-| [<br/>[datenum("2016-01-01") datenum("2016-01-31") 13.13]<br/>[datenum("2016-02-01") datenum("2016-02-29") 42.42]<br/>] | {<br/>"type": "array",<br/>"items": {<br/>"type": "array",<br/>"items": [<br/>{"type": "string", "format": "date"},<br/>{"type": "string", "format": "date"},<br/>{"type": ["number", "null"] }<br/>]<br/>}<br/>} | [["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]] |
+| [<br/>      [datenum("2016-01-01") datenum("2016-01-31") 13.13]<br/>      [datenum("2016-02-01") datenum("2016-02-29") 42.42]<br/>  ] | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "array",<br/>          "items": [<br/>              {"type": "string", "format": "date"},<br/>              {"type": "string", "format": "date"},<br/>              {"type": ["number", "null"] }<br/>          ]<br/>      }<br/>  } | [["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]] |
 | Foo |
-| struct('foo', 1) | {<br/>"type": "object",<br/>"properties": {<br/>"foo": { "type": "array" }<br/>}<br/>} | {"foo":[1]} |
+| struct('foo', 1) | {<br/>      "type": "object",<br/>      "properties": {<br/>          "foo": { "type": "array" }<br/>      }<br/>  } | {"foo":[1]} |
 | Foo |
-| 'Hello' | {<br/>"type": "string",<br/>"pattern": "^\\w+$"<br/>} | "Hello" |
+| 'Hello' | {<br/>      "type": "string",<br/>      "pattern": "^\\w+$"<br/>  } | "Hello" |
 | Date formater |
-| struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02')) | {<br/>"type": "object",<br/>"properties": {<br/>"myDate": { <br/>"type": "string",<br/>"format": "date"<br/>},<br/>"myDateTime": { <br/>"type": "string",<br/>"format": "date-time"<br/>}<br/>}<br/>} | {"myDate":"2016-01-03","myDateTime":"2016-01-03T12:00:00+0100"} |
+| struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02')) | {<br/>      "type": "object",<br/>      "properties": {<br/>          "myDate": { <br/>              "type": "string",<br/>              "format": "date"<br/>          },<br/>          "myDateTime": { <br/>              "type": "string",<br/>              "format": "date-time"<br/>          }<br/>      }<br/>  } | {<br/>      "myDate":"2016-01-03",<br/>      "myDateTime":"2016-01-03T12:00:00+0100"<br/>  } |
 
 
 [//]: # "ROUNDTRIP"
@@ -238,7 +238,7 @@ schema = JSON_Parser.parse('file:schema.json')
 | Structure array |
 | {'foo'} |  | ["foo"] |
 | AllOf |
-| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>"$ref": "schema2.json"<br/>} | {<br/>"id":"4711",<br/>"foo":2<br/>} |
+| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>      "$ref": "schema2.json"<br/>  } | {<br/>      "id":"4711",<br/>      "foo":2<br/>  } |
 
 
 [//]: # "PARSE"
@@ -256,11 +256,11 @@ schema = JSON_Parser.parse('file:schema.json')
 | Treatment of special numbers |
 | [1 Inf -Inf NaN 2] |  | [1,null,null,null,2] |
 | Foo |
-| [1 NaN Inf -Inf 2] | { "type": "array",<br/>"items": { "type": ["number", "null"] }<br/>} | [1,null,null,null,2] |
+| [1 NaN Inf -Inf 2] | { "type": "array",<br/>    "items": { "type": ["number", "null"] }<br/>  } | [1,null,null,null,2] |
 | Fixed precision |
-| pi | {<br/>"type": "number",<br/>"fixedPrecision": 2<br/>} | 3.14 |
+| pi | {<br/>      "type": "number",<br/>      "fixedPrecision": 2<br/>  } | 3.14 |
 | Array of arrays with fixed precision |
-| pi | { <br/>"type": "array",<br/>"items": {<br/>"type": "array",  <br/>"items": {<br/>"type": ["number", "null"], <br/>"fixedPrecision": 2<br/>}<br/>}<br/>} | [[3.14]] |
+| pi | { <br/>      "type": "array",<br/>      "items": {<br/>          "type": "array",  <br/>          "items": {<br/>              "type": ["number", "null"], <br/>              "fixedPrecision": 2<br/>          }<br/>      }<br/>  } | [[3.14]] |
 
 
 [//]: # "STRINGIFY"

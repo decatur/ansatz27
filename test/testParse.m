@@ -21,7 +21,7 @@ append('|--------|--------|------|');
 for k=1:tests.getLength()
     test = tests.item(k-1);
     
-    getElem = @(tagName) strrep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), repmat(' ', 1, 12), '');
+    getElem = @(tagName) regexprep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), '\n\s{10}', '\n');
 
     desc = getElem('description');
     if nargin >= 1 && ~strcmp(desc, description)
