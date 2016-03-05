@@ -291,7 +291,8 @@ classdef JSON_Stringifier < JSON_Handler
             items = getPath(schema, 'items');
             if isempty(items)
                 % Make sure a column vector such as [1;2] is generated as [[1],[2]].
-                items = struct('type', 'array');
+                items = struct();
+                items.type = { 'array' };
             end
 
             itemContext = context;

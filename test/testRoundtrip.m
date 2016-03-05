@@ -32,9 +32,9 @@ for k=1:tests.getLength()
 
     code = getElem('matlab');
     schema = getElem('schema');
-    json = getElem('json');
+    jsonExpected = getElem('json');
 
-    status = '';
+    status = ':white_check_mark:';
 
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);
@@ -42,34 +42,46 @@ for k=1:tests.getLength()
         eval(code);
     end
 
-    fprintf(1, ' stringify ... ');
-    [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
+    fprintf(1, ' ... stringify ');
+    [jsonActual, errors] = JSON_Stringifier.stringify(a, schema, 0);
     if ~isempty(errors)
-        status = ':x: ';
+        status = ':x:';
         errors
     end
 
-    if ~strcmp(regexprep(json, '\s', ''), jsonOut)
-        status = ':x: ';
-        json
-        jsonOut
+    if ~strcmp(regexprep(jsonExpected, '\s', ''), jsonActual)
+        status = ':x:';
+        jsonExpected
+        jsonActual
     end
 
-    fprintf(1, ' parse ... ');
-    [objOut, errors] = JSON_Parser.parse(json, schema);
+    fprintf(1, ' ... parse ');
+    [actualM, errors] = JSON_Parser.parse(jsonExpected, schema);
     if ~isempty(errors)
-        status = ':x: ';
+        status = ':x:';
         errors
     end
 
-    if ~isequaln(a, objOut)
-        status = ':x: ';
-        a
-        objOut
+    expectedM = a;
+
+    if ~isequaln(expectedM, actualM) || (islogical(expectedM) && ~islogical(actualM))
+        status = ':x:';
+        if isnumeric(expectedM) || islogical(expectedM) 
+            mat2str(expectedM)
+        else
+            expectedM
+        end
+
+        if isnumeric(actualM) || islogical(actualM)
+            mat2str(actualM)
+        else
+            actualM
+        end
+
     end
 
-    append('| %s%s |', status, desc);
-    append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
+    append('| %s %s |', status, desc);
+    append('| %s | %s | %s |', nl(code), nl(schema), nl(jsonExpected));
 
 end
 

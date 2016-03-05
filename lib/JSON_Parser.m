@@ -315,7 +315,7 @@ classdef JSON_Parser < JSON_Handler
                     this.parse_array(c, context);
                     val = c.value;
 
-                    if strcmp(class(c), 'CellArrayHolder')
+                    if strcmp(class(c), 'CellArrayHolder') && ~strcmp(class(holder), 'CellArrayHolder')
                         val = cellToMat(val);
                     end
                 case '{'

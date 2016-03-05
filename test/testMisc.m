@@ -39,3 +39,20 @@ expectedErrors = { ...
     {'/matrix/2/2/', 'is smaller than minimum 0', '-5'}, ...
     {'/myArray/2/myNumber/', 'is smaller than minimum 0', '-3.1415'}, ...
 };
+
+m = cellToMat({1 2});
+assert(isequal(m, [1 2]));
+
+m = cellToMat({[1] [2]});
+assert(isequal(m, [1;2]));
+
+m = cellToMat({{1 2} {[] 4}});
+assert(isequaln(m, [1 2;NaN 4]));
+
+m = cellToMat({{{1 2} {3 4}} {{5 6} {7 8}}});
+assert(isequal(squeeze(m(1,:,:)), [1 2;3 4]));
+assert(isequal(squeeze(m(2,:,:)), [5 6; 7 8]));
+assert(isequal(m, permute(cat(3, [1 3;2 4], [5 7; 6 8]), [3 2 1])));
+
+m = cellToMat({1 NaN 3});
+assert(isequaln(m, [1 NaN 3]));

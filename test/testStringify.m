@@ -24,7 +24,7 @@ for k=1:tests.getLength()
     getElem = @(tagName) regexprep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), '\n\s{10}', '\n');
 
     desc = getElem('description');
-    if isempty(desc) || (nargin >= 1 && ~strcmp(desc, description))
+    if nargin >= 1 && ~strcmp(desc, description)
         continue;
     end
 

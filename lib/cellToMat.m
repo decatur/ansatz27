@@ -1,42 +1,80 @@
-function m = cellToMat(c)
-%cellToMat converts a uniform cell array into a matrix if possible.
-%
-% Usage:
-%   cellToMat({{1 2},{[] 4}})
-%   ans 1   2
-%       NaN 4
-%
+function m=cellToMat(c)
 
-if ~iscell(c)
-    m = c;
+assert(iscell(c));
+
+if isempty(c)
+    m = [];
     return;
 end
 
-m = [];
-itemSize = [];
+cc = c;
+dims = [];
 
-for k=1:length(c)
-    mm = cellToMat(c{k});
-    
-    if isempty(mm)
-        mm = NaN;
-    end
-    
-    if isnumeric(mm) && (k == 1 || isequal(itemSize, size(mm)))
-        if numel(mm) > 1
-            dim = 1;
-        else
-            dim = 2;
-        end
-
-        m = cat(dim, m, mm);
-        itemSize = size(mm);
-
+while iscell(cc)
+    dims = [dims length(cc)];
+    if length(cc) > 0
+        cc = cc{1};
     else
-        m = c;
-        return;
+        break;
     end
+end
 
+if length(dims) == 1
+    dims = [1 dims];
+end
+
+m = inf(dims(:));
+
+hasLogical = false;
+hasNumeric = false;
+cc = c;
+stack = {c};
+ind = {1};
+
+while true
+    k = ind{end};
+    if k<=length(stack{end})
+        cc = stack{end}{k};
+        if iscell(cc)
+            stack{end+1} = cc;
+            ind{end+1} = 1;
+        elseif isnumeric(cc) || islogical(cc)
+            if isempty(cc)
+                cc = nan;
+            end
+
+            if islogical(cc)
+                hasLogical = true;
+            else
+                hasNumeric = true;
+            end
+            
+            indx = struct('type', '()');
+            indx.subs = ind;
+            m = subsasgn(m, indx, cc);
+            ind{end} = 1+ind{end};
+        else
+            m = c;
+            return;
+        end
+    else
+        stack = stack(1:end-1);
+        if isempty(stack)
+            break;
+        end
+        ind = ind(1:end-1);
+        ind{end} = 1 + ind{end};
+    end
+end
+
+if any(isinf(m(:)))
+   m = c;
+elseif hasNumeric && hasLogical
+    m=c 
+elseif hasLogical
+    l = true(dims(:));
+    l(~m) = false;
+    m = l;
 end
 
 end
