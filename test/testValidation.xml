@@ -190,4 +190,71 @@
         </json>
         <errors>{'/2/' 'contains additional properties' '{object}'}</errors>
     </test>
+    <test>
+        <description>Invalid Reference</description>
+        <matlab>struct('id', '4711', 'bar', 2)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "bar": { "$ref": "#definitions/BAR" }
+                },
+                "definitions": {
+                    "bar": { }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "id": "4711",
+                "bar": 2
+            }
+        </json>
+        <errors>{[] 'Invalid $ref at /properties/bar/ -> #definitions/BAR' ''}</errors>
+    </test>
+    <test>
+        <description>Invalid Reference</description>
+        <matlab>struct('id', '4711', 'bar', 2)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "bar": { "$ref": 4711 }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "id": "4711",
+                "bar": 2
+            }
+        </json>
+        <errors>{[] 'Invalid $ref at /properties/bar/' ''}</errors>
+    </test>
+    <test>
+        <description>Cyclic Schema References</description>
+        <matlab>struct('id', '4711', 'bar', 2)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "bar": { "$ref": "#definitions/barType" }
+                },
+                "additionalProperties": false,
+                "definitions": {
+                    "barType": { "$ref": "#properties/bar" }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "id": "4711",
+                "bar": 2
+            }
+        </json>
+        <errors>{[] 'Cyclic references /properties/bar/ -> #definitions/barType -> #properties/bar' ''}</errors>
+    </test>
 </tests>

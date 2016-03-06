@@ -1,6 +1,7 @@
 function testValidation(description)
 
-fid = fopen ('../build/validation.md', 'w');
+dir = fileparts(mfilename ("fullpath"));
+fid = fopen(fullfile(dir, '..', 'build', 'validation.md'), 'w');
 
 function append(format, varargin)
     fprintf(fid, [format '\n'], varargin{:});
@@ -9,7 +10,7 @@ end
 factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
 builder = factory.newDocumentBuilder();
 
-file = javaObject('java.io.File', 'testValidation.xml');
+file = javaObject('java.io.File', fullfile(dir, 'testValidation.xml'));
 document = builder.parse(file);
 
 tests = document.getDocumentElement().getElementsByTagName('test');
@@ -20,18 +21,18 @@ append('|--------|--------|--------|--------|');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
-    
-    getElem = @(tagName) regexprep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), '\n\s{10}', '\n');
 
-    desc = getElem('description');
+    desc = getElementText(test, 'description');
     if nargin >= 1 && ~strcmp(desc, description)
         continue;
     end
 
-    code = getElem('matlab');
-    schema = getElem('schema');
-    json = getElem('json');
-    errorText = getElem('errors');
+    fprintf(1, '%s\n', desc);
+
+    code = getElementText(test, 'matlab');
+    schema = getElementText(test, 'schema');
+    json = getElementText(test, 'json');
+    errorText = getElementText(test, 'errors');
 
     append('| %s |', desc);
     append('| %s | %s | %s | %s |', nl(code), nl(json), nl(schema), nl(errorText));

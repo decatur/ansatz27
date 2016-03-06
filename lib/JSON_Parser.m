@@ -42,6 +42,9 @@ classdef JSON_Parser < JSON_Handler
                 error('JSON must be non-empty string');
             end
 
+            this.errors = {};
+            value = [];
+
             if nargin < 3
                 rootschema = [];
             end
@@ -66,10 +69,14 @@ classdef JSON_Parser < JSON_Handler
             end
 
             if isfield(context, 'schema')
-                context.schema = this.normalizeSchema(context.schema);
+                try
+                    context.schema = this.normalizeSchema(context.schema);
+                catch e
+                    this.addError(this.schemaURL, e.message, []);
+                    errors = this.errors;
+                    return
+                end
             end
-            
-            this.errors = {};
             
             % String delimiters and escape chars identified to improve speed:
             this.esc = find(this.json=='"' | this.json=='\' ); % comparable to: regexp(this.json, '["\\]');

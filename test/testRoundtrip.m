@@ -1,9 +1,9 @@
 function testRoundtrip(description)
 
-fid = fopen ('../build/roundtrip.md', 'w');
+fid = fopen ('../build/roundtrip.html', 'w');
 
 function append(format, varargin)
-    fprintf(fid, [format '\n'], varargin{:});
+    fprintf(fid, ['<tr>' format '</tr>\n'], varargin{:});
 end
 
 factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
@@ -13,28 +13,26 @@ file = javaObject('java.io.File', 'testRoundtrip.xml');
 document = builder.parse(file);
 
 tests = document.getDocumentElement().getElementsByTagName('test');
-nl = @(text) strrep(text, sprintf('\n'), '<br/>');
+nl = @(text) text;
 
-append('| MATLAB | Schema | JSON |');
-append('|--------|--------|------|');
+fprintf(fid, '<table><tbody>\n');
+append('<th>MATLAB</th><th>Schema</th><th>JSON</th>');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
     
-    getElem = @(tagName) regexprep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), '\n\s{10}', '\n');
-
-    desc = getElem('description');
+    desc = getElementText(test, 'description');
     if nargin >= 1 && ~strcmp(desc, description)
         continue;
     end
 
     fprintf(1, '\n%s', desc);
 
-    code = getElem('matlab');
-    schema = getElem('schema');
-    jsonExpected = getElem('json');
+    code = getElementText(test, 'matlab');
+    schema = getElementText(test, 'schema');
+    jsonExpected = getElementText(test, 'json');
 
-    status = ':white_check_mark:';
+    status = '(Pass)';
 
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);
@@ -45,12 +43,12 @@ for k=1:tests.getLength()
     fprintf(1, ' ... stringify ');
     [jsonActual, errors] = JSON_Stringifier.stringify(a, schema, 0);
     if ~isempty(errors)
-        status = ':x:';
+        status = 'Fail';
         errors
     end
 
     if ~strcmp(regexprep(jsonExpected, '\s', ''), jsonActual)
-        status = ':x:';
+        status = 'Fail';
         jsonExpected
         jsonActual
     end
@@ -58,14 +56,14 @@ for k=1:tests.getLength()
     fprintf(1, ' ... parse ');
     [actualM, errors] = JSON_Parser.parse(jsonExpected, schema);
     if ~isempty(errors)
-        status = ':x:';
+        status = 'Fail';
         errors
     end
 
     expectedM = a;
 
     if ~isequaln(expectedM, actualM) || (islogical(expectedM) && ~islogical(actualM))
-        status = ':x:';
+        status = 'Fail';
         if isnumeric(expectedM) || islogical(expectedM) 
             mat2str(expectedM)
         else
@@ -80,11 +78,12 @@ for k=1:tests.getLength()
 
     end
 
-    append('| %s %s |', status, desc);
-    append('| %s | %s | %s |', nl(code), nl(schema), nl(jsonExpected));
+    append('<td span="3">%s %s</td>', status, desc);
+    append('<td><pre>%s</pre></td><td><pre>%s</pre></td><td><pre>%s</pre></td>', nl(code), nl(schema), nl(jsonExpected));
 
 end
 
+fprintf(fid, '</tbody></table>');
 fclose(fid);
 
 end

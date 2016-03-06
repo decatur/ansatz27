@@ -38,13 +38,13 @@ classdef JSON_Handler < handle
             end
         end
 
-        function rootDir = getRootDir(this)
-            if isempty(this.schemaURL)
-                rootDir = '.';
-            else
-                rootDir = fileparts(this.schemaURL);
-            end
-        end
+        %function rootDir = getRootDir(this)
+        %    if isempty(this.schemaURL)
+        %        rootDir = '.';
+        %    else
+        %        rootDir = fileparts(this.schemaURL);
+        %    end
+        %end
 
         function addError(this, path, msg, value)
             if isstruct(value)
@@ -95,16 +95,28 @@ classdef JSON_Handler < handle
 
             if isfield(schema, 'x_ref')
                 % Replace by referenced schema.
-                % TODO: We must do this until we hit a non-ref schema!
-                if ~ischar(schema.x_ref) || isempty(strtrim(schema.x_ref))
-                    error('Invalid $ref at %s', path);
-                end
-                schema.x_ref = strtrim(schema.x_ref);
-                if schema.x_ref(1) == '#'
-                    schema = getPath(rootSchema, schema.x_ref(2:end));
-                else
-                    schema = JSON_Parser.parse(JSON_Handler.readFileToString( fullfile(this.getRootDir(), schema.x_ref), 'latin1' ));
-                end
+                refs = {path};
+                do
+                    if ~ischar(schema.x_ref) || isempty(strtrim(schema.x_ref))
+                        error('Invalid $ref at %s', strjoin(refs, ' -> '));
+                    end
+                    
+                    schema.x_ref = strtrim(schema.x_ref);
+                    if ismember(schema.x_ref, refs)
+                        error('Cyclic references %s', strjoin(refs, ' -> '));
+                    end
+
+                    refs{end+1} = schema.x_ref;
+
+                    if schema.x_ref(1) == '#'
+                        schema = getPath(rootSchema, schema.x_ref(2:end));
+                        if isempty(schema)
+                            error('Invalid $ref at %s', strjoin(refs, ' -> '));
+                        end
+                    else
+                        schema = JSON_Parser.parse(JSON_Handler.readFileToString( schema.x_ref, 'latin1' ));
+                    end
+                until ~isfield(schema, 'x_ref')
             end
 
             if isfield(schema, 'allOf')
@@ -132,7 +144,7 @@ classdef JSON_Handler < handle
                 props = schema.properties;
                 pNames = fieldnames(props);
                 for k=1:length(pNames)
-                    subPath = [path pNames{k} '/'];
+                    subPath = [path 'properties/' pNames{k} '/'];
                     schema.properties.(pNames{k}) = this.normalizeSchema_(rootSchema, props.(pNames{k}), subPath);
                 end
             elseif ismember('array', type) && isfield(schema, 'items') 
@@ -140,7 +152,7 @@ classdef JSON_Handler < handle
                     schema.items = this.normalizeSchema_(rootSchema, schema.items, [path 'items' '/']);
                 elseif iscell(schema.items)
                     for k=1:length(schema.items)
-                        subPath = [path num2str(k) '/'];
+                        subPath = [path 'items/' num2str(k) '/'];
                         schema.items{k} = this.normalizeSchema_(rootSchema, schema.items{k}, subPath);
                     end
                 end
@@ -163,8 +175,6 @@ classdef JSON_Handler < handle
             mergedSchema.type = 'object';
             mergedSchema.properties = struct;
             mergedSchema.required = {};
-
-            rootDir = this.getRootDir();
 
             for k=1:length(schema.allOf)
                 subSchema = this.normalizeSchema_(rootSchema, schema.allOf{k}, [path 'allOf/']);

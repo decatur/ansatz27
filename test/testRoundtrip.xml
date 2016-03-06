@@ -6,7 +6,9 @@
             a = struct('id', '4711');
             a.portfolio.index = 3;
             a.portfolio.value = 4.32;
-            a.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});
+            a.deals = struct( ...
+                'name', {'DEAL-A' 'DEAL-B'}, ...
+                'value', {13.13 42.42});
             a.dealValues = [13.13 42.42];
         </matlab>
         <schema>
@@ -74,7 +76,12 @@
     </test>
     <test>
         <description>AllOf</description>
-        <matlab>struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL')</matlab>
+        <matlab>
+            struct( ...
+                'id', '4711', ...
+                'foo', 2, ...
+                'bar', 'DEF_VAL')
+        </matlab>
         <schema>
             {
                 "allOf": [
@@ -133,7 +140,12 @@
                 }
             }
         </schema>
-        <json>[{"foo":1,"bar":3},{"foo":2,"bar":4}]</json>
+        <json>
+            [
+                {"foo":1,"bar":3},
+                {"foo":2,"bar":4}
+            ]
+        </json>
     </test>
     <test>
         <description>Array of strings</description>
@@ -249,7 +261,12 @@
     </test>
     <test>
         <description>Cell array</description>
-        <matlab>{struct('foo',1) struct('foo',2)}</matlab>
+        <matlab>
+            {
+                struct('foo',1) ...
+                struct('foo',2)
+            }
+        </matlab>
         <schema></schema>
         <json>[{"foo":1},{"foo":2}]</json>
     </test>
@@ -412,7 +429,12 @@
                 }
             }
         </schema>
-        <json>[["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]]</json>
+        <json>
+            [
+                ["2016-01-01", "2016-01-31", 13.13],
+                ["2016-02-01", "2016-02-29", 42.42]
+            ]
+        </json>
     </test>
     <test>
         <description>Foo</description>
@@ -440,7 +462,12 @@
     </test>
     <test>
         <description>Date formater</description>
-        <matlab>struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02'))</matlab>
+        <matlab>
+            struct( ...
+                'myDate', 1+datenum('2016-01-02'), ...
+                'myDateTime', 1.5+datenum('2016-01-02') ...
+            )
+        </matlab>
         <schema>
             {
                 "type": "object",

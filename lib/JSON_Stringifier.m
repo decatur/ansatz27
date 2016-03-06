@@ -57,8 +57,9 @@ classdef JSON_Stringifier < JSON_Handler
             %   Wolfgang Kuehn 2015, 2016
             %   Qianqian Fang 2011-09-09
             
+            json = [];
+
             if nargin < 2
-                json = [];
                 errors = [];
                 return;
             end
@@ -73,6 +74,7 @@ classdef JSON_Stringifier < JSON_Handler
             end
 
             this.schemaURL = [];
+            this.errors = {};
 
             if ischar(rootschema)
                 rootschema = strtrim(rootschema);
@@ -82,10 +84,15 @@ classdef JSON_Stringifier < JSON_Handler
             end
 
             if ~isempty(rootschema)
-                rootschema = this.normalizeSchema(rootschema);
+                try
+                    rootschema = this.normalizeSchema(rootschema);
+                catch e
+                    this.addError(this.schemaURL, e.message, []);
+                    errors = this.errors;
+                    return
+                end
             end
             
-            this.errors = {};
             context = struct();
             
             this.indent = '';
