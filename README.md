@@ -1,6 +1,15 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
-The well established JSON schema specification http://json-schema.org/ is used to validate data and to map between JSON and MATLABs data types.
+The JSON schema specification http://json-schema.org/ is used to map between JSON and MATLABs data types and to validate data.
+
+# Requirements
+GNU Octave version minimum 4.0 or MATLAB about version 2006 (verified for 2013b).
+There are no dependencies.
+
+# Related Work
+
+# JSON Schema and Type Coersion
+
 For all use cases of ansatz27, schemas are optional. However, their use is strongly encouraged.
 
 Without schemas, roundtripping may break structure, for example
@@ -9,49 +18,44 @@ Without schemas, roundtripping may break structure, for example
 |----------------|------------------|--------------|
 | { "foo": [1] } | struct('foo', 1) | { "foo": 1 } |
 
-# Requirements
-GNU Octave version minimum 4.0 or MATLAB about version 2006 (verified for 2013b).
 
-# Dependencies
-There are no dependencies.
+JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 
-# Related Work
-
-# Parser
-
-## Usage
+# Usage
 
 [//]: # "Comment"
+
+```MATLAB
+addpath('lib', 'test')
+
+schema = struct('type', 'object')
+
+[obj, errors] = JSON_Parser.parse('file:document.json', 'file:schema.json')
+[obj, errors] = JSON_Parser.parse('{"foo": 1, "bar": 2}', schema)
+
+obj = struct('foo', 1, 'bar', 2)
+[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json')
+[json, errors] = JSON_Stringifier.stringify(obj, schema)
+
 ```
-[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
-[obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', 'file:schema.json')
-```
+
 ## Mapping
 
 ### Key mapping
 
-Object keys which are not valid MATLAB variable names are mapped, for example $ref -> x_ref.
-
-
-# Stringifier
-
-## Usage
-```
-[obj, errors] = JSON_Parser.parse('{"foo": 1, "bar: 2"}', '{ "type": "object" }')
-[obj, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
-
-```
+Object keys which are not valid MATLAB variable names are mapped, for example `$ref -> x_ref` or `He@@o -> He__o`.
 
 # Formatter
 
 Formatters allow to make custom transformations. A typical candidate are dates and their mapping bewteen
 string representation and MATLABs numerical representation. A formatter is invoked on an element if
 the value of the format property (if any) is the name of a registered formatter. 
-```
-{
-    "type": "string",
-    "format": "date"
-}
+
+```MATLAB
+stringifier = JSON_Stringifier()
+stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x)
+stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x)
+[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json')
 ```
 
 On parse, formatters are applied *after* all parse, validation steps have been performed.
@@ -87,181 +91,491 @@ There are two predefined formatters
 
 # Defaults
 
-In each schema you may specify a default value.
-```
-{
+A schema may specify a default value. On stringify, defaults are ignored.
+On parse, default values are set for unspecified object properties, see test cases below.
+
+
+# Roundtrip Test Cases
+
+All entries are unit tests (:y: success, :x: failure).
+
+[//]: # "ROUNDTRIP"
+
+<table><tbody valign="top">
+<tr><th>MATLAB</th><th>Schema</th><th>JSON</th></tr>
+<tr><td span="3">(Pass) Comprehensive</td></tr>
+<tr><td><pre>a = struct('id', '4711');
+a.portfolio.index = 3;
+a.portfolio.value = 4.32;
+a.deals = struct( ...
+  'name', {'DEAL-A' 'DEAL-B'}, ...
+  'value', {13.13 42.42});
+a.dealValues = [13.13 42.42];</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "portfolio": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "value": {
+          "type": "number"
+        }
+      }
+    },
+    "deals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^DEAL-\\w+$"
+          },
+          "value": {
+            "type": "number",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  }
+}</pre></td><td><pre>{
+  "id": "4711",
+  "portfolio": {
+    "index": 3,
+    "value": 4.32
+  },
+  "deals": [
+    {
+      "name": "DEAL-A",
+      "value": 13.13
+    },
+    {
+      "name": "DEAL-B",
+      "value": 42.42
+    }
+  ],
+  "dealValues": [
+    13.13,
+    42.42
+  ]
+}</pre></td></tr>
+<tr><td span="3">(Pass) AllOf</td></tr>
+<tr><td><pre>struct( ...
+  'id', '4711', ...
+  'foo', 2, ...
+  'bar', 'DEF_VAL')</pre></td><td><pre>{
+  "allOf": [
+    {
+      "$ref": "schema2.json"
+    },
+    {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "foo": {
+          "type": "number"
+        }
+      }
+    }
+  ]
+}</pre></td><td><pre>{
+  "id":"4711",
+  "foo":2,
+  "bar":"DEF_VAL"
+}</pre></td></tr>
+<tr><td span="3">(Pass) Cell array</td></tr>
+<tr><td><pre>{struct('foo', 1) struct('bar', 2)}</pre></td><td><pre>{
+  "type": "array",
+  "items": {
+    "type": "object"
+  }
+}</pre></td><td><pre>[{"foo":1},{"bar":2}]</pre></td></tr>
+<tr><td span="3">(Pass) Structure array</td></tr>
+<tr><td><pre>struct('foo', {1 2}, 'bar', {3 4})</pre></td><td><pre>{
+  "type": "array",
+  "items": {
     "type": "object",
     "properties": {
-        "foo": { "type": "string", "default": "bar" }
+      "foo": {},
+      "bar": {}
+    },
+    "additionalProperties": false
+  }
+}</pre></td><td><pre>[
+  {"foo":1,"bar":3},
+  {"foo":2,"bar":4}
+]</pre></td></tr>
+<tr><td span="3">(Pass) Array of strings</td></tr>
+<tr><td><pre>{'foo'}</pre></td><td><pre></pre></td><td><pre>["foo"]</pre></td></tr>
+<tr><td span="3">(Pass) Scalar number</td></tr>
+<tr><td><pre>1</pre></td><td><pre>{
+  "type": "number",
+  "enum": [1, 2]
+}</pre></td><td><pre>1</pre></td></tr>
+<tr><td span="3">(Pass) Scalar boolean</td></tr>
+<tr><td><pre>true</pre></td><td><pre>{
+  "type": "boolean"
+}</pre></td><td><pre>true</pre></td></tr>
+<tr><td span="3">(Pass) Null or NaN</td></tr>
+<tr><td><pre>NaN</pre></td><td><pre>{
+  "type": "null"
+}</pre></td><td><pre>null</pre></td></tr>
+<tr><td span="3">(Pass) Single string with enumeration</td></tr>
+<tr><td><pre>'foo'</pre></td><td><pre>{
+  "type": "string",
+  "enum": ["bar", "foo"]
+}</pre></td><td><pre>"foo"</pre></td></tr>
+<tr><td span="3">(Pass) Row vector</td></tr>
+<tr><td><pre>[1 2]</pre></td><td><pre></pre></td><td><pre>[1,2]</pre></td></tr>
+<tr><td span="3">(Pass) Mixed array</td></tr>
+<tr><td><pre>{1, struct(), 2}</pre></td><td><pre>{
+  "type": "array",
+  "items": {"type": ["number", "object"]}
+}</pre></td><td><pre>[1,{},2]</pre></td></tr>
+<tr><td span="3">(Pass) Row vector with NaN</td></tr>
+<tr><td><pre>[1 NaN 2]</pre></td><td><pre>{
+  "type": "array",
+  "items": {
+    "type": ["number", "null"]
+  }
+}</pre></td><td><pre>[1,null,2]</pre></td></tr>
+<tr><td span="3">(Pass) Matrix</td></tr>
+<tr><td><pre>[ [1 2 NaN]; [4 -5 6] ]</pre></td><td><pre>{
+  "type": "array",
+  "items": {
+    "type": "array",
+    "items": {
+      "type": ["number", "null"]
     }
-}
-```
-
-| JSON              | MATLAB    |
-|-------------------|-----------|
-| {}                | struct('foo', 'bar') |
-
-Defaults are ignored when stringifying.
-
-# Schema
-
-JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
-```
-schema = JSON_Parser.parse('file:schema.json')
-```
-
-# Roundtrip
+  }
+}</pre></td><td><pre>[[1,2,null],[4,-5,6]]</pre></td></tr>
+<tr><td span="3">(Pass) Simple object</td></tr>
+<tr><td><pre>struct('foo', 'bar')</pre></td><td><pre></pre></td><td><pre>{"foo":"bar"}</pre></td></tr>
+<tr><td span="3">(Pass) Empty object, no schema</td></tr>
+<tr><td><pre>struct()</pre></td><td><pre></pre></td><td><pre>{}</pre></td></tr>
+<tr><td span="3">(Pass) Empty object</td></tr>
+<tr><td><pre>struct()</pre></td><td><pre>{ "type": "object", "properties": {} }</pre></td><td><pre>{}</pre></td></tr>
+<tr><td span="3">(Pass) Cell array</td></tr>
+<tr><td><pre>{
+  struct('foo',1) ...
+  struct('foo',2)
+}</pre></td><td><pre></pre></td><td><pre>[{"foo":1},{"foo":2}]</pre></td></tr>
+<tr><td span="3">(Pass) Row vector (Fragile)</td></tr>
+<tr><td><pre>[1 2]</pre></td><td><pre></pre></td><td><pre>[1,2]</pre></td></tr>
+<tr><td span="3">(Pass) Matrix 2x2 (Fragile)</td></tr>
+<tr><td><pre>[1 2;3 4]</pre></td><td><pre></pre></td><td><pre>[[1,2],[3,4]]</pre></td></tr>
+<tr><td span="3">(Pass) Column vector (Fragile)</td></tr>
+<tr><td><pre>[1; 2]</pre></td><td><pre></pre></td><td><pre>[[1],[2]]</pre></td></tr>
+<tr><td span="3">(Pass) Array of strings</td></tr>
+<tr><td><pre>{'foo' 'bar'}</pre></td><td><pre></pre></td><td><pre>["foo","bar"]</pre></td></tr>
+<tr><td span="3">(Pass) Single number</td></tr>
+<tr><td><pre>1</pre></td><td><pre></pre></td><td><pre>1</pre></td></tr>
+<tr><td span="3">(Pass) Single boolean</td></tr>
+<tr><td><pre>true</pre></td><td><pre></pre></td><td><pre>true</pre></td></tr>
+<tr><td span="3">(Pass) Single string</td></tr>
+<tr><td><pre>'Hello-World'</pre></td><td><pre></pre></td><td><pre>"Hello-World"</pre></td></tr>
+<tr><td span="3">(Pass) Single boolean</td></tr>
+<tr><td><pre>true</pre></td><td><pre></pre></td><td><pre>true</pre></td></tr>
+<tr><td span="3">(Pass) Single boolean</td></tr>
+<tr><td><pre>false</pre></td><td><pre></pre></td><td><pre>false</pre></td></tr>
+<tr><td span="3">(Pass) Boolean array (Fragile)</td></tr>
+<tr><td><pre>[true false]</pre></td><td><pre></pre></td><td><pre>[true,false]</pre></td></tr>
+<tr><td span="3">(Pass) Hint array</td></tr>
+<tr><td><pre>1</pre></td><td><pre>{ "type": "array",
+  "items": { "type": ["number", "null"] }
+}</pre></td><td><pre>[1]</pre></td></tr>
+<tr><td span="3">(Pass) Hint array of arrays</td></tr>
+<tr><td><pre>1</pre></td><td><pre>{ 
+  "type": "array",
+  "items": {
+  "type": "array",  
+  "items": { "type": ["number", "null"] }
+  }
+}</pre></td><td><pre>[[1]]</pre></td></tr>
+<tr><td span="3">(Pass) Foo</td></tr>
+<tr><td><pre>[1 NaN 2]</pre></td><td><pre>{ "type": "array",
+  "items": { "type": ["number", "null"] }
+}</pre></td><td><pre>[1, null, 2]</pre></td></tr>
+<tr><td span="3">(Pass) Empty array</td></tr>
+<tr><td><pre>[]</pre></td><td><pre>{ "type": ["array", "null"] }</pre></td><td><pre>[]</pre></td></tr>
+<tr><td span="3">(Pass) 3D matrix</td></tr>
+<tr><td><pre>a = NaN(2,2,2);
+a(1,:,:) = [1 2; 3 4];
+a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5,6],[7,8]]]</pre></td></tr>
+<tr><td span="3">(Pass) Foo</td></tr>
+<tr><td><pre>[1 NaN]</pre></td><td><pre>{
+  "type": "array",
+  "items": [{"type": "number"}, {"type": "null"}]
+}</pre></td><td><pre>[1,null]</pre></td></tr>
+<tr><td span="3">(Pass) From-till-value list</td></tr>
+<tr><td><pre>[datenum("2016-01-01") datenum("2016-01-31") 13]</pre></td><td><pre>{
+  "type": "array",
+  "items": [
+    {"type": "string", "format": "date"},
+    {"type": "string", "format": "date"},
+    {"type": ["number", "null"] }
+  ]
+}</pre></td><td><pre>["2016-01-01","2016-01-31",13]</pre></td></tr>
+<tr><td span="3">(Pass) List of from-till-value lists</td></tr>
+<tr><td><pre>[
+  [datenum("2016-01-01") datenum("2016-01-31") 13.13]
+  [datenum("2016-02-01") datenum("2016-02-29") 42.42]
+]</pre></td><td><pre>{
+  "type": "array",
+  "items": {
+    "type": "array",
+    "items": [
+      {"type": "string", "format": "date"},
+      {"type": "string", "format": "date"},
+      {"type": ["number", "null"] }
+    ]
+  }
+}</pre></td><td><pre>[
+  ["2016-01-01", "2016-01-31", 13.13],
+  ["2016-02-01", "2016-02-29", 42.42]
+]</pre></td></tr>
+<tr><td span="3">(Pass) Foo</td></tr>
+<tr><td><pre>struct('foo', 1)</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "foo": { "type": "array" }
+  }
+}</pre></td><td><pre>{"foo":[1]}</pre></td></tr>
+<tr><td span="3">(Pass) Foo</td></tr>
+<tr><td><pre>'Hello'</pre></td><td><pre>{
+  "type": "string",
+  "pattern": "^\\w+$"
+}</pre></td><td><pre>"Hello"</pre></td></tr>
+<tr><td span="3">(Pass) Date formater</td></tr>
+<tr><td><pre>struct( ...
+  'myDate', 1+datenum('2016-01-02'), ...
+  'myDateTime', 1.5+datenum('2016-01-02') ...
+)</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "myDate": { 
+      "type": "string",
+      "format": "date"
+    },
+    "myDateTime": { 
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}</pre></td><td><pre>{
+  "myDate":"2016-01-03",
+  "myDateTime":"2016-01-03T12:00:00+0100"
+}</pre></td></tr>
+</tbody></table>
 
 [//]: # "ROUNDTRIP"
 
-| MATLAB | Schema | JSON |
-|--------|--------|------|
-| Comprehensive |
-| a = struct('id', '4711');<br/>  a.portfolio.index = 3;<br/>  a.portfolio.value = 4.32;<br/>  a.deals = struct('name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42});<br/>  a.dealValues = [13.13 42.42]; | {<br/>      "type": "object",<br/>      "properties": {<br/>          "id": {<br/>              "type": "string"<br/>          },<br/>          "portfolio": {<br/>              "type": "object",<br/>              "properties": {<br/>                  "index": {<br/>                      "type": "integer",<br/>                      "minimum": 1<br/>                  },<br/>                  "value": {<br/>                      "type": "number"<br/>                  }<br/>              }<br/>          },<br/>          "deals": {<br/>              "type": "array",<br/>              "items": {<br/>                  "type": "object",<br/>                  "additionalProperties": false,<br/>                  "properties": {<br/>                      "name": {<br/>                          "type": "string",<br/>                          "pattern": "^DEAL-\\w+$"<br/>                      },<br/>                      "value": {<br/>                          "type": "number",<br/>                          "minimum": 0<br/>                      }<br/>                  }<br/>              }<br/>          }<br/>      }<br/>  } | {<br/>      "id": "4711",<br/>      "portfolio": {<br/>          "index": 3,<br/>          "value": 4.32<br/>      },<br/>      "deals": [<br/>          {<br/>              "name": "DEAL-A",<br/>              "value": 13.13<br/>          },<br/>          {<br/>              "name": "DEAL-B",<br/>              "value": 42.42<br/>          }<br/>      ],<br/>      "dealValues": [<br/>          13.13,<br/>          42.42<br/>      ]<br/>  } |
-| AllOf |
-| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>      "allOf": [<br/>          {<br/>              "$ref": "schema2.json"<br/>          },<br/>          {<br/>              "type": "object",<br/>              "required": ["id"],<br/>              "properties": {<br/>                  "id": {<br/>                      "type": "string"<br/>                  },<br/>                  "foo": {<br/>                      "type": "number"<br/>                  }<br/>              }<br/>          }<br/>      ]<br/>  } | {<br/>      "id":"4711",<br/>      "foo":2,<br/>      "bar":"DEF_VAL"<br/>  } |
-| Cell array |
-| {struct('foo', 1) struct('bar', 2)} | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "object"<br/>      }<br/>  } | [{"foo":1},{"bar":2}] |
-| Structure array |
-| struct('foo', {1 2}, 'bar', {3 4}) | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "object",<br/>          "additionalProperties": false<br/>      }<br/>  } | [{"foo":1,"bar":3},{"foo":2,"bar":4}] |
-| Array of strings |
-| {'foo'} |  | ["foo"] |
-| Scalar number |
-| 1 | {<br/>      "type": "number",<br/>      "enum": [1, 2]<br/>  } | 1 |
-| Scalar boolean |
-| true | {<br/>      "type": "boolean"<br/>  } | true |
-| Null or NaN |
-| NaN | {<br/>      "type": "null"<br/>  } | null |
-| Single string with enumeration |
-| 'foo' | {<br/>      "type": "string",<br/>      "enum": ["bar", "foo"]<br/>  } | "foo" |
-| Row vector |
-| [1 2] |  | [1,2] |
-| Mixed array |
-| {1, struct(), 2} | {<br/>      "type": "array",<br/>      "items": {"type": ["number", "object"]}<br/>  } | [1,{},2] |
-| Row vector with NaN |
-| [1 NaN 2] | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": ["number", "null"]<br/>      }<br/>  } | [1,null,2] |
-| Matrix |
-| [ [1 2 NaN]; [4 -5 6] ] | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "array",<br/>          "items": {<br/>              "type": ["number", "null"]<br/>          }<br/>      }<br/>  } | [[1,2,null],[4,-5,6]] |
-| Simple object |
-| struct('foo', 'bar') |  | {"foo":"bar"} |
-| Empty object, no schema |
-| struct() |  | {} |
-| Empty object |
-| struct() | { "type": "object", "properties": {} } | {} |
-| Cell array |
-| {struct('foo',1) struct('foo',2)} |  | [{"foo":1},{"foo":2}] |
-| Row vector (Fragile) |
-| [1 2] |  | [1,2] |
-| Matrix 2x2 (Fragile) |
-| [1 2;3 4] |  | [[1,2],[3,4]] |
-| :x: Column vector (Fragile) |
-| [1; 2] |  | [[1],[2]] |
-| Array of strings |
-| {'foo' 'bar'} |  | ["foo","bar"] |
-| Single number |
-| 1 |  | 1 |
-| Single boolean |
-| true |  | true |
-| Single string |
-| 'Hello-World' |  | "Hello-World" |
-| Single boolean |
-| true |  | true |
-| Single boolean |
-| false |  | false |
-| :x: Boolean array (Fragile) |
-| [true false] |  | [true,false] |
-| Hint array |
-| 1 | { "type": "array",<br/>    "items": { "type": ["number", "null"] }<br/>  } | [1] |
-| Hint array of arrays |
-| 1 | { <br/>    "type": "array",<br/>    "items": {<br/>      "type": "array",  <br/>      "items": { "type": ["number", "null"] }<br/>    }<br/>  } | [[1]] |
-| Foo |
-| [1 NaN 2] | { "type": "array",<br/>    "items": { "type": ["number", "null"] }<br/>  } | [1, null, 2] |
-| Empty array |
-| [] | { "type": ["array", "null"] } | [] |
-| :x: 3D matrix |
-| a = NaN(2,2,2);<br/>  a(1,:,:) = [1 2; 3 4];<br/>  a(2,:,:) = [5 6; 7 8]; |  | [[[1,2],[3,4]],[[5,6],[7,8]]] |
-| Foo |
-| [1 NaN] | {<br/>      "type": "array",<br/>      "items": [{"type": "number"}, {"type": "null"}]<br/>  } | [1,null] |
-| From-till-value list |
-| [datenum("2016-01-01") datenum("2016-01-31") 13] | {<br/>      "type": "array",<br/>      "items": [<br/>          {"type": "string", "format": "date"},<br/>          {"type": "string", "format": "date"},<br/>          {"type": ["number", "null"] }<br/>      ]<br/>  } | ["2016-01-01","2016-01-31",13] |
-| List of from-till-value lists |
-| [<br/>      [datenum("2016-01-01") datenum("2016-01-31") 13.13]<br/>      [datenum("2016-02-01") datenum("2016-02-29") 42.42]<br/>  ] | {<br/>      "type": "array",<br/>      "items": {<br/>          "type": "array",<br/>          "items": [<br/>              {"type": "string", "format": "date"},<br/>              {"type": "string", "format": "date"},<br/>              {"type": ["number", "null"] }<br/>          ]<br/>      }<br/>  } | [["2016-01-01","2016-01-31",13.13],["2016-02-01","2016-02-29",42.42]] |
-| Foo |
-| struct('foo', 1) | {<br/>      "type": "object",<br/>      "properties": {<br/>          "foo": { "type": "array" }<br/>      }<br/>  } | {"foo":[1]} |
-| Foo |
-| 'Hello' | {<br/>      "type": "string",<br/>      "pattern": "^\\w+$"<br/>  } | "Hello" |
-| Date formater |
-| struct('myDate', 1+datenum('2016-01-02'), 'myDateTime', 1.5+datenum('2016-01-02')) | {<br/>      "type": "object",<br/>      "properties": {<br/>          "myDate": { <br/>              "type": "string",<br/>              "format": "date"<br/>          },<br/>          "myDateTime": { <br/>              "type": "string",<br/>              "format": "date-time"<br/>          }<br/>      }<br/>  } | {<br/>      "myDate":"2016-01-03",<br/>      "myDateTime":"2016-01-03T12:00:00+0100"<br/>  } |
 
-
-[//]: # "ROUNDTRIP"
-
-
-# Validation
+# Validation Test Cases
 
 [//]: # "VALIDATION"
 
-| MATLAB |  JSON  | Schema | Errors |
-|--------|--------|--------|--------|
-| Array with one string |
-| {'foo'} | ["foo"] | { "type": "object" } | {'/' 'does not match type object' '[array]'} |
-| Row vector with NaNs |
-| [NaN 1] | [null,1] | { "type": "array",<br/>    "items": [<br/>      { "type": "number" },<br/>      { "type": "null"}]<br/>  } | {'/1/' 'does not match type number' 'NaN'}<br/>  {'/2/' 'does not match type null' '1'} |
-| Foo1 |
-| struct('foo', 1) | {"foo":1} | {<br/>      "type": "object",<br/>      "required": ["bar"]<br/>  } | {'/' 'is missing required field bar' '{object}'} |
-| Foo2 |
-| [1 2] | [1, 2] | {<br/>      "type": "object"<br/>  } | {'/' 'does not match type object' '1  2'} |
-| Foo3 |
-| 'foo' | "foo" | {<br/>      "type": "number"<br/>  } | {'/' 'does not match type number' 'foo'} |
-| Foo4 |
-| true | true | {<br/>      "type": "number"<br/>  } | {'/' 'does not match type number' 'true'} |
-| Foo4 |
-| {'foo'} | ["foo"] | {<br/>      "type": "object"<br/>  } | {'/' 'does not match type object' '[array]'} |
-| Foo6 |
-| 'Hello World' | "Hello World" | {<br/>      "type": "string",<br/>      "pattern": "^\\w+$"<br/>  } | {'/' 'does not match pattern ^\w+$' 'Hello World'} |
-| Foo6 |
-| 'Hello World' | "Hello World" | {<br/>      "type": "string",<br/>      "enum": ["foo", "bar"]<br/>  } | {'/' 'is not contained in enumeration' 'Hello World'} |
-| Foo6 |
-| 4711 | 4711 | {<br/>      "type": "integer",<br/>      "enum": [1, 2, 3, 4]<br/>  } | {'/' 'is not contained in enumeration' '4711'} |
-| External Schema |
-| struct('id', '4711', 'bar', 2) | {<br/>      "id":"4711",<br/>      "bar":2<br/>  } | {<br/>      "$ref": "schema2.json"<br/>  } | {'/bar/' 'does not match type string' '2'} |
-
+<table><tbody valign="top">
+<tr><th>MATLAB</th><th>JSON</th><th>Schema</th><th>Errors</th></tr>
+<tr><td span="4">Array with one string</td></tr>
+<tr><td><pre>{'foo'}</pre></td><td><pre>["foo"]</pre></td><td><pre>{ "type": "object" }</pre></td><td><pre>{'/' 'does not match type object' '[array]'}</pre></td></tr>
+<tr><td span="4">Row vector with NaNs</td></tr>
+<tr><td><pre>[NaN 1]</pre></td><td><pre>[null,1]</pre></td><td><pre>{ "type": "array",
+  "items": [
+  { "type": "number" },
+  { "type": "null"}]
+}</pre></td><td><pre>{'/1/' 'does not match type number' 'NaN'}
+{'/2/' 'does not match type null' '1'}</pre></td></tr>
+<tr><td span="4">Foo1</td></tr>
+<tr><td><pre>struct('foo', 1)</pre></td><td><pre>{"foo":1}</pre></td><td><pre>{
+  "type": "object",
+  "required": ["bar"]
+}</pre></td><td><pre>{'/' 'is missing required field bar' '{object}'}</pre></td></tr>
+<tr><td span="4">Foo2</td></tr>
+<tr><td><pre>[1 2]</pre></td><td><pre>[1, 2]</pre></td><td><pre>{
+  "type": "object"
+}</pre></td><td><pre>{'/' 'does not match type object' '1  2'}</pre></td></tr>
+<tr><td span="4">Foo3</td></tr>
+<tr><td><pre>'foo'</pre></td><td><pre>"foo"</pre></td><td><pre>{
+  "type": "number"
+}</pre></td><td><pre>{'/' 'does not match type number' 'foo'}</pre></td></tr>
+<tr><td span="4">Foo4</td></tr>
+<tr><td><pre>true</pre></td><td><pre>true</pre></td><td><pre>{
+  "type": "number"
+}</pre></td><td><pre>{'/' 'does not match type number' 'true'}</pre></td></tr>
+<tr><td span="4">Foo4</td></tr>
+<tr><td><pre>{'foo'}</pre></td><td><pre>["foo"]</pre></td><td><pre>{
+  "type": "object"
+}</pre></td><td><pre>{'/' 'does not match type object' '[array]'}</pre></td></tr>
+<tr><td span="4">Foo6</td></tr>
+<tr><td><pre>'Hello World'</pre></td><td><pre>"Hello World"</pre></td><td><pre>{
+  "type": "string",
+  "pattern": "^\\w+$"
+}</pre></td><td><pre>{'/' 'does not match pattern ^\w+$' 'Hello World'}</pre></td></tr>
+<tr><td span="4">Foo6</td></tr>
+<tr><td><pre>'Hello World'</pre></td><td><pre>"Hello World"</pre></td><td><pre>{
+  "type": "string",
+  "enum": ["foo", "bar"]
+}</pre></td><td><pre>{'/' 'is not contained in enumeration' 'Hello World'}</pre></td></tr>
+<tr><td span="4">Foo6</td></tr>
+<tr><td><pre>4711</pre></td><td><pre>4711</pre></td><td><pre>{
+  "type": "integer",
+  "enum": [1, 2, 3, 4]
+}</pre></td><td><pre>{'/' 'is not contained in enumeration' '4711'}</pre></td></tr>
+<tr><td span="4">External Schema</td></tr>
+<tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
+  "id":"4711",
+  "bar":2
+}</pre></td><td><pre>{
+  "$ref": "schema2.json"
+}</pre></td><td><pre>{'/bar/' 'does not match type string' '2'}</pre></td></tr>
+<tr><td span="4">Internal Schema</td></tr>
+<tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
+  "id": "4711",
+  "bar": 2
+}</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "bar": { "$ref": "#definitions/bar" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "bar": { "type": "string" }
+  }
+}</pre></td><td><pre>{'/bar/' 'does not match type string' '2'}</pre></td></tr>
+<tr><td span="4">additionalProperties</td></tr>
+<tr><td><pre>{
+  struct('id', '4711', 'bar', 2)
+  struct('id', '4711', 'bar', 2, 'foo', 'Hello')
+}</pre></td><td><pre>[
+  {
+    "id":"4711",
+    "bar":2
+  },
+  {
+    "id":"4711",
+    "bar":2,
+    "foo": "Hello"
+  }
+]</pre></td><td><pre>{
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "id": { "type": "string" },
+      "bar": { "type": "number" }
+    },
+    "additionalProperties": false
+  }
+}</pre></td><td><pre>{'/2/' 'contains additional properties' '{object}'}</pre></td></tr>
+<tr><td span="4">Invalid Reference</td></tr>
+<tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
+  "id": "4711",
+  "bar": 2
+}</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "bar": { "$ref": "#definitions/BAR" }
+  },
+  "definitions": {
+    "bar": { }
+  }
+}</pre></td><td><pre>{[] 'Invalid $ref at /properties/bar/ -> #definitions/BAR' ''}</pre></td></tr>
+<tr><td span="4">Invalid Reference</td></tr>
+<tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
+  "id": "4711",
+  "bar": 2
+}</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "bar": { "$ref": 4711 }
+  }
+}</pre></td><td><pre>{[] 'Invalid $ref at /properties/bar/' ''}</pre></td></tr>
+<tr><td span="4">Cyclic Schema References</td></tr>
+<tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
+  "id": "4711",
+  "bar": 2
+}</pre></td><td><pre>{
+  "type": "object",
+  "properties": {
+    "id": { "type": "string" },
+    "bar": { "$ref": "#definitions/barType" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "barType": { "$ref": "#properties/bar" }
+  }
+}</pre></td><td><pre>{[] 'Cyclic references /properties/bar/ -> #definitions/barType -> #properties/bar' ''}</pre></td></tr>
+</tbody></table>
 
 [//]: # "VALIDATION"
 
-# Parse
+# Parse Oneway Test Cases
 
 [//]: # "PARSE"
 
-| MATLAB <-|<- Schema <-|<- JSON |
-|--------|--------|------|
-| Structure array |
-| {'foo'} |  | ["foo"] |
-| AllOf |
-| struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL') | {<br/>      "$ref": "schema2.json"<br/>  } | {<br/>      "id":"4711",<br/>      "foo":2<br/>  } |
-
+<table><tbody valign="top">
+<tr><th>MATLAB</th><th>Schema</th><th>JSON</th></tr>
+<tr><td span="3">Structure array</td></tr>
+<tr><td><pre>{'foo'}</pre></td><td><pre></pre></td><td><pre>["foo"]</pre></td></tr>
+<tr><td span="3">AllOf</td></tr>
+<tr><td><pre>struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL')</pre></td><td><pre>{
+  "$ref": "schema2.json"
+}</pre></td><td><pre>{
+  "id":"4711",
+  "foo":2
+}</pre></td></tr>
+</tbody></table>
 
 [//]: # "PARSE"
 
-# Stringify
+# Stringify Oneway Test Cases
 
 [//]: # "STRINGIFY"
 
-| MATLAB | Schema | JSON |
-|--------|--------|------|
-| Structure array |
-| struct('foo', {1 2}) |  | [{"foo":1},{"foo":2}] |
-| Treatment of Inf |
-| Inf |  | null |
-| Treatment of special numbers |
-| [1 Inf -Inf NaN 2] |  | [1,null,null,null,2] |
-| Foo |
-| [1 NaN Inf -Inf 2] | { "type": "array",<br/>    "items": { "type": ["number", "null"] }<br/>  } | [1,null,null,null,2] |
-| Fixed precision |
-| pi | {<br/>      "type": "number",<br/>      "fixedPrecision": 2<br/>  } | 3.14 |
-| Array of arrays with fixed precision |
-| pi | { <br/>      "type": "array",<br/>      "items": {<br/>          "type": "array",  <br/>          "items": {<br/>              "type": ["number", "null"], <br/>              "fixedPrecision": 2<br/>          }<br/>      }<br/>  } | [[3.14]] |
-
+<table><tbody valign="top">
+<tr><th>MATLAB</th><th>Schema</th><th>JSON</th></tr>
+<tr><td span="3">Structure array</td></tr>
+<tr><td><pre>struct('foo', {1 2})</pre></td><td><pre></pre></td><td><pre>[{"foo":1},{"foo":2}]</pre></td></tr>
+<tr><td span="3">Treatment of Inf</td></tr>
+<tr><td><pre>Inf</pre></td><td><pre></pre></td><td><pre>null</pre></td></tr>
+<tr><td span="3">Treatment of special numbers</td></tr>
+<tr><td><pre>[1 Inf -Inf NaN 2]</pre></td><td><pre></pre></td><td><pre>[1,null,null,null,2]</pre></td></tr>
+<tr><td span="3">Foo</td></tr>
+<tr><td><pre>[1 NaN Inf -Inf 2]</pre></td><td><pre>{ "type": "array",
+  "items": { "type": ["number", "null"] }
+}</pre></td><td><pre>[1,null,null,null,2]</pre></td></tr>
+<tr><td span="3">Fixed precision</td></tr>
+<tr><td><pre>pi</pre></td><td><pre>{
+  "type": "number",
+  "fixedPrecision": 2
+}</pre></td><td><pre>3.14</pre></td></tr>
+<tr><td span="3">Array of arrays with fixed precision</td></tr>
+<tr><td><pre>pi</pre></td><td><pre>{ 
+  "type": "array",
+  "items": {
+    "type": "array",  
+    "items": {
+      "type": ["number", "null"], 
+      "fixedPrecision": 2
+    }
+  }
+}</pre></td><td><pre>[[3.14]]</pre></td></tr>
+</tbody></table>
 
 [//]: # "STRINGIFY"
 
