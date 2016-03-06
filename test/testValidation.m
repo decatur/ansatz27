@@ -1,23 +1,13 @@
 function testValidation(description)
 
 dir = fileparts(mfilename ("fullpath"));
-fid = fopen(fullfile(dir, '..', 'build', 'validation.md'), 'w');
 
-function append(format, varargin)
-    fprintf(fid, [format '\n'], varargin{:});
-end
-
-factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
-builder = factory.newDocumentBuilder();
-
-file = javaObject('java.io.File', fullfile(dir, 'testValidation.xml'));
-document = builder.parse(file);
-
+document = xmlread(fullfile(dir, 'testValidation.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
-nl = @(text) strrep(text, sprintf('\n'), '<br/>');
 
-append('| MATLAB |  JSON  | Schema | Errors |');
-append('|--------|--------|--------|--------|');
+fid = fopen(fullfile(dir, '..', 'build', 'validation.html'), 'w');
+fprintf(fid, '<table><tbody valign="top">\n');
+appendRow(fid, '<th>MATLAB</th><th>JSON</th><th>Schema</th><th>Errors</th>');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -34,8 +24,8 @@ for k=1:tests.getLength()
     json = getElementText(test, 'json');
     errorText = getElementText(test, 'errors');
 
-    append('| %s |', desc);
-    append('| %s | %s | %s | %s |', nl(code), nl(json), nl(schema), nl(errorText));
+    appendRow(fid, '<td span="4">%s</td>', desc);
+    appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 4), code, json, schema, errorText);
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
@@ -63,6 +53,7 @@ for k=1:tests.getLength()
 
 end
 
+fprintf(fid, '</tbody></table>');
 fclose(fid);
 
 end

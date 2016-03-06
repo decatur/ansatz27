@@ -1,22 +1,13 @@
 function testRoundtrip(description)
 
-fid = fopen ('../build/roundtrip.html', 'w');
+dir = fileparts(mfilename ("fullpath"));
 
-function append(format, varargin)
-    fprintf(fid, ['<tr>' format '</tr>\n'], varargin{:});
-end
-
-factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
-builder = factory.newDocumentBuilder();
-
-file = javaObject('java.io.File', 'testRoundtrip.xml');
-document = builder.parse(file);
-
+document = xmlread(fullfile(dir, 'testRoundtrip.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
-nl = @(text) text;
 
-fprintf(fid, '<table><tbody>\n');
-append('<th>MATLAB</th><th>Schema</th><th>JSON</th>');
+fid = fopen (fullfile(dir, '../build/roundtrip.html'), 'w');
+fprintf(fid, '<table><tbody valign="top">\n');
+appendRow(fid, '<th>MATLAB</th><th>Schema</th><th>JSON</th>');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -78,8 +69,8 @@ for k=1:tests.getLength()
 
     end
 
-    append('<td span="3">%s %s</td>', status, desc);
-    append('<td><pre>%s</pre></td><td><pre>%s</pre></td><td><pre>%s</pre></td>', nl(code), nl(schema), nl(jsonExpected));
+    appendRow(fid, '<td span="3">%s %s</td>', status, desc);
+    appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, jsonExpected);
 
 end
 

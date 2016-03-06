@@ -1,36 +1,25 @@
 function testStringify(description)
 
-fid = fopen ('../build/stringify.md', 'w');
+dir = fileparts(mfilename ("fullpath"));
 
-function append(format, varargin)
-    fprintf(fid, [format '\n'], varargin{:});
-end
-
-factory = javaMethod('newInstance', 'javax.xml.parsers.DocumentBuilderFactory');
-builder = factory.newDocumentBuilder();
-file = javaObject('java.io.File', 'testStringify.xml');
-document = builder.parse(file);
-
+document = xmlread(fullfile(dir, 'testStringify.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
-nl = @(text) strrep(text, sprintf('\n'), '<br/>');
 
-
-append('| MATLAB | Schema | JSON |');
-append('|--------|--------|------|');
+fid = fopen(fullfile(dir, '..', 'build', 'stringify.html'), 'w');
+fprintf(fid, '<table><tbody valign="top">\n');
+appendRow(fid, '<th>MATLAB</th><th>Schema</th><th>JSON</th>');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
-    
-    getElem = @(tagName) regexprep(strtrim(test.getElementsByTagName(tagName).item(0).getTextContent()), '\n\s{10}', '\n');
 
-    desc = getElem('description');
+    desc = getElementText(test, 'description');
     if nargin >= 1 && ~strcmp(desc, description)
         continue;
     end
 
-    code = getElem('matlab');
-    schema = getElem('schema');
-    json = getElem('json');
+    code = getElementText(test, 'matlab');
+    schema = getElementText(test, 'schema');
+    json = getElementText(test, 'json');
 
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);
@@ -40,8 +29,8 @@ for k=1:tests.getLength()
 
     [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
 
-    append('| %s |', desc);
-    append('| %s | %s | %s |', nl(code), nl(schema), nl(json));
+    appendRow(fid, '<td span="3">%s</td>', desc);
+    appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, json);
 
     assert(isempty(errors));
 
@@ -53,7 +42,7 @@ for k=1:tests.getLength()
 
 end
 
-
+fprintf(fid, '</tbody></table>');
 fclose(fid);
 
 end

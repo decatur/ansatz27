@@ -30,20 +30,10 @@ end
 
 [obj, errors] = JSON_Parser.parse('file:document.json', 'file:schema.json');
 
-assert(isempty(obj.foo))
-assert(obj.date == 736355)
-assert(obj.datetime == 736355.5)
-
-expectedErrors = { ...
-    {'/minNumber/', 'is smaller than minimum 3', '1'}, ...
-    {'/matrix/2/2/', 'is smaller than minimum 0', '-5'}, ...
-    {'/myArray/2/myNumber/', 'is smaller than minimum 0', '-3.1415'}, ...
-};
-
 m = cellToMat({1 2});
 assert(isequal(m, [1 2]));
 
-m = cellToMat({[1] [2]});
+m = cellToMat({{1} {2}});
 assert(isequal(m, [1;2]));
 
 m = cellToMat({{1 2} {[] 4}});
