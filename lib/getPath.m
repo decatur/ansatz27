@@ -1,7 +1,7 @@
 % COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
-function obj = getPath(obj, path)
+function obj = getPath(obj, path, default)
 %GETPATH Returns the value under the path or empty if the path does not exist.
 % Example:
 %    obj = struct('foo', struct('bar', 13))
@@ -12,7 +12,10 @@ for k=1:length(parts)
     if isfield(obj, parts{k})
         obj = obj.(parts{k});
     else
-        obj = [];
+        if nargin >= 3
+            obj = default;
+        else
+            obj = [];
         return
     end
 end

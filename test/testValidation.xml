@@ -130,4 +130,64 @@
         </json>
         <errors>{'/bar/' 'does not match type string' '2'}</errors>
     </test>
+    <test>
+        <description>Internal Schema</description>
+        <matlab>struct('id', '4711', 'bar', 2)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string" },
+                    "bar": { "$ref": "#definitions/bar" }
+                },
+                "additionalProperties": false,
+                "definitions": {
+                    "bar": { "type": "string" }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "id": "4711",
+                "bar": 2
+            }
+        </json>
+        <errors>{'/bar/' 'does not match type string' '2'}</errors>
+    </test>
+    <test>
+        <description>additionalProperties</description>
+        <matlab>
+            {
+                struct('id', '4711', 'bar', 2)
+                struct('id', '4711', 'bar', 2, 'foo', 'Hello')
+            }
+        </matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string" },
+                        "bar": { "type": "number" }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        </schema>
+        <json>
+            [
+                {
+                    "id":"4711",
+                    "bar":2
+                },
+                {
+                    "id":"4711",
+                    "bar":2,
+                    "foo": "Hello"
+                }
+            ]
+        </json>
+        <errors>{'/2/' 'contains additional properties' '{object}'}</errors>
+    </test>
 </tests>

@@ -316,6 +316,7 @@ classdef JSON_Parser < JSON_Handler
                     val = c.value;
 
                     if strcmp(class(c), 'CellArrayHolder') && ~strcmp(class(holder), 'CellArrayHolder')
+                        % End-of-line of a nested cell array. Try to convert to matrix.
                         val = cellToMat(val);
                     end
                 case '{'

@@ -70,6 +70,14 @@ if isstruct(value)
             end
         end
     end
+
+    if getPath(schema, 'additionalProperties') == false
+        actualKeys = fieldnames(value);
+        allowedKeys = fieldnames(getPath(schema, 'properties', struct()));
+        if any(~ismember(actualKeys, allowedKeys))
+            this.addError(path, 'contains additional properties', value);
+        end
+    end
 elseif ischar(value)
     if isfield(schema, 'pattern')
         if isempty(regexp(value, schema.pattern))

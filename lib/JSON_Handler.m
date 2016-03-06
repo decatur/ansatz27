@@ -82,21 +82,33 @@ classdef JSON_Handler < handle
 
         function schema = normalizeSchema(this, schema, path)
         %normalizeSchema recursively descends the schema and resolves allOf references.
-            
+            if nargin < 3
+                path = '/';
+            end
+            schema = normalizeSchema_(this, schema, schema, path);
+        end
+
+        function schema = normalizeSchema_(this, rootSchema, schema, path)
             if ~isstruct(schema)
                 return
             end
 
-            if nargin < 3
-                path = '/';
+            if isfield(schema, 'x_ref')
+                % Replace by referenced schema.
+                % TODO: We must do this until we hit a non-ref schema!
+                if ~ischar(schema.x_ref) || isempty(strtrim(schema.x_ref))
+                    error('Invalid $ref at %s', path);
+                end
+                schema.x_ref = strtrim(schema.x_ref);
+                if schema.x_ref(1) == '#'
+                    schema = getPath(rootSchema, schema.x_ref(2:end));
+                else
+                    schema = JSON_Parser.parse(JSON_Handler.readFileToString( fullfile(this.getRootDir(), schema.x_ref), 'latin1' ));
+                end
             end
 
             if isfield(schema, 'allOf')
-                schema = this.mergeSchemas(schema);
-            end
-
-            if isfield(schema, 'x_ref')
-                schema = JSON_Parser.parse(JSON_Handler.readFileToString( fullfile(this.getRootDir(), schema.x_ref), 'latin1' ));
+                schema = this.mergeSchemas(rootSchema, schema);
             end
 
             if ~isfield(schema, 'type') || isempty(schema.type)
@@ -121,15 +133,15 @@ classdef JSON_Handler < handle
                 pNames = fieldnames(props);
                 for k=1:length(pNames)
                     subPath = [path pNames{k} '/'];
-                    schema.properties.(pNames{k}) = this.normalizeSchema(props.(pNames{k}), subPath);
+                    schema.properties.(pNames{k}) = this.normalizeSchema_(rootSchema, props.(pNames{k}), subPath);
                 end
             elseif ismember('array', type) && isfield(schema, 'items') 
                 if isstruct(schema.items)
-                    schema.items = this.normalizeSchema(schema.items, [path 'items' '/']);
+                    schema.items = this.normalizeSchema_(rootSchema, schema.items, [path 'items' '/']);
                 elseif iscell(schema.items)
                     for k=1:length(schema.items)
                         subPath = [path num2str(k) '/'];
-                        schema.items{k} = this.normalizeSchema(schema.items{k}, subPath);
+                        schema.items{k} = this.normalizeSchema_(rootSchema, schema.items{k}, subPath);
                     end
                 end
             elseif any(ismember({'number' 'integer'}, type))
@@ -142,7 +154,7 @@ classdef JSON_Handler < handle
 
         end
 
-        function [ mergedSchema ] = mergeSchemas(this, schema)
+        function [ mergedSchema ] = mergeSchemas(this, rootSchema, schema)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
 
@@ -155,11 +167,8 @@ classdef JSON_Handler < handle
             rootDir = this.getRootDir();
 
             for k=1:length(schema.allOf)
-                subSchema = schema.allOf{k};
-                if isfield(subSchema, 'x_ref')
-                    subSchema = JSON_Parser.parse(JSON_Handler.readFileToString( fullfile(rootDir, subSchema.x_ref), 'latin1' ));
-                end
-                
+                subSchema = this.normalizeSchema_(rootSchema, schema.allOf{k}, [path 'allOf/']);
+
                 keys = fieldnames(subSchema.properties);
                 for l=1:length(keys)
                     key = keys{l};
@@ -182,10 +191,15 @@ classdef JSON_Handler < handle
 
         function text = readFileToString(path, encoding )
             if JSON_Handler.isoct
-                fid = fopen(path, 'r');
+                [fid, msg] = fopen(path, 'r');
             else
-                fid = fopen(path, 'r', 'l', encoding);
+                [fid, msg] = fopen(path, 'r', 'l', encoding);
             end
+
+            if fid == -1
+                error('Could not open %s: %s', path)
+            end
+
             text = fscanf(fid, '%c');
             fclose(fid);
         end
