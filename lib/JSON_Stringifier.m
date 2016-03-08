@@ -1,11 +1,11 @@
 % COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
-classdef JSON_Stringifier < JSON_Handler
-    %JSON_PARSER Validating JSON stringifier
+classdef JSON_Stringifier < JSON
+    %JSON_Stringifier Validating JSON stringifier
     %
     %    Usage:
-    %       [value, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json', 4)
+    %       [value, errors] = JSON.stringify(obj, 'file:schema.json', 4)
     
     properties (Access = private)
         nl
@@ -15,17 +15,13 @@ classdef JSON_Stringifier < JSON_Handler
     
     methods
         function this = JSON_Stringifier()
-            %this@JSON_Handler();
-            this.formatters('date') = @(x) JSON_Handler.datenum2string(x);
-            this.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
+            %this@JSON();
+            this.formatters('date') = @(x) JSON.datenum2string(x);
+            this.formatters('date-time') = @(x) JSON.datetimenum2string(x);
         end
     end
 
     methods (Static)
-        function [json, errors] = stringify(varargin)
-            stringifier = JSON_Stringifier();
-            [json, errors] = stringifier.stringify_(varargin{:});
-        end
     end
     
     methods

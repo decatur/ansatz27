@@ -18,7 +18,7 @@ classdef datetime < handle
             if nargin < 1
                 this.dateNum = now
             else
-                this.dateNum = JSON_Handler.datestring2num(s)
+                this.dateNum = JSON.datestring2num(s)
             end
         end
 

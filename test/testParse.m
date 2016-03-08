@@ -29,7 +29,7 @@ for k=1:tests.getLength()
 
     expected = a;
 
-    [actual, errors] = JSON_Parser.parse(json, schema);
+    [actual, errors] = JSON.parse(json, schema);
 
     appendRow(fid, '<td span="3">%s</td>', desc);
     appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, json);

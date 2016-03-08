@@ -35,7 +35,7 @@ for k=1:tests.getLength()
         eval(code);
     end
 
-    [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
+    [jsonOut, errors] = JSON.stringify(a, schema, 0);
 
     if ~isequal(expectedErrors, errors)
         fprintf(1, 'stringify\n');
@@ -43,7 +43,7 @@ for k=1:tests.getLength()
         errors
     end
 
-    [objOut, errors] = JSON_Parser.parse(json, schema);
+    [objOut, errors] = JSON.parse(json, schema);
 
     if ~isequal(expectedErrors, errors)
         fprintf(1, 'parse\n');

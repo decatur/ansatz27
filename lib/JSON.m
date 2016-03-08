@@ -1,7 +1,7 @@
 % COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
-classdef JSON_Handler < handle
+classdef JSON < handle
 
     properties (Constant)
         isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
@@ -16,8 +16,8 @@ classdef JSON_Handler < handle
     
     methods
 
-        function this = JSON_Handler()
-            if JSON_Handler.isoct
+        function this = JSON()
+            if JSON.isoct
                 this.formatters = ContainersMap();
             else
                 this.formatters = containers.Map();
@@ -30,9 +30,9 @@ classdef JSON_Handler < handle
             if ischar(schema)
                 if regexp(schema, '^file:')
                     schemaURL = regexprep(schema, '^file:', '');
-                    schema = JSON_Handler.readFileToString(schemaURL, 'latin1');
+                    schema = JSON.readFileToString(schemaURL, 'latin1');
                 end
-                schema = JSON_Parser.parse(schema);
+                schema = JSON.parse(schema);
             else
                 error('Illegal type for schema');
             end
@@ -114,7 +114,7 @@ classdef JSON_Handler < handle
                             error('Invalid $ref at %s', strjoin(refs, ' -> '));
                         end
                     else
-                        schema = JSON_Parser.parse(JSON_Handler.readFileToString( schema.x_ref, 'latin1' ));
+                        schema = JSON.parse(JSON.readFileToString( schema.x_ref, 'latin1' ));
                     end
                 until ~isfield(schema, 'x_ref')
             end
@@ -199,8 +199,18 @@ classdef JSON_Handler < handle
 
     methods (Static)
 
+        function [value, errors] = parse(varargin)
+            parser = JSON_Parser();
+            [value, errors] = parser.parse_(varargin{:});
+        end
+
+        function [json, errors] = stringify(varargin)
+            stringifier = JSON_Stringifier();
+            [json, errors] = stringifier.stringify_(varargin{:});
+        end
+
         function text = readFileToString(path, encoding )
-            if JSON_Handler.isoct
+            if JSON.isoct
                 [fid, msg] = fopen(path, 'r');
             else
                 [fid, msg] = fopen(path, 'r', 'l', encoding);

@@ -32,7 +32,7 @@ for k=1:tests.getLength()
     end
 
     fprintf(1, ' ... stringify ');
-    [jsonActual, errors] = JSON_Stringifier.stringify(a, schema, 0);
+    [jsonActual, errors] = JSON.stringify(a, schema, 0);
     if ~isempty(errors)
         status = 'Fail';
         errors
@@ -45,7 +45,7 @@ for k=1:tests.getLength()
     end
 
     fprintf(1, ' ... parse ');
-    [actualM, errors] = JSON_Parser.parse(jsonExpected, schema);
+    [actualM, errors] = JSON.parse(jsonExpected, schema);
     if ~isempty(errors)
         status = 'Fail';
         errors

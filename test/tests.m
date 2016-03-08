@@ -1,4 +1,4 @@
-addpath('../lib');
+addpath('../lib', '../lib/polyfill');
 %debug_on_error(true);
 
 testRoundtrip();

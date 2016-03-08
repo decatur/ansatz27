@@ -10,7 +10,7 @@ classdef ContainersMap < handle
     
     methods
 
-        function this = JSON_Handler()
+        function this = ContainersMap()
             this.s = struct;
         end
 

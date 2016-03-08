@@ -1,11 +1,11 @@
 % COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
-classdef JSON_Parser < JSON_Handler
+classdef JSON_Parser < JSON
     %JSON_PARSER Validating JSON parser
     %   
     %    Usage:
-    %       [value, errors] = JSON_Parser.parse('file:doc.json', 'file:schema.json')
+    %       [value, errors] = JSON.parse('file:doc.json', 'file:schema.json')
     
     properties %(Access = private)
         pos
@@ -19,19 +19,16 @@ classdef JSON_Parser < JSON_Handler
     methods
         
         function this = JSON_Parser()
-            %this@JSON_Handler();
-            this.formatters('date') = @(x) JSON_Handler.datestring2num(x);
-            this.formatters('date-time') = @(x) JSON_Handler.datetimestring2num(x);
+            %this@JSON();
+            this.formatters('date') = @(x) JSON.datestring2num(x);
+            this.formatters('date-time') = @(x) JSON.datetimestring2num(x);
         end
     
     end
 
     methods (Static)
 
-        function [value, errors] = parse(varargin)
-            parser = JSON_Parser();
-            [value, errors] = parser.parse_(varargin{:});
-        end
+        
     
     end
     
@@ -50,7 +47,7 @@ classdef JSON_Parser < JSON_Handler
             end
 
             if regexp(json, '^file:')
-                this.json = JSON_Handler.readFileToString(regexprep(json, '^file:', ''), 'latin1');
+                this.json = JSON.readFileToString(regexprep(json, '^file:', ''), 'latin1');
             else
                 this.json = json;
             end
@@ -259,7 +256,7 @@ classdef JSON_Parser < JSON_Handler
                                     this.error_pos('End of text reached in escaped unicode character');
                                 end
                                 
-                                if JSON_Handler.isoct
+                                if JSON.isoct
                                     str(nstr+(1:6)) = this.json(this.pos-1:this.pos+4);
                                 else
                                     str(nstr+1) = native2unicode( [0 0 hex2dec(this.json(this.pos+1:this.pos+2)) hex2dec(this.json(this.pos+3:this.pos+4))], 'utf-32');
