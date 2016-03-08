@@ -29,7 +29,7 @@ for k=1:tests.getLength()
 
     [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
 
-    appendRow(fid, '<td span="3">%s</td>', desc);
+    appendRow(fid, '<td colspan="3">%s</td>', desc);
     appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, json);
 
     assert(isempty(errors));

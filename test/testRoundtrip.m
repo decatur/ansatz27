@@ -23,8 +23,6 @@ for k=1:tests.getLength()
     schema = getElementText(test, 'schema');
     jsonExpected = getElementText(test, 'json');
 
-    status = '(Pass)';
-
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);
     else
@@ -34,12 +32,10 @@ for k=1:tests.getLength()
     fprintf(1, ' ... stringify ');
     [jsonActual, errors] = JSON.stringify(a, schema, 0);
     if ~isempty(errors)
-        status = 'Fail';
         errors
     end
 
     if ~strcmp(regexprep(jsonExpected, '\s', ''), jsonActual)
-        status = 'Fail';
         jsonExpected
         jsonActual
     end
@@ -47,14 +43,12 @@ for k=1:tests.getLength()
     fprintf(1, ' ... parse ');
     [actualM, errors] = JSON.parse(jsonExpected, schema);
     if ~isempty(errors)
-        status = 'Fail';
         errors
     end
 
     expectedM = a;
 
     if ~isequaln(expectedM, actualM) || (islogical(expectedM) && ~islogical(actualM))
-        status = 'Fail';
         if isnumeric(expectedM) || islogical(expectedM) 
             mat2str(expectedM)
         else
@@ -69,7 +63,7 @@ for k=1:tests.getLength()
 
     end
 
-    appendRow(fid, '<td span="3">%s %s</td>', status, desc);
+    appendRow(fid, '<td colspan="3">%s</td>', desc);
     appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, jsonExpected);
 
 end

@@ -24,7 +24,7 @@ for k=1:tests.getLength()
     json = getElementText(test, 'json');
     errorText = getElementText(test, 'errors');
 
-    appendRow(fid, '<td span="4">%s</td>', desc);
+    appendRow(fid, '<td colspan="4">%s</td>', desc);
     appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 4), code, json, schema, errorText);
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);

@@ -31,7 +31,7 @@ for k=1:tests.getLength()
 
     [actual, errors] = JSON.parse(json, schema);
 
-    appendRow(fid, '<td span="3">%s</td>', desc);
+    appendRow(fid, '<td colspan="3">%s</td>', desc);
     appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, json);
 
     if ~isempty(errors)

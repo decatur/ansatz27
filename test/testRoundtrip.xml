@@ -348,7 +348,9 @@
               "type": "array",
               "items": {
                 "type": "array",  
-                "items": { "type": ["number", "null"] }
+                "items": { 
+                    "type": ["number", "null"]
+                }
               }
             }
         </schema>
@@ -358,8 +360,11 @@
         <description>Foo</description>
         <matlab>[1 NaN 2]</matlab>
         <schema>
-            { "type": "array",
-              "items": { "type": ["number", "null"] }
+            { 
+                "type": "array",
+                "items": { 
+                    "type": ["number", "null"]
+                }
             }
         </schema>
         <json>[1, null, 2]</json>
@@ -380,7 +385,17 @@
             a(2,:,:) = [5 6; 7 8];
         </matlab>
         <schema></schema>
-        <json>[[[1,2],[3,4]],[[5,6],[7,8]]]</json>
+        <json>
+            [
+                [
+                    [1,2],
+                    [3,4]
+                ], [
+                    [5,6],
+                    [7,8]
+                ]
+            ]
+        </json>
     </test>
     <test>
         <description>Foo</description>
@@ -388,14 +403,26 @@
         <schema>
             {
                 "type": "array",
-                "items": [{"type": "number"}, {"type": "null"}]
+                "items": [
+                    {
+                        "type": "number"
+                    }, {
+                        "type": "null"
+                    }
+                ]
             }
         </schema>
         <json>[1,null]</json>
     </test>
     <test>
         <description>From-till-value list</description>
-        <matlab>[datenum("2016-01-01") datenum("2016-01-31") 13]</matlab>
+        <matlab>
+            [
+                datenum("2016-01-01") ...
+                datenum("2016-01-31") ...
+                13
+            ]
+        </matlab>
         <schema>
             {
                 "type": "array",
@@ -412,8 +439,8 @@
         <description>List of from-till-value lists</description>
         <matlab>
             [
-                [datenum("2016-01-01") datenum("2016-01-31") 13.13]
-                [datenum("2016-02-01") datenum("2016-02-29") 42.42]
+                [736330 736360 13.13]
+                [736361 736389 42.42]
             ]
         </matlab>
         <schema>
