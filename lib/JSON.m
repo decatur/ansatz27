@@ -88,35 +88,40 @@ classdef JSON < handle
             schema = normalizeSchema_(this, schema, schema, path);
         end
 
+
+        function schema = resolveRef(this, rootSchema, schema, path)
+            % Replace by referenced schema.
+            refs = {path};
+            do
+                if ~ischar(schema.x_ref) || isempty(strtrim(schema.x_ref))
+                    error('Invalid $ref at %s', strjoin(refs, ' -> '));
+                end
+                
+                schema.x_ref = strtrim(schema.x_ref);
+                if ismember(schema.x_ref, refs)
+                    error('Cyclic references %s', strjoin(refs, ' -> '));
+                end
+
+                refs{end+1} = schema.x_ref;
+
+                if schema.x_ref(1) == '#'
+                    schema = getPath(rootSchema, schema.x_ref(2:end));
+                    if isempty(schema)
+                        error('Invalid $ref at %s', strjoin(refs, ' -> '));
+                    end
+                else
+                    schema = JSON.parse(JSON.readFileToString( schema.x_ref, 'latin1' ));
+                end
+            until ~isfield(schema, 'x_ref')
+        end
+
         function schema = normalizeSchema_(this, rootSchema, schema, path)
             if ~isstruct(schema)
                 return
             end
 
             if isfield(schema, 'x_ref')
-                % Replace by referenced schema.
-                refs = {path};
-                do
-                    if ~ischar(schema.x_ref) || isempty(strtrim(schema.x_ref))
-                        error('Invalid $ref at %s', strjoin(refs, ' -> '));
-                    end
-                    
-                    schema.x_ref = strtrim(schema.x_ref);
-                    if ismember(schema.x_ref, refs)
-                        error('Cyclic references %s', strjoin(refs, ' -> '));
-                    end
-
-                    refs{end+1} = schema.x_ref;
-
-                    if schema.x_ref(1) == '#'
-                        schema = getPath(rootSchema, schema.x_ref(2:end));
-                        if isempty(schema)
-                            error('Invalid $ref at %s', strjoin(refs, ' -> '));
-                        end
-                    else
-                        schema = JSON.parse(JSON.readFileToString( schema.x_ref, 'latin1' ));
-                    end
-                until ~isfield(schema, 'x_ref')
+                schema = this.resolveRef(rootSchema, schema, path);
             end
 
             if isfield(schema, 'allOf')
