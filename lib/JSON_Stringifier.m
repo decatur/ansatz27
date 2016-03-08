@@ -83,6 +83,8 @@ classdef JSON_Stringifier < JSON
                 try
                     rootschema = this.normalizeSchema(rootschema);
                 catch e
+                    %lasterror.message
+                    %lasterror.stack(1)
                     this.addError(this.schemaURL, e.message, []);
                     errors = this.errors;
                     return

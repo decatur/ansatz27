@@ -11,13 +11,14 @@ classdef JSON < handle
         errors
         schemaURL
         formatters
+        schemaCache
     end
-    
     
     methods
 
         function this = JSON()
             this.formatters = containers.Map();
+            this.schemaCache = containers.Map();
         end
 
         function [ schema, schemaURL ] = loadSchema(this, schema)
@@ -100,13 +101,24 @@ classdef JSON < handle
 
                 refs{end+1} = schema.x_ref;
 
-                if schema.x_ref(1) == '#'
-                    schema = getPath(rootSchema, schema.x_ref(2:end));
+                parts = strsplit(schema.x_ref, '#');
+                
+                if ~isempty(parts{1})
+                    url = parts{1};
+                    if this.schemaCache.isKey(url)
+                        schema = this.schemaCache.isKey(url);
+                    else
+                        fprintf(1, 'Loading schema %s\n', url);
+                        schema = JSON.parse(JSON.readFileToString( url, 'latin1' ));                    
+                        this.schemaCache(url) = schema;
+                    end
+                end
+
+                if length(parts) == 2
+                    schema = getPath(rootSchema, parts{2});
                     if isempty(schema)
                         error('Invalid $ref at %s', strjoin(refs, ' -> '));
                     end
-                else
-                    schema = JSON.parse(JSON.readFileToString( schema.x_ref, 'latin1' ));
                 end
             until ~isfield(schema, 'x_ref')
         end
@@ -218,7 +230,7 @@ classdef JSON < handle
             end
 
             if fid == -1
-                error('Could not open %s: %s', path)
+                error('Could not open %s', path)
             end
 
             text = fscanf(fid, '%c');
