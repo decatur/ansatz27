@@ -59,7 +59,7 @@ classdef JSON_Parser < JSON_Handler
             this.len = length(this.json);
             
             context = struct();
-            context.path = '/';;
+            context.path = '';;
             this.schemaURL = [];
 
             if ~isempty(rootschema) && ischar(rootschema) 
@@ -109,7 +109,7 @@ classdef JSON_Parser < JSON_Handler
         
         function child = childContext(this, context, key)
             child = struct();
-            child.path = [context.path num2str(key) '/'];
+            child.path = [context.path '/' num2str(key)];
             if ~isfield(context, 'schema')
                 return
             end
@@ -304,16 +304,16 @@ classdef JSON_Parser < JSON_Handler
         end
         
         function parse_value(this, holder, index, key, context)
-            schema = getPath(context, 'schema');
+            schema = getPath(context, '/schema');
             
             switch(this.json(this.pos))
                 case '"'
                     val = this.parseStr(context);
                 case '['
-                    items = getPath(schema, 'items');
-                    itemType = getPath(items, 'type');
+                    items = getPath(schema, '/items');
+                    itemType = getPath(items, '/type');
 
-                    if ~isempty(itemType) && ismember('object', itemType) && getPath(items, 'additionalProperties') == false
+                    if ~isempty(itemType) && ismember('object', itemType) && getPath(items, '/additionalProperties') == false
                         c = StructArrayHolder();
                     else
                         c = CellArrayHolder();
@@ -360,7 +360,7 @@ classdef JSON_Parser < JSON_Handler
             
             if ~isempty(schema)
                 validate(this, val, schema, context.path);
-                format = getPath(schema, 'format');
+                format = getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);
                     val = formatter(val);

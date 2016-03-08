@@ -6,7 +6,7 @@ assert(isstruct(object));
 
 mergedObject = object;
 
-properties = getPath(schema, 'properties');
+properties = getPath(schema, '/properties');
 if ~isstruct(properties)
     return
 end

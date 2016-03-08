@@ -71,9 +71,9 @@ if isstruct(value)
         end
     end
 
-    if getPath(schema, 'additionalProperties') == false
+    if getPath(schema, '/additionalProperties') == false
         actualKeys = fieldnames(value);
-        allowedKeys = fieldnames(getPath(schema, 'properties', struct()));
+        allowedKeys = fieldnames(getPath(schema, '/properties', struct()));
         if any(~ismember(actualKeys, allowedKeys))
             this.addError(path, 'contains additional properties', value);
         end
@@ -85,7 +85,7 @@ elseif ischar(value)
         end
     end
     
-    format = getPath(schema, 'format');
+    format = getPath(schema, '/format');
     
     if strcmp(format, 'date')
         if ~regexp(value, '^\d{4}-\d{2}-\d{2}$')

@@ -5,7 +5,7 @@
         <matlab>{'foo'}</matlab>
         <schema>{ "type": "object" }</schema>
         <json>["foo"]</json>
-        <errors>{'/' 'does not match type object' '[array]'}</errors>
+        <errors>{'' 'does not match type object' '[array]'}</errors>
     </test>
     <test>
         <description>Row vector with NaNs</description>
@@ -19,8 +19,8 @@
         </schema>
         <json>[null,1]</json>
         <errors>
-            {'/1/' 'does not match type number' 'NaN'}
-            {'/2/' 'does not match type null' '1'}
+            {'/1' 'does not match type number' 'NaN'}
+            {'/2' 'does not match type null' '1'}
         </errors>
     </test>
     <test>
@@ -33,7 +33,7 @@
             }
         </schema>
         <json>{"foo":1}</json>
-        <errors>{'/' 'is missing required field bar' '{object}'}</errors>
+        <errors>{'' 'is missing required field bar' '{object}'}</errors>
     </test>
     <test>
         <description>Foo2</description>
@@ -44,7 +44,7 @@
             }
         </schema>
         <json>[1, 2]</json>
-        <errors>{'/' 'does not match type object' '1  2'}</errors>
+        <errors>{'' 'does not match type object' '1  2'}</errors>
     </test>
     <test>
         <description>Foo3</description>
@@ -54,7 +54,7 @@
                 "type": "number"
             }</schema>
         <json>"foo"</json>
-        <errors>{'/' 'does not match type number' 'foo'}</errors>
+        <errors>{'' 'does not match type number' 'foo'}</errors>
     </test>
     <test>
         <description>Foo4</description>
@@ -65,7 +65,7 @@
             }
         </schema>
         <json>true</json>
-        <errors>{'/' 'does not match type number' 'true'}</errors>
+        <errors>{'' 'does not match type number' 'true'}</errors>
     </test>
     <test>
         <description>Foo4</description>
@@ -76,7 +76,7 @@
             }
         </schema>
         <json>["foo"]</json>
-        <errors>{'/' 'does not match type object' '[array]'}</errors>
+        <errors>{'' 'does not match type object' '[array]'}</errors>
     </test>
     <test>
         <description>Foo6</description>
@@ -88,7 +88,7 @@
             }
         </schema>
         <json>"Hello World"</json>
-        <errors>{'/' 'does not match pattern ^\w+$' 'Hello World'}</errors>
+        <errors>{'' 'does not match pattern ^\w+$' 'Hello World'}</errors>
     </test>
     <test>
         <description>Foo6</description>
@@ -100,7 +100,7 @@
             }
         </schema>
         <json>"Hello World"</json>
-        <errors>{'/' 'is not contained in enumeration' 'Hello World'}</errors>
+        <errors>{'' 'is not contained in enumeration' 'Hello World'}</errors>
     </test>
     <test>
         <description>Foo6</description>
@@ -112,7 +112,7 @@
             }
         </schema>
         <json>4711</json>
-        <errors>{'/' 'is not contained in enumeration' '4711'}</errors>
+        <errors>{'' 'is not contained in enumeration' '4711'}</errors>
     </test>
     <test>
         <description>External Schema</description>
@@ -128,7 +128,7 @@
                 "bar":2
             }
         </json>
-        <errors>{'/bar/' 'does not match type string' '2'}</errors>
+        <errors>{'/bar' 'does not match type string' '2'}</errors>
     </test>
     <test>
         <description>Internal Schema</description>
@@ -138,7 +138,7 @@
                 "type": "object",
                 "properties": {
                     "id": { "type": "string" },
-                    "bar": { "$ref": "#definitions/bar" }
+                    "bar": { "$ref": "#/definitions/bar" }
                 },
                 "additionalProperties": false,
                 "definitions": {
@@ -152,7 +152,7 @@
                 "bar": 2
             }
         </json>
-        <errors>{'/bar/' 'does not match type string' '2'}</errors>
+        <errors>{'/bar' 'does not match type string' '2'}</errors>
     </test>
     <test>
         <description>additionalProperties</description>
@@ -188,7 +188,7 @@
                 }
             ]
         </json>
-        <errors>{'/2/' 'contains additional properties' '{object}'}</errors>
+        <errors>{'/2' 'contains additional properties' '{object}'}</errors>
     </test>
     <test>
         <description>Invalid Reference</description>
@@ -198,7 +198,7 @@
                 "type": "object",
                 "properties": {
                     "id": { "type": "string" },
-                    "bar": { "$ref": "#definitions/BAR" }
+                    "bar": { "$ref": "#/definitions/BAR" }
                 },
                 "definitions": {
                     "bar": { }
@@ -211,7 +211,7 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Invalid $ref at /properties/bar/ -> #definitions/BAR' ''}</errors>
+        <errors>{[] 'Invalid $ref at /properties/bar -> #/definitions/BAR' ''}</errors>
     </test>
     <test>
         <description>Invalid Reference</description>
@@ -231,7 +231,7 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Invalid $ref at /properties/bar/' ''}</errors>
+        <errors>{[] 'Invalid $ref at /properties/bar' ''}</errors>
     </test>
     <test>
         <description>Cyclic Schema References</description>
@@ -241,11 +241,11 @@
                 "type": "object",
                 "properties": {
                     "id": { "type": "string" },
-                    "bar": { "$ref": "#definitions/barType" }
+                    "bar": { "$ref": "#/definitions/barType" }
                 },
                 "additionalProperties": false,
                 "definitions": {
-                    "barType": { "$ref": "#properties/bar" }
+                    "barType": { "$ref": "#/properties/bar" }
                 }
             }
         </schema>
@@ -255,6 +255,6 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Cyclic references /properties/bar/ -> #definitions/barType -> #properties/bar' ''}</errors>
+        <errors>{[] 'Cyclic references /properties/bar -> #/definitions/barType -> #/properties/bar' ''}</errors>
     </test>
 </tests>

@@ -437,7 +437,7 @@
         </json>
     </test>
     <test>
-        <description>Foo</description>
+        <description>Foo1</description>
         <matlab>struct('foo', 1)</matlab>
         <schema>
             {

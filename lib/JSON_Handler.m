@@ -67,11 +67,11 @@ classdef JSON_Handler < handle
             end
             
             if ischar(key)
-                if ismember('object', getPath(schema, 'type'))
-                    childSchema = getPath(schema, ['properties/' key]);
+                if ismember('object', getPath(schema, '/type'))
+                    childSchema = getPath(schema, ['/properties/' key]);
                 end
             elseif isnumeric(key)
-                items = getPath(schema, 'items');
+                items = getPath(schema, '/items');
                 if isstruct(items)
                     childSchema = items;
                 elseif iscell(items)
@@ -83,7 +83,7 @@ classdef JSON_Handler < handle
         function schema = normalizeSchema(this, schema, path)
         %normalizeSchema recursively descends the schema and resolves allOf references.
             if nargin < 3
-                path = '/';
+                path = '';
             end
             schema = normalizeSchema_(this, schema, schema, path);
         end
@@ -144,15 +144,15 @@ classdef JSON_Handler < handle
                 props = schema.properties;
                 pNames = fieldnames(props);
                 for k=1:length(pNames)
-                    subPath = [path 'properties/' pNames{k} '/'];
+                    subPath = [path '/properties/' pNames{k}];
                     schema.properties.(pNames{k}) = this.normalizeSchema_(rootSchema, props.(pNames{k}), subPath);
                 end
             elseif ismember('array', type) && isfield(schema, 'items') 
                 if isstruct(schema.items)
-                    schema.items = this.normalizeSchema_(rootSchema, schema.items, [path 'items' '/']);
+                    schema.items = this.normalizeSchema_(rootSchema, schema.items, [path '/items']);
                 elseif iscell(schema.items)
                     for k=1:length(schema.items)
-                        subPath = [path 'items/' num2str(k) '/'];
+                        subPath = [path '/items/' num2str(k)];
                         schema.items{k} = this.normalizeSchema_(rootSchema, schema.items{k}, subPath);
                     end
                 end
@@ -177,7 +177,7 @@ classdef JSON_Handler < handle
             mergedSchema.required = {};
 
             for k=1:length(schema.allOf)
-                subSchema = this.normalizeSchema_(rootSchema, schema.allOf{k}, [path 'allOf/']);
+                subSchema = this.normalizeSchema_(rootSchema, schema.allOf{k}, [path '/allOf']);
 
                 keys = fieldnames(subSchema.properties);
                 for l=1:length(keys)

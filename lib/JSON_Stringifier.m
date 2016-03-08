@@ -112,7 +112,7 @@ classdef JSON_Stringifier < JSON_Handler
             end
 
             context.gap = '';
-            context.path = '/';
+            context.path = '';
             
             json = this.value2json(value, context, rootschema);
             errors = this.errors;
@@ -133,7 +133,7 @@ classdef JSON_Stringifier < JSON_Handler
                 value = this.normalize2nan(value);
             end
 
-            format = getPath(schema, 'format');
+            format = getPath(schema, '/format');
             if this.formatters.isKey(format)
                 formatter = this.formatters(format);
                 value = formatter(value);
@@ -215,7 +215,7 @@ classdef JSON_Stringifier < JSON_Handler
             
             for k=1:l
                 key = names{k};
-                context.path = [path key '/'];
+                context.path = [path '/' key];
                 item_str = this.value2json(value.(key), context, this.getChildSchema(schema, key));
                 if isempty(item_str)
                     continue;
@@ -240,7 +240,7 @@ classdef JSON_Stringifier < JSON_Handler
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            items = getPath(schema, 'items');    
+            items = getPath(schema, '/items');    
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             l = length(value);
@@ -259,7 +259,7 @@ classdef JSON_Stringifier < JSON_Handler
                     item = value{k};
                 end
                 
-                itemContext.path = [context.path num2str(k) '/'];
+                itemContext.path = [context.path '/' num2str(k)];
                 item_str = this.value2json(item, itemContext, itemSchema);
                 
                 if isempty(item_str)
@@ -295,7 +295,7 @@ classdef JSON_Stringifier < JSON_Handler
             s = size(tensor);
             assert(s(1) > 0);
             
-            items = getPath(schema, 'items');
+            items = getPath(schema, '/items');
             if isempty(items)
                 % Make sure a column vector such as [1;2] is generated as [[1],[2]].
                 items = struct();
@@ -324,7 +324,7 @@ classdef JSON_Stringifier < JSON_Handler
                     itemSchema = items;
                 end
 
-                itemContext.path = [context.path num2str(k) '/'];
+                itemContext.path = [context.path '/' num2str(k)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(m, itemContext, itemSchema));
                 sep = ',';
@@ -336,7 +336,7 @@ classdef JSON_Stringifier < JSON_Handler
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
             
-            items = getPath(schema, 'items');
+            items = getPath(schema, '/items');
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -352,7 +352,7 @@ classdef JSON_Stringifier < JSON_Handler
                     itemSchema = items;
                 end
 
-                itemContext.path = [context.path num2str(k) '/'];
+                itemContext.path = [context.path '/' num2str(k)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(row(k), itemContext, itemSchema));
                 sep = ',';
