@@ -17,11 +17,7 @@ classdef JSON < handle
     methods
 
         function this = JSON()
-            if JSON.isoct
-                this.formatters = ContainersMap();
-            else
-                this.formatters = containers.Map();
-            end
+            this.formatters = containers.Map();
         end
 
         function [ schema, schemaURL ] = loadSchema(this, schema)

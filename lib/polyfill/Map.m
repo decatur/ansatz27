@@ -1,7 +1,7 @@
 % COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
-classdef ContainersMap < handle
+classdef Map < handle
 
     properties %(Access = private)
         s
@@ -10,7 +10,7 @@ classdef ContainersMap < handle
     
     methods
 
-        function this = ContainersMap()
+        function this = Map()
             this.s = struct;
         end
 
