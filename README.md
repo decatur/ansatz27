@@ -30,12 +30,12 @@ addpath('lib', 'test')
 
 schema = struct('type', 'object')
 
-[obj, errors] = JSON_Parser.parse('file:document.json', 'file:schema.json')
-[obj, errors] = JSON_Parser.parse('{"foo": 1, "bar": 2}', schema)
+[obj, errors] = JSON.parse('file:document.json', 'file:schema.json')
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', schema)
 
 obj = struct('foo', 1, 'bar', 2)
-[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json')
-[json, errors] = JSON_Stringifier.stringify(obj, schema)
+[json, errors] = JSON.stringify(obj, 'file:schema.json')
+[json, errors] = JSON.stringify(obj, schema)
 
 ```
 
@@ -55,7 +55,6 @@ the value of the format property (if any) is the name of a registered formatter.
 stringifier = JSON_Stringifier()
 stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x)
 stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x)
-[json, errors] = JSON_Stringifier.stringify(obj, 'file:schema.json')
 ```
 
 On parse, formatters are applied *after* all parse, validation steps have been performed.
@@ -345,7 +344,7 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
   ["2016-01-01", "2016-01-31", 13.13],
   ["2016-02-01", "2016-02-29", 42.42]
 ]</pre></td></tr>
-<tr><td span="3">(Pass) Foo</td></tr>
+<tr><td span="3">(Pass) Foo1</td></tr>
 <tr><td><pre>struct('foo', 1)</pre></td><td><pre>{
   "type": "object",
   "properties": {
@@ -389,57 +388,57 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
 <table><tbody valign="top">
 <tr><th>MATLAB</th><th>JSON</th><th>Schema</th><th>Errors</th></tr>
 <tr><td span="4">Array with one string</td></tr>
-<tr><td><pre>{'foo'}</pre></td><td><pre>["foo"]</pre></td><td><pre>{ "type": "object" }</pre></td><td><pre>{'/' 'does not match type object' '[array]'}</pre></td></tr>
+<tr><td><pre>{'foo'}</pre></td><td><pre>["foo"]</pre></td><td><pre>{ "type": "object" }</pre></td><td><pre>{'' 'does not match type object' '[array]'}</pre></td></tr>
 <tr><td span="4">Row vector with NaNs</td></tr>
 <tr><td><pre>[NaN 1]</pre></td><td><pre>[null,1]</pre></td><td><pre>{ "type": "array",
   "items": [
   { "type": "number" },
   { "type": "null"}]
-}</pre></td><td><pre>{'/1/' 'does not match type number' 'NaN'}
-{'/2/' 'does not match type null' '1'}</pre></td></tr>
+}</pre></td><td><pre>{'/1' 'does not match type number' 'NaN'}
+{'/2' 'does not match type null' '1'}</pre></td></tr>
 <tr><td span="4">Foo1</td></tr>
 <tr><td><pre>struct('foo', 1)</pre></td><td><pre>{"foo":1}</pre></td><td><pre>{
   "type": "object",
   "required": ["bar"]
-}</pre></td><td><pre>{'/' 'is missing required field bar' '{object}'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'is missing required field bar' '{object}'}</pre></td></tr>
 <tr><td span="4">Foo2</td></tr>
 <tr><td><pre>[1 2]</pre></td><td><pre>[1, 2]</pre></td><td><pre>{
   "type": "object"
-}</pre></td><td><pre>{'/' 'does not match type object' '1  2'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'does not match type object' '1  2'}</pre></td></tr>
 <tr><td span="4">Foo3</td></tr>
 <tr><td><pre>'foo'</pre></td><td><pre>"foo"</pre></td><td><pre>{
   "type": "number"
-}</pre></td><td><pre>{'/' 'does not match type number' 'foo'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'does not match type number' 'foo'}</pre></td></tr>
 <tr><td span="4">Foo4</td></tr>
 <tr><td><pre>true</pre></td><td><pre>true</pre></td><td><pre>{
   "type": "number"
-}</pre></td><td><pre>{'/' 'does not match type number' 'true'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'does not match type number' 'true'}</pre></td></tr>
 <tr><td span="4">Foo4</td></tr>
 <tr><td><pre>{'foo'}</pre></td><td><pre>["foo"]</pre></td><td><pre>{
   "type": "object"
-}</pre></td><td><pre>{'/' 'does not match type object' '[array]'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'does not match type object' '[array]'}</pre></td></tr>
 <tr><td span="4">Foo6</td></tr>
 <tr><td><pre>'Hello World'</pre></td><td><pre>"Hello World"</pre></td><td><pre>{
   "type": "string",
   "pattern": "^\\w+$"
-}</pre></td><td><pre>{'/' 'does not match pattern ^\w+$' 'Hello World'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'does not match pattern ^\w+$' 'Hello World'}</pre></td></tr>
 <tr><td span="4">Foo6</td></tr>
 <tr><td><pre>'Hello World'</pre></td><td><pre>"Hello World"</pre></td><td><pre>{
   "type": "string",
   "enum": ["foo", "bar"]
-}</pre></td><td><pre>{'/' 'is not contained in enumeration' 'Hello World'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'is not contained in enumeration' 'Hello World'}</pre></td></tr>
 <tr><td span="4">Foo6</td></tr>
 <tr><td><pre>4711</pre></td><td><pre>4711</pre></td><td><pre>{
   "type": "integer",
   "enum": [1, 2, 3, 4]
-}</pre></td><td><pre>{'/' 'is not contained in enumeration' '4711'}</pre></td></tr>
+}</pre></td><td><pre>{'' 'is not contained in enumeration' '4711'}</pre></td></tr>
 <tr><td span="4">External Schema</td></tr>
 <tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
   "id":"4711",
   "bar":2
 }</pre></td><td><pre>{
   "$ref": "schema2.json"
-}</pre></td><td><pre>{'/bar/' 'does not match type string' '2'}</pre></td></tr>
+}</pre></td><td><pre>{'/bar' 'does not match type string' '2'}</pre></td></tr>
 <tr><td span="4">Internal Schema</td></tr>
 <tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
   "id": "4711",
@@ -448,13 +447,13 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "bar": { "$ref": "#definitions/bar" }
+    "bar": { "$ref": "#/definitions/bar" }
   },
   "additionalProperties": false,
   "definitions": {
     "bar": { "type": "string" }
   }
-}</pre></td><td><pre>{'/bar/' 'does not match type string' '2'}</pre></td></tr>
+}</pre></td><td><pre>{'/bar' 'does not match type string' '2'}</pre></td></tr>
 <tr><td span="4">additionalProperties</td></tr>
 <tr><td><pre>{
   struct('id', '4711', 'bar', 2)
@@ -479,7 +478,7 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
     },
     "additionalProperties": false
   }
-}</pre></td><td><pre>{'/2/' 'contains additional properties' '{object}'}</pre></td></tr>
+}</pre></td><td><pre>{'/2' 'contains additional properties' '{object}'}</pre></td></tr>
 <tr><td span="4">Invalid Reference</td></tr>
 <tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
   "id": "4711",
@@ -488,12 +487,12 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "bar": { "$ref": "#definitions/BAR" }
+    "bar": { "$ref": "#/definitions/BAR" }
   },
   "definitions": {
     "bar": { }
   }
-}</pre></td><td><pre>{[] 'Invalid $ref at /properties/bar/ -> #definitions/BAR' ''}</pre></td></tr>
+}</pre></td><td><pre>{[] 'Invalid $ref at /properties/bar -> #/definitions/BAR' ''}</pre></td></tr>
 <tr><td span="4">Invalid Reference</td></tr>
 <tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
   "id": "4711",
@@ -504,7 +503,7 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
     "id": { "type": "string" },
     "bar": { "$ref": 4711 }
   }
-}</pre></td><td><pre>{[] 'Invalid $ref at /properties/bar/' ''}</pre></td></tr>
+}</pre></td><td><pre>{[] 'Invalid $ref at /properties/bar' ''}</pre></td></tr>
 <tr><td span="4">Cyclic Schema References</td></tr>
 <tr><td><pre>struct('id', '4711', 'bar', 2)</pre></td><td><pre>{
   "id": "4711",
@@ -513,13 +512,13 @@ a(2,:,:) = [5 6; 7 8];</pre></td><td><pre></pre></td><td><pre>[[[1,2],[3,4]],[[5
   "type": "object",
   "properties": {
     "id": { "type": "string" },
-    "bar": { "$ref": "#definitions/barType" }
+    "bar": { "$ref": "#/definitions/barType" }
   },
   "additionalProperties": false,
   "definitions": {
-    "barType": { "$ref": "#properties/bar" }
+    "barType": { "$ref": "#/properties/bar" }
   }
-}</pre></td><td><pre>{[] 'Cyclic references /properties/bar/ -> #definitions/barType -> #properties/bar' ''}</pre></td></tr>
+}</pre></td><td><pre>{[] 'Cyclic references /properties/bar -> #/definitions/barType -> #/properties/bar' ''}</pre></td></tr>
 </tbody></table>
 
 [//]: # "VALIDATION"
