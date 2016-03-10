@@ -18,7 +18,7 @@ end
 
 
 if pointer(1) ~= '/'
-    error('Invalid pointer', pointer)
+    error('Invalid pointer %s', pointer)
 end
 
 parts = strsplit(pointer, '/');

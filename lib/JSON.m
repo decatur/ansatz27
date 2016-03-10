@@ -28,6 +28,7 @@ classdef JSON < handle
                 if regexp(schema, '^file:')
                     schemaURL = regexprep(schema, '^file:', '');
                     schema = JSON.readFileToString(schemaURL, 'latin1');
+                    schema.url = schemaURL;
                 end
                 schema = JSON.parse(schema);
             else
@@ -87,30 +88,39 @@ classdef JSON < handle
 
 
         function schema = resolveRef(this, rootSchema, schema, path)
-            % Replace by referenced schema.
-            refs = {path};
+        %resolveRef swaps in the referenced schema.
+
+            refs = {['#' path]};
             do
-                if ~ischar(schema.x_ref) || isempty(strtrim(schema.x_ref))
+                ref = schema.x_ref;
+                
+                if ~ischar(ref) || isempty(strtrim(ref))
                     error('Invalid $ref at %s', strjoin(refs, ' -> '));
                 end
                 
-                schema.x_ref = strtrim(schema.x_ref);
-                if ismember(schema.x_ref, refs)
-                    error('Cyclic references %s', strjoin(refs, ' -> '));
+                ref = strtrim(ref);
+                if ref(1) == '#'
+                    ref = [getPath(rootSchema, '/url', '') ref];
                 end
 
-                refs{end+1} = schema.x_ref;
+                if ismember(ref, refs)
+                    error('Cyclic references %s', strjoin([refs ref], ' -> '));
+                end
 
-                parts = strsplit(schema.x_ref, '#');
+                refs{end+1} = ref;
+
+                parts = strsplit(ref, '#');
                 
                 if ~isempty(parts{1})
                     url = parts{1};
                     if this.schemaCache.isKey(url)
-                        schema = this.schemaCache.isKey(url);
+                        rootSchema = this.schemaCache.isKey(url);
                     else
                         fprintf(1, 'Loading schema %s\n', url);
-                        schema = JSON.parse(JSON.readFileToString( url, 'latin1' ));                    
-                        this.schemaCache(url) = schema;
+                        rootSchema = JSON.parse(JSON.readFileToString( url, 'latin1' )); 
+                        rootSchema.url = url;                 
+                        this.schemaCache(url) = rootSchema;
+                        schema = rootSchema;
                     end
                 end
 
