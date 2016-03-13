@@ -1,8 +1,8 @@
 addpath('lib', 'test');
 
-if 5~=exist('DateTime', 'builtin')
-    addpath('lib/polyfill');
-end
+%if 5~=exist('DateTime', 'builtin')
+    addpath('lib/polyfill', '-end');
+%end
 
 debug_on_error(true);
 

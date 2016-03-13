@@ -1,30 +1,20 @@
 addpath('../lib');
 
+tc = TestCase();
+
 [json, errors] = JSON.stringify({'foo'}, struct('type', 'object'));
 
 [json, errors] = JSON.stringify(pi, struct('type', 'integer'), 0);
 
-try
-    [obj, errors] = JSON.parse('[1,2]a');
-    assert(false);
-catch e
-    assert(strcmp(e.message, 'Unexpected char [1,2]a^^^'));
-end
+[obj, errors] = JSON.parse('[1,2]a');
+tc.assertEqual(errors{1}{2}, 'Unexpected trailing text [1,2]a^^^');
 
-try
-    [obj, errors] = JSON.parse('a[1,2]');
-    assert(false);
-catch e
-    assert(strcmp(e.message, 'Illegal token a^^^[1,2]'));
-end
+[obj, errors] = JSON.parse('a[1,2]');
+tc.assertEqual(errors{1}{2}, 'Illegal token a^^^[1,2]');
 
 % Check for invalid chars in string "fo\x01o"
-try
-    JSON.parse(char([34  102  111 1 111 34]));
-    assert(false);
-catch e
-    assert(strcmp(e.message, ['Invalid char found in range #00-#1F "fo' char(1) '^^^o"']));
-end
+[obj, errors] = JSON.parse(char([34  102  111 1 111 34]));
+tc.assertEqual(errors{1}{2}, ['Invalid char found in range #00-#1F "fo' char(1) '^^^o"']);
 
 %%% Comprehensive Tests
 

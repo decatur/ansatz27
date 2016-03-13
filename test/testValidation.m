@@ -32,6 +32,9 @@ for k=1:tests.getLength()
     end
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
+    for k=1:length(expectedErrors)
+        expectedErrors{k} = [expectedErrors{k} 'JSON:SCHEMA_VALIDATION'];
+    end
 
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);

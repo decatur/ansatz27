@@ -18,6 +18,7 @@ end
 
 
 if pointer(1) ~= '/'
+    % TODO: Do not throw here
     error('Invalid pointer %s', pointer)
 end
 

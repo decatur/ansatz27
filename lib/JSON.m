@@ -32,7 +32,7 @@ classdef JSON < handle
                 end
                 schema = JSON.parse(schema);
             else
-                error('Illegal type for schema');
+                error('JSON:PARSE_SCHEMA', 'Schema must be of type char');
             end
         end
 
@@ -44,7 +44,11 @@ classdef JSON < handle
         %    end
         %end
 
-        function addError(this, path, msg, value)
+        function addError(this, path, msg, value, type)
+            if nargin < 5
+                type = 'JSON:SCHEMA_VALIDATION';
+            end
+
             if isstruct(value)
                 value = '{object}';
             elseif iscell(value)
@@ -54,7 +58,7 @@ classdef JSON < handle
             else
                 value = num2str(value);
             end
-            this.errors{end+1} = {path msg value};
+            this.errors{end+1} = {path msg value type};
         end
         
         function childSchema = getChildSchema(this, schema, key)
@@ -95,7 +99,7 @@ classdef JSON < handle
                 ref = schema.x_ref;
                 
                 if ~ischar(ref) || isempty(strtrim(ref))
-                    error('Invalid $ref at %s', strjoin(refs, ' -> '));
+                    error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
                 end
                 
                 ref = strtrim(ref);
@@ -104,7 +108,7 @@ classdef JSON < handle
                 end
 
                 if ismember(ref, refs)
-                    error('Cyclic references %s', strjoin([refs ref], ' -> '));
+                    error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
                 end
 
                 refs{end+1} = ref;
@@ -127,7 +131,7 @@ classdef JSON < handle
                 if length(parts) == 2
                     schema = getPath(rootSchema, parts{2});
                     if isempty(schema)
-                        error('Invalid $ref at %s', strjoin(refs, ' -> '));
+                        error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
                     end
                 end
             until ~isfield(schema, 'x_ref')
@@ -160,7 +164,7 @@ classdef JSON < handle
             schema.type = type;
 
             if isfield(schema, 'required') && ~iscell(schema.required)
-                error('Invalid required at %s', path);
+                error('JSON:PARSE_SCHEMA', 'Invalid required at %s', path);
             end
 
             if ismember('object', type) && isfield(schema, 'properties') && ~isempty(schema.properties)
@@ -224,7 +228,18 @@ classdef JSON < handle
 
         function [value, errors] = parse(varargin)
             parser = JSON_Parser();
-            [value, errors] = parser.parse_(varargin{:});
+            
+            try
+                value = parser.parse_(varargin{:});
+            catch e
+                if regexp(e.identifier, '^JSON:', 'once')
+                    parser.addError([], e.message, [], e.identifier);
+                else
+                    rethrow e;
+                end
+            end
+
+            errors = parser.errors;
         end
 
         function [json, errors] = stringify(varargin)
@@ -240,6 +255,7 @@ classdef JSON < handle
             end
 
             if fid == -1
+                % TODO: Do not throw here
                 error('Could not open %s', path)
             end
 

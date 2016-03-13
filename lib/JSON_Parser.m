@@ -28,15 +28,13 @@ classdef JSON_Parser < JSON
 
     methods (Static)
 
-        
-    
     end
     
     methods
         
         function [value, errors] = parse_(this, json, rootschema)
             if nargin < 2 || ~ischar(json) || isempty(json)
-                error('JSON must be non-empty string');
+                error('JSON:PARSE_JSON', 'JSON must be non-empty string');
             end
 
             this.errors = {};
@@ -85,17 +83,12 @@ classdef JSON_Parser < JSON
 
             this.parse_value(holder, [], 'value', context);
             this.skip_whitespace();
-            
             if this.pos ~= this.len+1
                 % Not all text was consumed.
-                this.error_pos('Unexpected char');
+                this.error_pos('Unexpected trailing text');
             end
-            
+
             value = holder.value.value;
-            
-            %if isstruct(value) && ~isempty(this.schemaURL)
-            %    value.validationSchema = this.schemaURL;
-            %end
             
             errors = this.errors;
         end
@@ -378,7 +371,7 @@ classdef JSON_Parser < JSON
                 msg = [msg part(index+1:end)];
             end
 
-            error('JSONparser:invalidFormat', msg);
+            error('JSON:PARSE_JSON', msg);
         end % function error_pos
         
         function validKey = valid_field(this, key)

@@ -19,8 +19,8 @@ classdef Map < handle
         end
 
         function value = subsref(this, idx)
-            if (isempty (idx))
-                error ();
+            if (isempty(idx))
+                error('Must provide idx in call to subsref()');
             end
 
             switch idx(1).type
@@ -48,7 +48,7 @@ classdef Map < handle
 
         function this = subsasgn(this, idx, rhs)
             if (isempty (idx))
-                error ();
+                error('Must provide idx in call to subsasgn()');
             end
 
             if strcmp(idx(1).type, '()')
