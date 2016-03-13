@@ -62,33 +62,13 @@ string representation and MATLABs numerical representation. A formatter is invok
 the value of the format property (if any) is the name of a registered formatter. 
 
 ```MATLAB
-stringifier = JSON_Stringifier()
-stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x)
-stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x)
+TODO
 ```
 
-On parse, formatters are applied *after* all parse, validation steps have been performed.
+On parse, formatters are applied *after* all parseing and validation steps have been performed.
 On stringify, formatters are performed *before* all validation and stringifying takes place.
 
-There are two predefined formatters
-
-## date
-
-| JSON       | MATLAB    |
-|------------|-----------|
-| string     | numerical |
-| 2016-02-08 | 736368    |
-
-## datetime
-
-| JSON                  | MATLAB    |
-|-----------------------|-----------|
-| string                | numerical |
-| 2016-02-08T12Z        | 736368.5  |
-| 2016-02-08T12:00+0000 | 736368.5  |
-| 2016-02-08T13:00+0100 | 736368.5  |
-| 2016-02-08T12:30:30Z  | 736368.521181  |
-
+There are two predefined formatters `date` and `date-time`.
 
 # Array comprehensions
 
@@ -105,8 +85,6 @@ On parse, default values are set for unspecified object properties, see test cas
 
 
 # Roundtrip Test Cases
-
-Each entry is a passed unit test.
 
 [//]: # "ROUNDTRIP"
 
