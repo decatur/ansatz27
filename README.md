@@ -68,7 +68,7 @@ TODO
 On parse, formatters are applied *after* all parseing and validation steps have been performed.
 On stringify, formatters are performed *before* all validation and stringifying takes place.
 
-There are two predefined formatters `date` and `date-time`.
+There are two predefined formatters `date` and `date-time`, see [some examples](#date-formater) below.
 
 # Array comprehensions
 
@@ -269,6 +269,8 @@ Schema
 
 ```
 ### List of from-till-value tripples
+<a name="date-formater"></a>
+
 MATLAB
 ```MATLAB
 [
