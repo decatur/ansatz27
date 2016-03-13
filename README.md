@@ -408,18 +408,37 @@ Schema
 
 [//]: # "VALIDATION"
 
-### Format validation on parse
+### Pattern
 MATLAB
 ```MATLAB
+'Hello World'
+```
+JSON
+```JSON
+"Hello World"
+```
 
+Schema
+```JSON
+{
+    "type": "string",
+    "pattern": "^\\w+$"
+}
+```
+Errors
+```MATLAB
+{'' 'does not match pattern ^\w+$' 'Hello World'}
+```
+### Cyclic Schema References
+MATLAB
+```MATLAB
+struct('id', '4711', 'bar', 2)
 ```
 JSON
 ```JSON
 {
-    "a": "2016-01-01",
-    "b": "2016-01-01T12:00:00Z",
-    "c": "2016-01-01T12:00:00Z",
-    "d": "2016-01-01T12:00:00Zulu",
+    "id": "4711",
+    "bar": 2
 }
 ```
 
@@ -428,19 +447,16 @@ Schema
 {
     "type": "object",
     "properties": {
-        "a": { "type": "string", "format": "date" },
-        "b": { "type": "string", "format": "date" },
-        "c": { "type": "string", "format": "date-time" },
-        "d": { "type": "string", "format": "date-time" }
+        "id": { "type": "string" },
+        "bar": { "$ref": "#/definitions/barType" }
+    },
+    "additionalProperties": false,
+    "definitions": {
+        "barType": { "$ref": "#/properties/bar" }
     }
 }
 ```
 Errors
-```MATLAB
-{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Zulu'}
-```
-rrors
 ```MATLAB
 {[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}
 ```
@@ -449,11 +465,6 @@ MATLAB
 ```MATLAB
 struct('a', 736330, 'b', 736330.5, 'c', 736330.5, 'd', 'i')
 ```
-JSON
-```JSON
-
-```
-
 Schema
 ```JSON
 {
@@ -473,17 +484,13 @@ Errors
 {'/d' 'must be a number' 'i'}
 ```
 ### Format validation on parse
-MATLAB
-```MATLAB
-
-```
 JSON
 ```JSON
 {
     "a": "2016-01-01",
     "b": "2016-01-01T12:00:00Z",
     "c": "2016-01-01T12:00:00Z",
-    "d": "2016-01-01T12:00:00Zulu",
+    "d": "2016-01-01T12:00:00Zulu"
 }
 ```
 

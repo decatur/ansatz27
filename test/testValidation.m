@@ -25,8 +25,12 @@ for k=1:tests.getLength()
 
     if strcmp(char(test.getAttribute('readme')), 'true')
         fprintf(fid, '### %s\n', desc);
-        fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
-        fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', jsonExpected);
+        if ~isempty(code)
+            fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
+        end
+        if ~isempty(jsonExpected)
+            fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', jsonExpected);
+        end
         fprintf(fid, 'Schema\n```JSON\n%s\n```\n', schema);
         fprintf(fid, 'Errors\n```MATLAB\n%s\n```\n', errorText);
     end
