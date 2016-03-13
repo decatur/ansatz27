@@ -205,7 +205,9 @@ classdef JSON_Parser < JSON
         end
         
         function str = parseStr(this, context)
-            assert(this.json(this.pos) == '"');
+            if this.json(this.pos) ~= '"'
+                this.error_pos('" expected');
+            end
 
             startPos = this.pos;            
             this.pos = this.pos + 1;
@@ -353,7 +355,10 @@ classdef JSON_Parser < JSON
                 format = getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);
-                    val = formatter(val);
+                    [val errMsg] = formatter(val);
+                    if ~isempty(errMsg)
+                        this.addError(context.path, errMsg, val);
+                    end
                 end
             end
 

@@ -278,4 +278,50 @@
         </json>
         <errors>{[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}</errors>
     </test>
+    <test readme="true">
+        <description>Format validation on stringify</description>
+        <matlab>struct('a', 736330, 'b', 736330.5, 'c', 736330.5, 'd', 'i')</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "a": { "type": "string", "format": "date" },
+                    "b": { "$ref": "#/properties/a" },
+                    "c": { "type": "string", "format": "date-time" },
+                    "d": { "$ref": "#/properties/c" }
+                }
+            }
+        </schema>
+        <errors>
+            {'/b' 'must be an integer' '736330.5'}
+            {'/b' 'does not match type string' '736330.5'}
+            {'/d' 'must be a number' 'i'}
+        </errors>
+    </test>
+    <test readme="true">
+        <description>Format validation on parse</description>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "a": { "type": "string", "format": "date" },
+                    "b": { "type": "string", "format": "date" },
+                    "c": { "type": "string", "format": "date-time" },
+                    "d": { "type": "string", "format": "date-time" }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "a": "2016-01-01",
+                "b": "2016-01-01T12:00:00Z",
+                "c": "2016-01-01T12:00:00Z",
+                "d": "2016-01-01T12:00:00Zulu"
+            }
+        </json>
+        <errors>
+            {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+            {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Zulu'}
+        </errors>
+    </test>
 </tests>

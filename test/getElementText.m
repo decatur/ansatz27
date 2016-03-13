@@ -1,7 +1,7 @@
 function text = getElementText(parentNode, tagName)
     nodeList = parentNode.getElementsByTagName(tagName);
     if nodeList.getLength() == 0
-        text = ''
+        text = '';
     else
         text = nodeList.item(0).getTextContent();
         %text = regexprep(text, '^[^\n]*\n', '');

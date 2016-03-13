@@ -134,7 +134,10 @@ classdef JSON_Stringifier < JSON
             format = getPath(schema, '/format');
             if this.formatters.isKey(format)
                 formatter = this.formatters(format);
-                value = formatter(value);
+                [value errMsg] = formatter(value);
+                if ~isempty(errMsg)
+                    this.addError(context.path, errMsg, value);
+                end
             end
 
 

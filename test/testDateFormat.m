@@ -1,4 +1,3 @@
-addpath('../lib');
 
 javaDate = javaObject('java.util.Date');
 offsetInMinutes = javaDate.getTimezoneOffset();

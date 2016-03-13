@@ -36,17 +36,22 @@ for k=1:tests.getLength()
         expectedErrors{k} = [expectedErrors{k} 'JSON:SCHEMA_VALIDATION'];
     end
 
-    if isempty(regexp(code, '^a\s*='))
-        a = eval(code);
-    else
-        eval(code);
+    
+    if ~isempty(code)
+        if isempty(regexp(code, '^a\s*='))
+            a = eval(code);
+        else
+            eval(code);
+        end 
+
+        [jsonActual, actualErrors] = JSON.stringify(a, schema, 0);
+        tc.assertEqual(actualErrors, expectedErrors);
     end
 
-    [jsonActual, actualErrors] = JSON.stringify(a, schema, 0);
-    tc.assertEqual(actualErrors, expectedErrors);
-
-    [actualMatlab, actualErrors] = JSON.parse(jsonExpected, schema);
-    tc.assertEqual(actualErrors, expectedErrors);
+    if ~isempty(jsonExpected)
+        [actualMatlab, actualErrors] = JSON.parse(jsonExpected, schema);
+        tc.assertEqual(actualErrors, expectedErrors);
+    end
 
 end
 

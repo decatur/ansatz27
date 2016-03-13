@@ -1,31 +1,15 @@
-% COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
-% Origin is https://github.com/decatur/ansatz27.
+function t = datetime(x, varargin)
+% Example:
+% t = datetime(now, 'TimeZone', '+01:00', 'ConvertFrom', 'datenum');
+% 04-Mar-2016 20:01:28
+% datetime('2014-01-01T01:02:03', 'TimeZone', '+01:00', 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ss')
 
-classdef datetime < handle
+t = Datetime(x);
 
-    properties (Constant)
-        isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
-    end
-
-    properties %(Access = private)
-        TimeZone
-        dateNum
-    end
-    
-    methods
-
-        function this = datetime(s)
-            if nargin < 1
-                this.dateNum = now
-            else
-                this.dateNum = JSON.datestring2num(s)
-            end
-        end
-
-    end
-
-    methods (Static)
-        
+for k=1:2:length(varargin)
+    if strcmp(varargin{k}, 'TimeZone')
+        t.TimeZone = varargin{k+1};
     end
 end
+
 

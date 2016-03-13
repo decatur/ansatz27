@@ -20,7 +20,7 @@ readme = merge(readme, 'VALIDATION', 'build/validation.md')
 readme = merge(readme, 'PARSE', 'build/parse.md')
 readme = merge(readme, 'STRINGIFY', 'build/stringify.md')
 
-f = codecs.open("build/README.md", "w", "utf-8")
+f = codecs.open("README.md", "w", "utf-8")
 f.write(readme)
 f.close()
 

@@ -233,9 +233,10 @@ classdef JSON < handle
                 value = parser.parse_(varargin{:});
             catch e
                 if regexp(e.identifier, '^JSON:', 'once')
+                    value = [];
                     parser.addError([], e.message, [], e.identifier);
                 else
-                    rethrow e;
+                    rethrow(e);
                 end
             end
 
@@ -244,7 +245,19 @@ classdef JSON < handle
 
         function [json, errors] = stringify(varargin)
             stringifier = JSON_Stringifier();
-            [json, errors] = stringifier.stringify_(varargin{:});
+
+            try
+                json = stringifier.stringify_(varargin{:});
+            catch e
+                if regexp(e.identifier, '^JSON:', 'once')
+                    json = [];
+                    parser.addError([], e.message, [], e.identifier);
+                else
+                    rethrow(e);
+                end
+            end
+
+            errors = stringifier.errors;
         end
 
         function text = readFileToString(path, encoding )
@@ -263,18 +276,21 @@ classdef JSON < handle
             fclose(fid);
         end
 
-        function s = datenum2string(n)
+        function [s err] = datenum2string(n)
             if ~isnumeric(n) || rem(n, 1)~=0 
                 s = n;
+                err = 'must be an integer';
                 return;
+            else
+                err = [];
+                s = datestr(n, 'yyyy-mm-dd');
             end
-
-            s = datestr(n, 'yyyy-mm-dd');
         end
 
-        function s = datetimenum2string(n)
+        function [s err] = datetimenum2string(n)
             if ~isnumeric(n)
                 s = n;
+                err = 'must be a number';
                 return;
             end
 
@@ -288,9 +304,10 @@ classdef JSON < handle
             end
 
             s = [datestr(n, 'yyyy-mm-ddTHH:MM:SS') sprintf('%s%.2i%.2i', sign, fix(offsetInMinutes/60), rem(offsetInMinutes, 60))];
+            err = [];
         end
 
-        function d = datestring2num(s)
+        function [d err] = datestring2num(s)
             % Parse date into a numerical date according MATLABs datenum().
             % The argument is returned if it is not a valid date.
             %
@@ -300,13 +317,15 @@ classdef JSON < handle
 
             if isempty(m)
                 d = s;
+                err = 'is not a valid date';
                 return
+            else
+                d = datenum(str2double(m{1}),str2double(m{2}),str2double(m{3}));
+                err = [];
             end
-
-            d = datenum(str2double(m{1}),str2double(m{2}),str2double(m{3}));
         end
 
-        function d = datetimestring2num(s)
+        function [d err] = datetimestring2num(s)
             % Parse date-time with timezone offset into a numerical date according MATLABs datenum().
             % Minutes and seconds are optional. Timezone offset is Z (meaning +0000) or of the form +-02:00 or +-0200.
             % The argument is returned if it is not a valid date-time.
@@ -323,6 +342,7 @@ classdef JSON < handle
 
             if isempty(names.y)
                 d = s;
+                err = 'is not a valid date-time';
                 return
             end
 
@@ -357,6 +377,7 @@ classdef JSON < handle
             
             % Note: minutes in access to 60 are rolled over to hours by datenum().
             d = datenum(y, m, d, h, mi + offset, sec);
+            err = [];
         end
         
     end

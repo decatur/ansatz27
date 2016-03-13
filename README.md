@@ -1,9 +1,5 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
-▲ - U+25B2 BLACK UP-POINTING TRIANGLE
-▼ - U+25BC BLACK DOWN-POINTING TRIANGLEU+25C0
-◀ ▶
-⮰ ⮱ ⮲ ⮳ ⮴ ⮵ ⮶ ⮷
 ```
       ⮳ MATLAB  ⮷
       |          |
@@ -21,9 +17,6 @@ There are no dependencies.
 # Related Work
 
 [Understanding JSON Schema](http://spacetelescope.github.io/understanding-json-schema/)
-
-
-
 
 # JSON Schema and Type Coersion
 
@@ -124,112 +117,112 @@ a = struct('id', '4711');
 a.portfolio.index = 3;
 a.portfolio.value = 4.32;
 a.deals = struct( ...
-  'name', {'DEAL-A' 'DEAL-B'}, ...
-  'value', {13.13 42.42});
+    'name', {'DEAL-A' 'DEAL-B'}, ...
+    'value', {13.13 42.42});
 a.dealValues = [13.13 42.42];
 ```
 JSON
 ```JSON
 {
-  "id": "4711",
-  "portfolio": {
-    "index": 3,
-    "value": 4.32
-  },
-  "deals": [
-    {
-      "name": "DEAL-A",
-      "value": 13.13
+    "id": "4711",
+    "portfolio": {
+        "index": 3,
+        "value": 4.32
     },
-    {
-      "name": "DEAL-B",
-      "value": 42.42
-    }
-  ],
-  "dealValues": [
-    13.13,
-    42.42
-  ]
+    "deals": [
+        {
+            "name": "DEAL-A",
+            "value": 13.13
+        },
+        {
+            "name": "DEAL-B",
+            "value": 42.42
+        }
+    ],
+    "dealValues": [
+        13.13,
+        42.42
+    ]
 }
 ```
 
 Schema
 ```JSON
 {
-  "type": "object",
-  "properties": {
-    "id": {
-      "type": "string"
-    },
-    "portfolio": {
-      "type": "object",
-      "properties": {
-        "index": {
-          "type": "integer",
-          "minimum": 1
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
         },
-        "value": {
-          "type": "number"
+        "portfolio": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "deals": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "pattern": "^DEAL-\\w+$"
+                    },
+                    "value": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                }
+            }
         }
-      }
-    },
-    "deals": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "name": {
-            "type": "string",
-            "pattern": "^DEAL-\\w+$"
-          },
-          "value": {
-            "type": "number",
-            "minimum": 0
-          }
-        }
-      }
     }
-  }
 }
 ```
 ### AllOf
 MATLAB
 ```MATLAB
 struct( ...
-  'id', '4711', ...
-  'foo', 2, ...
-  'bar', 'DEF_VAL')
+    'id', '4711', ...
+    'foo', 2, ...
+    'bar', 'DEF_VAL')
 ```
 JSON
 ```JSON
 {
-  "id":"4711",
-  "foo":2,
-  "bar":"DEF_VAL"
+    "id":"4711",
+    "foo":2,
+    "bar":"DEF_VAL"
 }
 ```
 
 Schema
 ```JSON
 {
-  "allOf": [
-    {
-      "$ref": "schema2.json"
-    },
-    {
-      "type": "object",
-      "required": ["id"],
-      "properties": {
-        "id": {
-          "type": "string"
+    "allOf": [
+        {
+            "$ref": "schema2.json"
         },
-        "foo": {
-          "type": "number"
+        {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "foo": {
+                    "type": "number"
+                }
+            }
         }
-      }
-    }
-  ]
+    ]
 }
 ```
 ### Cell array
@@ -245,10 +238,10 @@ JSON
 Schema
 ```JSON
 {
-  "type": "array",
-  "items": {
-    "type": "object"
-  }
+    "type": "array",
+    "items": {
+        "type": "object"
+    }
 }
 ```
 ### Hint array of arrays
@@ -266,10 +259,10 @@ Schema
 { 
   "type": "array",
   "items": {
-  "type": "array",  
-  "items": { 
-    "type": ["number", "null"]
-  }
+    "type": "array",  
+    "items": { 
+        "type": ["number", "null"]
+    }
   }
 }
 ```
@@ -283,13 +276,13 @@ a(2,:,:) = [5 6; 7 8];
 JSON
 ```JSON
 [
-  [
-    [1,2],
-    [3,4]
-  ], [
-    [5,6],
-    [7,8]
-  ]
+    [
+        [1,2],
+        [3,4]
+    ], [
+        [5,6],
+        [7,8]
+    ]
 ]
 ```
 
@@ -301,109 +294,109 @@ Schema
 MATLAB
 ```MATLAB
 [
-  [736330 736360 13.13]
-  [736361 736389 42.42]
+    [736330 736360 13.13]
+    [736361 736389 42.42]
 ]
 ```
 JSON
 ```JSON
 [
-  ["2016-01-01", "2016-01-31", 13.13],
-  ["2016-02-01", "2016-02-29", 42.42]
+    ["2016-01-01", "2016-01-31", 13.13],
+    ["2016-02-01", "2016-02-29", 42.42]
 ]
 ```
 
 Schema
 ```JSON
 {
-  "type": "array",
-  "items": {
     "type": "array",
-    "items": [
-      {"type": "string", "format": "date"},
-      {"type": "string", "format": "date"},
-      {"type": ["number", "null"] }
-    ]
-  }
+    "items": {
+        "type": "array",
+        "items": [
+            {"type": "string", "format": "date"},
+            {"type": "string", "format": "date"},
+            {"type": ["number", "null"] }
+        ]
+    }
 }
 ```
 ### Date formater
 MATLAB
 ```MATLAB
 struct( ...
-  'myDate', 1+datenum('2016-01-02'), ...
-  'myDateTime', 1.5+datenum('2016-01-02') ...
+    'myDate', 1+datenum('2016-01-02'), ...
+    'myDateTime', 1.5+datenum('2016-01-02') ...
 )
 ```
 JSON
 ```JSON
 {
-  "myDate":"2016-01-03",
-  "myDateTime":"2016-01-03T12:00:00+0100"
+    "myDate":"2016-01-03",
+    "myDateTime":"2016-01-03T12:00:00+0100"
 }
 ```
 
 Schema
 ```JSON
 {
-  "type": "object",
-  "properties": {
-    "myDate": { 
-      "type": "string",
-      "format": "date"
-    },
-    "myDateTime": { 
-      "type": "string",
-      "format": "date-time"
+    "type": "object",
+    "properties": {
+        "myDate": { 
+            "type": "string",
+            "format": "date"
+        },
+        "myDateTime": { 
+            "type": "string",
+            "format": "date-time"
+        }
     }
-  }
 }
 ```
 ### Reuse
 MATLAB
 ```MATLAB
 struct( ...
-  'shipping_address', ...
-    struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
-  'billing_address', ...
-  struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
+    'shipping_address', ...
+        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
+    'billing_address', ...
+    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
 ```
 JSON
 ```JSON
 {
-  "shipping_address": {
-    "street_address": "1600 Pennsylvania Avenue NW",
-    "city": "Washington",
-    "state": "DC"
-  },
+    "shipping_address": {
+        "street_address": "1600 Pennsylvania Avenue NW",
+        "city":           "Washington",
+        "state":          "DC"
+    },
     "billing_address": {
-    "street_address": "1st Street SE",
-    "city": "Washington",
-    "state": "DC"
-  }
+        "street_address": "1st Street SE",
+        "city":           "Washington",
+        "state":          "DC"
+    }
 }
 ```
 
 Schema
 ```JSON
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-   "definitions": {
-    "address": {
-      "type": "object",
-        "properties": {
-          "street_address": { "type": "string" },
-          "city":       { "type": "string" },
-          "state":      { "type": "string" }
-        },
-        "required": ["street_address", "city", "state"]
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "definitions": {
+        "address": {
+            "type": "object",
+            "properties": {
+                "street_address": { "type": "string" },
+                "city":           { "type": "string" },
+                "state":          { "type": "string" }
+            },
+            "required": ["street_address", "city", "state"]
+        }
+    },
+    "type": "object",
+    "properties": {
+        "billing_address":  { "$ref": "#/definitions/address" },
+        "shipping_address": { "$ref": "#/definitions/address" }
     }
-  },
-   "type": "object",
-  "properties": {
-    "billing_address":  { "$ref": "#/definitions/address" },
-    "shipping_address": { "$ref": "#/definitions/address" }
-  }
 }
 ```
 
@@ -415,57 +408,101 @@ Schema
 
 [//]: # "VALIDATION"
 
-### Pattern
+### Format validation on parse
 MATLAB
 ```MATLAB
-'Hello World'
-```
-JSON
-```JSON
-"Hello World"
-```
 
-Schema
-```JSON
-{
-  "type": "string",
-  "pattern": "^\\w+$"
-}
-```
-Errors
-```MATLAB
-{'' 'does not match pattern ^\w+$' 'Hello World'}
-```
-### Cyclic Schema References
-MATLAB
-```MATLAB
-struct('id', '4711', 'bar', 2)
 ```
 JSON
 ```JSON
 {
-  "id": "4711",
-  "bar": 2
+    "a": "2016-01-01",
+    "b": "2016-01-01T12:00:00Z",
+    "c": "2016-01-01T12:00:00Z",
+    "d": "2016-01-01T12:00:00Zulu",
 }
 ```
 
 Schema
 ```JSON
 {
-  "type": "object",
-  "properties": {
-    "id": { "type": "string" },
-    "bar": { "$ref": "#/definitions/barType" }
-  },
-  "additionalProperties": false,
-  "definitions": {
-    "barType": { "$ref": "#/properties/bar" }
-  }
+    "type": "object",
+    "properties": {
+        "a": { "type": "string", "format": "date" },
+        "b": { "type": "string", "format": "date" },
+        "c": { "type": "string", "format": "date-time" },
+        "d": { "type": "string", "format": "date-time" }
+    }
 }
 ```
 Errors
+```MATLAB
+{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Zulu'}
+```
+rrors
 ```MATLAB
 {[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}
+```
+### Format validation on stringify
+MATLAB
+```MATLAB
+struct('a', 736330, 'b', 736330.5, 'c', 736330.5, 'd', 'i')
+```
+JSON
+```JSON
+
+```
+
+Schema
+```JSON
+{
+    "type": "object",
+    "properties": {
+        "a": { "type": "string", "format": "date" },
+        "b": { "$ref": "#/properties/a" },
+        "c": { "type": "string", "format": "date-time" },
+        "d": { "$ref": "#/properties/c" }
+    }
+}
+```
+Errors
+```MATLAB
+{'/b' 'must be an integer' '736330.5'}
+{'/b' 'does not match type string' '736330.5'}
+{'/d' 'must be a number' 'i'}
+```
+### Format validation on parse
+MATLAB
+```MATLAB
+
+```
+JSON
+```JSON
+{
+    "a": "2016-01-01",
+    "b": "2016-01-01T12:00:00Z",
+    "c": "2016-01-01T12:00:00Z",
+    "d": "2016-01-01T12:00:00Zulu",
+}
+```
+
+Schema
+```JSON
+{
+    "type": "object",
+    "properties": {
+        "a": { "type": "string", "format": "date" },
+        "b": { "type": "string", "format": "date" },
+        "c": { "type": "string", "format": "date-time" },
+        "d": { "type": "string", "format": "date-time" }
+    }
+}
+```
+Errors
+```MATLAB
+{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Zulu'}
 ```
 
 
