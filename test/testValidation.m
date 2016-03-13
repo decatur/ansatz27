@@ -4,10 +4,9 @@ dir = fileparts(mfilename ("fullpath"));
 
 document = xmlread(fullfile(dir, 'testValidation.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
+tc = TestCase();
 
-fid = fopen(fullfile(dir, '..', 'build', 'validation.html'), 'w');
-fprintf(fid, '<table><tbody valign="top">\n');
-appendRow(fid, '<th>MATLAB</th><th>JSON</th><th>Schema</th><th>Errors</th>');
+fid = fopen(fullfile(dir, '..', 'build', 'validation.md'), 'w');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -21,11 +20,16 @@ for k=1:tests.getLength()
 
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
-    json = getElementText(test, 'json');
+    jsonExpected = getElementText(test, 'json');
     errorText = getElementText(test, 'errors');
 
-    appendRow(fid, '<td colspan="4">%s</td>', desc);
-    appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 4), code, json, schema, errorText);
+    if strcmp(char(test.getAttribute('readme')), 'true')
+        fprintf(fid, '### %s\n', desc);
+        fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
+        fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', jsonExpected);
+        fprintf(fid, 'Schema\n```JSON\n%s\n```\n', schema);
+        fprintf(fid, 'Errors\n```MATLAB\n%s\n```\n', errorText);
+    end
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
@@ -35,25 +39,14 @@ for k=1:tests.getLength()
         eval(code);
     end
 
-    [jsonOut, errors] = JSON.stringify(a, schema, 0);
+    [jsonActual, actualErrors] = JSON.stringify(a, schema, 0);
+    tc.assertEqual(actualErrors, expectedErrors);
 
-    if ~isequal(expectedErrors, errors)
-        fprintf(1, 'stringify\n');
-        expectedErrors
-        errors
-    end
-
-    [objOut, errors] = JSON.parse(json, schema);
-
-    if ~isequal(expectedErrors, errors)
-        fprintf(1, 'parse\n');
-        expectedErrors
-        errors
-    end
+    [actualMatlab, actualErrors] = JSON.parse(jsonExpected, schema);
+    tc.assertEqual(actualErrors, expectedErrors);
 
 end
 
-fprintf(fid, '</tbody></table>');
 fclose(fid);
 
 end

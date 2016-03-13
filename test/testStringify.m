@@ -4,10 +4,9 @@ dir = fileparts(mfilename ("fullpath"));
 
 document = xmlread(fullfile(dir, 'testStringify.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
+tc = TestCase();
 
-fid = fopen(fullfile(dir, '..', 'build', 'stringify.html'), 'w');
-fprintf(fid, '<table><tbody valign="top">\n');
-appendRow(fid, '<th>MATLAB</th><th>Schema</th><th>JSON</th>');
+fid = fopen(fullfile(dir, '..', 'build', 'stringify.md'), 'w');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -19,7 +18,7 @@ for k=1:tests.getLength()
 
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
-    json = getElementText(test, 'json');
+    jsonExpected = getElementText(test, 'json');
 
     if isempty(regexp(code, '^a\s*='))
         a = eval(code);
@@ -27,22 +26,20 @@ for k=1:tests.getLength()
         eval(code);
     end
 
-    [jsonOut, errors] = JSON_Stringifier.stringify(a, schema, 0);
+    [jsonActual, errors] = JSON_Stringifier.stringify(a, schema, 0);
 
-    appendRow(fid, '<td colspan="3">%s</td>', desc);
-    appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, json);
-
-    assert(isempty(errors));
-
-    if ~strcmp(json, jsonOut)
-        keyboard
-        fprintf(1, 'Expected: %s\n', json);
-        fprintf(1, 'Actual: %s\n', jsonOut);
+    if strcmp(char(test.getAttribute('readme')), 'true')
+        fprintf(fid, '### %s\n', desc);
+        fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
+        fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', jsonExpected);
+        fprintf(fid, 'Schema\n```JSON\n%s\n```\n', schema);
     end
+
+    tc.assertEmpty(errors);
+    tc.assertEqual(jsonActual, jsonExpected);
 
 end
 
-fprintf(fid, '</tbody></table>');
 fclose(fid);
 
 end

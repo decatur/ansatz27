@@ -15,10 +15,10 @@ def merge( readme, sep, path ):
     readme = ('[//]: # "%s"' % sep).join(c)
     return readme
 
-readme = merge(readme, 'ROUNDTRIP', 'build/roundtrip.html')
-readme = merge(readme, 'VALIDATION', 'build/validation.html')
-readme = merge(readme, 'PARSE', 'build/parse.html')
-readme = merge(readme, 'STRINGIFY', 'build/stringify.html')
+readme = merge(readme, 'ROUNDTRIP', 'build/roundtrip.md')
+readme = merge(readme, 'VALIDATION', 'build/validation.md')
+readme = merge(readme, 'PARSE', 'build/parse.md')
+readme = merge(readme, 'STRINGIFY', 'build/stringify.md')
 
 f = codecs.open("build/README.md", "w", "utf-8")
 f.write(readme)

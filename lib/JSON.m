@@ -28,7 +28,7 @@ classdef JSON < handle
                 if regexp(schema, '^file:')
                     schemaURL = regexprep(schema, '^file:', '');
                     schema = JSON.readFileToString(schemaURL, 'latin1');
-                    schema.url = schemaURL;
+                    %schema.url = schemaURL;
                 end
                 schema = JSON.parse(schema);
             else
@@ -118,7 +118,7 @@ classdef JSON < handle
                     else
                         fprintf(1, 'Loading schema %s\n', url);
                         rootSchema = JSON.parse(JSON.readFileToString( url, 'latin1' )); 
-                        rootSchema.url = url;                 
+                        %rootSchema.url = url;                 
                         this.schemaCache(url) = rootSchema;
                         schema = rootSchema;
                     end

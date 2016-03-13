@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tests>
-    <test>
+    <test readme="true">
         <description>Comprehensive</description>
         <matlab>
             a = struct('id', '4711');
@@ -74,7 +74,7 @@
             }
         </json>
     </test>
-    <test>
+    <test readme="true">
         <description>AllOf</description>
         <matlab>
             struct( ...
@@ -111,7 +111,7 @@
             }
         </json>
     </test>
-    <test>
+    <test readme="true">
         <description>Cell array</description>
         <matlab>{struct('foo', 1) struct('bar', 2)}</matlab>
         <schema>
@@ -340,7 +340,7 @@
         </schema>
         <json>[1]</json>
     </test>
-    <test>
+    <test readme="true">
         <description>Hint array of arrays</description>
         <matlab>1</matlab>
         <schema>
@@ -377,7 +377,7 @@
         </schema>
         <json>[]</json>
     </test>
-    <test>
+    <test readme="true">
         <description>3D matrix</description>
         <matlab>
             a = NaN(2,2,2);
@@ -415,7 +415,7 @@
         <json>[1,null]</json>
     </test>
     <test>
-        <description>From-till-value list</description>
+        <description>From-till-value tripple</description>
         <matlab>
             [
                 datenum("2016-01-01") ...
@@ -435,8 +435,8 @@
         </schema>
         <json>["2016-01-01","2016-01-31",13]</json>
     </test>
-    <test>
-        <description>List of from-till-value lists</description>
+    <test readme="true">
+        <description>List of from-till-value tripples</description>
         <matlab>
             [
                 [736330 736360 13.13]
@@ -487,7 +487,7 @@
         </schema>
         <json>"Hello"</json>
     </test>
-    <test>
+    <test readme="true">
         <description>Date formater</description>
         <matlab>
             struct( ...
@@ -514,6 +514,53 @@
             {
                 "myDate":"2016-01-03",
                 "myDateTime":"2016-01-03T12:00:00+0100"
+            }
+        </json>
+    </test>
+    <test readme="true">
+        <description>Reuse</description>
+        <matlab>
+                struct( ...
+                    'shipping_address', ...
+                        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
+                    'billing_address', ...
+                    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
+        </matlab>
+        <schema>
+            {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+
+                "definitions": {
+                    "address": {
+                        "type": "object",
+                            "properties": {
+                                "street_address": { "type": "string" },
+                                "city":           { "type": "string" },
+                                "state":          { "type": "string" }
+                            },
+                            "required": ["street_address", "city", "state"]
+                    }
+                },
+
+                "type": "object",
+                "properties": {
+                    "billing_address":  { "$ref": "#/definitions/address" },
+                    "shipping_address": { "$ref": "#/definitions/address" }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "shipping_address": {
+                    "street_address": "1600 Pennsylvania Avenue NW",
+                    "city": "Washington",
+                    "state": "DC"
+                },
+                    "billing_address": {
+                    "street_address": "1st Street SE",
+                    "city": "Washington",
+                    "state": "DC"
+                }
             }
         </json>
     </test>

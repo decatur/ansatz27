@@ -4,10 +4,9 @@ dir = fileparts(mfilename ("fullpath"));
 
 document = xmlread(fullfile(dir, 'testParse.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
+tc = TestCase();
 
-fid = fopen(fullfile(dir, '..', 'build', 'parse.html'), 'w');
-fprintf(fid, '<table><tbody valign="top">\n');
-appendRow(fid, '<th>MATLAB</th><th>Schema</th><th>JSON</th>');
+fid = fopen(fullfile(dir, '..', 'build', 'parse.md'), 'w');
 
 for k=1:tests.getLength()
     test = tests.item(k-1);
@@ -27,25 +26,22 @@ for k=1:tests.getLength()
         eval(code);
     end
 
-    expected = a;
+    expectedMatlab = a;
 
-    [actual, errors] = JSON.parse(json, schema);
+    [actualMatlab, errors] = JSON.parse(json, schema);
 
-    appendRow(fid, '<td colspan="3">%s</td>', desc);
-    appendRow(fid, repmat('<td><pre>%s</pre></td>', 1, 3), code, schema, json);
-
-    if ~isempty(errors)
-        errors
+    if strcmp(char(test.getAttribute('readme')), 'true')
+        fprintf(fid, '### %s\n', desc);
+        fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
+        fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', json);
+        fprintf(fid, 'Schema\n```JSON\n%s\n```\n', schema);
     end
 
-    if ~isequal(expected, actual)
-        expected
-        actual
-    end
+    tc.assertEmpty(errors);
+    tc.assertEqual(actualMatlab, expectedMatlab);
 
 end
 
-fprintf(fid, '</tbody></table>');
 fclose(fid);
 
 end

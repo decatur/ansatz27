@@ -78,8 +78,8 @@
         <json>["foo"]</json>
         <errors>{'' 'does not match type object' '[array]'}</errors>
     </test>
-    <test>
-        <description>Foo6</description>
+    <test readme="true">
+        <description>Pattern</description>
         <matlab>'Hello World'</matlab>
         <schema>
             {
@@ -120,6 +120,27 @@
         <schema>
             {
                 "$ref": "schema2.json"
+            }
+        </schema>
+        <json>
+            {
+                "id":"4711",
+                "bar":2
+            }
+        </json>
+        <errors>{'/bar' 'does not match type string' '2'}</errors>
+    </test>
+    <test>
+        <description>External Schema</description>
+        <matlab>struct('id', '4711', 'bar', 2)</matlab>
+        <schema>
+            {
+                "type": "object",
+                "properties": {
+                    "bar": {
+                        "$ref": "schema2.json#/properties/bar"
+                    }
+                }
             }
         </schema>
         <json>
@@ -211,7 +232,7 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Invalid $ref at /properties/bar -> #/definitions/BAR' ''}</errors>
+        <errors>{[] 'Invalid $ref at #/properties/bar -> #/definitions/BAR' ''}</errors>
     </test>
     <test>
         <description>Invalid Reference</description>
@@ -231,9 +252,9 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Invalid $ref at /properties/bar' ''}</errors>
+        <errors>{[] 'Invalid $ref at #/properties/bar' ''}</errors>
     </test>
-    <test>
+    <test readme="true">
         <description>Cyclic Schema References</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
@@ -255,6 +276,6 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Cyclic references /properties/bar -> #/definitions/barType -> #/properties/bar' ''}</errors>
+        <errors>{[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}</errors>
     </test>
 </tests>
