@@ -293,17 +293,10 @@ classdef JSON < handle
                 err = 'must be a number';
                 return;
             end
-
-            javaDate = javaObject('java.util.Date');
-            offsetInMinutes = javaDate.getTimezoneOffset();
-            if offsetInMinutes < 0
-                sign = '+';
-                offsetInMinutes = -offsetInMinutes;
-            else
-                sign = '-';
-            end
-
-            s = [datestr(n, 'yyyy-mm-ddTHH:MM:SS') sprintf('%s%.2i%.2i', sign, fix(offsetInMinutes/60), rem(offsetInMinutes, 60))];
+            d = javaObject('java.util.Date', round((n - 719529)*1000*60*60*24));
+            d = javaObject('java.util.Date', d.getTime() + d.getTimezoneOffset()*60*1000);
+            df = javaObject('java.text.SimpleDateFormat', 'yyyy-MM-dd''T''HH:mm:ssXXX');
+            s = df.format(d);
             err = [];
         end
 
@@ -326,57 +319,42 @@ classdef JSON < handle
         end
 
         function [d err] = datetimestring2num(s)
-            % Parse date-time with timezone offset into a numerical date according MATLABs datenum().
-            % Minutes and seconds are optional. Timezone offset is Z (meaning +0000) or of the form +-02:00 or +-0200.
-            % The argument is returned if it is not a valid date-time.
+            % Parse ISO8601 date-time into a numerical date according MATLABs datenum() with respect to the default timezone.
+            % Minutes and seconds are optional. Timezone offset is Z (meaning +00:00) or of the form +-02:00 or +-0200.
+            % An error is returned if the argument is not a valid date-time.
             %
-            % Example: '2016-02-02 12:30:35+02:00'
-            
-            %  y = 2016     m = 02     d = 02
-            %  h = 12      mi = :30  sec = :35
-            %  o = +02:00  oh = 02   omi = 00
+            % Example:
+            %     JSON.datetimestring2num('2016-02-02T00:00:00+01:00')
+            %     -> 736362 % Note: Only if default time zone is GMT!
+            tokens = regexp(s, '^(.*T\d{2})(:\d{2})?(:\d{2})?(.*)$', 'tokens', 'once');
 
-            % Note: This regexp is tuned for some Octave bugs with named tokens!
-            names = regexp(s, '^(?<y>\d{4})-(?<m>\d{2})-(?<d>\d{2})(T|\s)(?<h>\d{2})(?<mi>:\d{2})?(?<sec>:\d{2})?(?<o>(\+|-)(?<oh>\d{2}):?(?<omi>\d{2})|Z)$', 'names', 'once');
-
-
-            if isempty(names.y)
+            if isempty(tokens)
                 d = s;
                 err = 'is not a valid date-time';
-                return
+                return;
             end
 
-            y = str2double(names.y);
-            m = str2double(names.m);
-            d = str2double(names.d);
-            h = str2double(names.h);
-
-            mi = 0;
-            if ~isempty(names.mi)
-                mi = str2double(names.mi(2:end));
-            end
-
-            sec = 0;
-            if ~isempty(names.sec)
-                sec = str2double(names.sec(2:end));
-            end
-
-            if names.o == 'Z'
-                offset = 0;
+            if length(tokens{end}) == 5
+                tzf = 'Z'; % RFC 822 time zone -0800
             else
-                % Offset from Z in minutes.
-                offset = str2double(names.oh)*60+str2double(names.omi);
-                if names.o(1) == '+'
-                    % Note: Positive offset means point in time is earlier than Z.
-                    offset = -offset;
-                end
+                tzf = 'XXX'; %  ISO 8601 time zone -08:00
             end
 
-            javaDate = javaObject('java.util.Date');
-            offset = offset - javaDate.getTimezoneOffset();
-            
-            % Note: minutes in access to 60 are rolled over to hours by datenum().
-            d = datenum(y, m, d, h, mi + offset, sec);
+            fmts = {'', ':mm', ':mm:ss'};
+
+            fmt = ['yyyy-MM-dd''T''HH' fmts{length(tokens)-1} tzf];
+
+            df = javaObject('java.text.SimpleDateFormat', fmt);
+            try
+                d = df.parse(s);
+            catch e
+                d = s;
+                err = 'is not a valid date-time';
+                return;
+            end
+
+            % datenum('1970-01-01') == 719529
+            d = (d.getTime()/1000/60 - d.getTimezoneOffset())/60/24 + 719529;
             err = [];
         end
         
