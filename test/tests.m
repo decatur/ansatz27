@@ -1,10 +1,11 @@
 addpath('lib', 'test');
+addpath('lib/polyfill', '-end');
 
-%if 5~=exist('DateTime', 'builtin')
-    addpath('lib/polyfill', '-end');
-%end
+mkdir('build');
 
-debug_on_error(true);
+if JSON.isoct
+    debug_on_error(true);
+end
 
 testRoundtrip();
 testStringify();

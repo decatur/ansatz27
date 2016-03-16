@@ -1,6 +1,6 @@
 function testValidation(description)
 
-dir = fileparts(mfilename ("fullpath"));
+dir = fileparts(mfilename ('fullpath'));
 
 document = xmlread(fullfile(dir, 'testValidation.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
@@ -36,24 +36,27 @@ for k=1:tests.getLength()
     end
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
-    for k=1:length(expectedErrors)
-        expectedErrors{k} = [expectedErrors{k} 'JSON:SCHEMA_VALIDATION'];
-    end
 
-    
     if ~isempty(code)
-        if isempty(regexp(code, '^a\s*='))
+        if isempty(regexp(code, '^a\s*=', 'once'))
             a = eval(code);
         else
             eval(code);
         end 
 
         [jsonActual, actualErrors] = JSON.stringify(a, schema, 0);
+        for l=1:length(actualErrors)
+            actualErrors{l} = actualErrors{l}(1:end-1);
+        end
+    
         tc.assertEqual(actualErrors, expectedErrors);
     end
 
     if ~isempty(jsonExpected)
         [actualMatlab, actualErrors] = JSON.parse(jsonExpected, schema);
+        for l=1:length(actualErrors)
+            actualErrors{l} = actualErrors{l}(1:end-1);
+        end
         tc.assertEqual(actualErrors, expectedErrors);
     end
 

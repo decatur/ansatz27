@@ -316,12 +316,12 @@
                 "a": "2016-01-01",
                 "b": "2016-01-01T12:00:00Z",
                 "c": "2016-01-01T12:00:00Z",
-                "d": "2016-01-01T12:00:00Zulu"
+                "d": "2016-01-01T12:00:00Y"
             }
         </json>
         <errors>
             {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-            {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Zulu'}
+            {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
         </errors>
     </test>
 </tests>

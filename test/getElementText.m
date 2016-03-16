@@ -3,7 +3,7 @@ function text = getElementText(parentNode, tagName)
     if nodeList.getLength() == 0
         text = '';
     else
-        text = nodeList.item(0).getTextContent();
+        text = char(nodeList.item(0).getTextContent());
         %text = regexprep(text, '^[^\n]*\n', '');
         text = regexprep(text, '\s*$', '');
         [a indentLength] = regexp(text, '^\n\s*', 'once');

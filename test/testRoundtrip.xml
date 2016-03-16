@@ -417,11 +417,9 @@
     <test>
         <description>From-till-value tripple</description>
         <matlab>
-            [
-                datenum("2016-01-01") ...
-                datenum("2016-01-31") ...
-                13
-            ]
+            [   datenum('2016-01-01') ...
+                datenum('2016-01-31') ...
+                13]
         </matlab>
         <schema>
             {
@@ -513,7 +511,7 @@
         <json>
             {
                 "myDate":"2016-01-03",
-                "myDateTime":"2016-01-03T12:00:00+0100"
+                "myDateTime":"2016-01-03T12:00:00+01:00"
             }
         </json>
     </test>

@@ -1,6 +1,6 @@
 function testRoundtrip(description)
 
-dir = fileparts(mfilename ("fullpath"));
+dir = fileparts(mfilename ('fullpath'));
 
 document = xmlread(fullfile(dir, 'testRoundtrip.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
@@ -22,7 +22,7 @@ for k=1:tests.getLength()
     schema = getElementText(test, 'schema');
     expectedJSON = getElementText(test, 'json');
 
-    if isempty(regexp(code, '^a\s*='))
+    if isempty(regexp(code, '^a\s*=', 'once'))
         a = eval(code);
     else
         eval(code);
