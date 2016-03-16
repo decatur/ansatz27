@@ -348,7 +348,7 @@ classdef JSON_Parser < JSON
             end
             
             if ~isempty(schema)
-                validate(this, val, schema, context.path);
+                this.validate(val, schema, context.path);
                 format = JSON.getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);

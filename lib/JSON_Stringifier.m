@@ -121,11 +121,6 @@ classdef JSON_Stringifier < JSON
     
     methods (Access=private)
         
-        function pType = validate_(this, value, schema, path)
-            pType = validate(this, value, schema, path);
-        end
-        
-        
         function json = value2json(this, value, context, schema)
             if isnumeric(value)
                 value = this.normalize2nan(value);
@@ -151,7 +146,7 @@ classdef JSON_Stringifier < JSON
             pType = [];
 
             if ~isempty(type)
-                pType = this.validate_(value, schema, context.path);
+                pType = this.validate(value, schema, context.path);
                 isarray = strcmp(pType, 'array');
                 
                 if ~isempty(json)
