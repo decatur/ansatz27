@@ -15,7 +15,10 @@ classdef StructArrayHolder < handle
         
         function setVal(this, index, key, val)
             if isempty(key)
-                this.value(index) = val;
+                names = fieldnames(val);
+                for k=1:length(names)
+                    this.value(index).(names{k}) = val.(names{k});
+                end
             else
                 this.value(index).(key) = val;
             end
