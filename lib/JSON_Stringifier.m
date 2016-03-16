@@ -218,7 +218,7 @@ classdef JSON_Stringifier < JSON
                 key = names{k};
                 context.path = [path '/' key];
                 item_str = this.value2json(value.(key), context, this.getChildSchema(schema, key));
-                if isempty(item_str)
+                if isempty(item_str) || strcmp(item_str, 'null') % TODO: Can it be empty?
                     continue;
                 end
                 
