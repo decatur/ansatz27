@@ -1,11 +1,11 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
 ```
-      ⮳ MATLAB  ⮷
-      |          |
-      |◀-Schema-▶|
-      |          |
-      ⮴  JSON   ⮰
+      ↱ MATLAB  ⬎
+      ↑          ↓
+      ↑← Schema →↓
+      ↑          ↓
+      ⬑  JSON   ↲
 ```
 
 The [JSON schema specification](http://json-schema.org) is used to map between JSON and MATLABs data types and to validate data.
@@ -269,8 +269,6 @@ Schema
 
 ```
 ### List of from-till-value tripples
-<a name="date-formater"></a>
-
 MATLAB
 ```MATLAB
 [
@@ -312,7 +310,7 @@ JSON
 ```JSON
 {
     "myDate":"2016-01-03",
-    "myDateTime":"2016-01-03T12:00:00+0100"
+    "myDateTime":"2016-01-03T12:00:00+01:00"
 }
 ```
 
@@ -470,7 +468,7 @@ JSON
     "a": "2016-01-01",
     "b": "2016-01-01T12:00:00Z",
     "c": "2016-01-01T12:00:00Z",
-    "d": "2016-01-01T12:00:00Zulu"
+    "d": "2016-01-01T12:00:00Y"
 }
 ```
 
@@ -489,7 +487,7 @@ Schema
 Errors
 ```MATLAB
 {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Zulu'}
+{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
 ```
 
 
@@ -521,7 +519,7 @@ Errors
 Encoding of files
 
 Design
-We do not functions in private directories. Octave Version 4.0 cannot resolve those from a class member function.
+We do not use functions in private directories. Octave Version 4.0 cannot resolve those from class member functions.
 
 # Testing
 
