@@ -148,6 +148,29 @@
         </json>
     </test>
     <test>
+        <description>Ragged structure array</description>
+        <matlab>struct('foo', {1 2}, 'bar', {[] 4})</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "foo": {},
+                        "bar": {}
+                    },
+                    "additionalProperties": false
+                }
+            }
+        </schema>
+        <json>
+            [
+                {"foo":1},
+                {"foo":2,"bar":4}
+            ]
+        </json>
+    </test>
+    <test>
         <description>Array of strings</description>
         <matlab>{'foo'}</matlab>
         <schema></schema>

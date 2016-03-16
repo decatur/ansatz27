@@ -21,4 +21,27 @@
             }
         </json>
     </test>
+    <test>
+        <description>Structure array with defaults</description>
+        <matlab>struct('foo', {1 2}, 'bar', {3 4})</matlab>
+        <schema>
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "foo": {},
+                        "bar": { "type": "number", "default": 3 }
+                    },
+                    "additionalProperties": false
+                }
+            }
+        </schema>
+        <json>
+            [
+                {"foo":1},
+                {"foo":2,"bar":4}
+            ]
+        </json>
+    </test>
 </tests>
