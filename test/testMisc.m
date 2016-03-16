@@ -20,19 +20,19 @@ tc.assertEqual(errors{1}{2}, ['Invalid char found in range #00-#1F "fo' char(1) 
 
 [obj, errors] = JSON.parse('file:document.json', 'file:schema.json');
 
-m = cellToMat({1 2});
+m = JSON_Parser.cellToMat({1 2});
 assert(isequal(m, [1 2]));
 
-m = cellToMat({{1} {2}});
+m = JSON_Parser.cellToMat({{1} {2}});
 assert(isequal(m, [1;2]));
 
-m = cellToMat({{1 2} {[] 4}});
+m = JSON_Parser.cellToMat({{1 2} {[] 4}});
 assert(isequaln(m, [1 2;NaN 4]));
 
-m = cellToMat({{{1 2} {3 4}} {{5 6} {7 8}}});
+m = JSON_Parser.cellToMat({{{1 2} {3 4}} {{5 6} {7 8}}});
 assert(isequal(squeeze(m(1,:,:)), [1 2;3 4]));
 assert(isequal(squeeze(m(2,:,:)), [5 6; 7 8]));
 assert(isequal(m, permute(cat(3, [1 3;2 4], [5 7; 6 8]), [3 2 1])));
 
-m = cellToMat({1 NaN 3});
+m = JSON_Parser.cellToMat({1 NaN 3});
 assert(isequaln(m, [1 NaN 3]));

@@ -166,7 +166,7 @@ classdef JSON_Parser < JSON
 
             if iscell(val) && ~isfield(context, 'isArray')
                 % End-of-line of a nested cell array. Try to convert to matrix.
-                val = cellToMat(val);
+                val = JSON_Parser.cellToMat(val);
             end
         end
         
@@ -319,7 +319,7 @@ classdef JSON_Parser < JSON
                 case '{'
                     val = this.parse_object(context);
                     if ~isempty(schema)
-                        val = mergeDefaults(val, schema);
+                        val = JSON_Parser.mergeDefaults(val, schema);
                     end
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
                     val = this.parse_number(context);
@@ -386,6 +386,112 @@ classdef JSON_Parser < JSON
             end
         end % function valid_field
         
+    end
+
+    methods (Static)
+
+        function m=cellToMat(c)
+
+            assert(iscell(c));
+
+            if isempty(c)
+                m = [];
+                return;
+            end
+
+            cc = c;
+            dims = [];
+
+            while iscell(cc)
+                dims = [dims length(cc)];
+                if length(cc) > 0
+                    cc = cc{1};
+                else
+                    break;
+                end
+            end
+
+            if length(dims) == 1
+                dims = [1 dims];
+            end
+
+            m = inf(dims(:));
+
+            hasLogical = false;
+            hasNumeric = false;
+            cc = c;
+            stack = {c};
+            ind = {1};
+
+            while true
+                k = ind{end};
+                if k<=length(stack{end})
+                    cc = stack{end}{k};
+                    if iscell(cc)
+                        stack{end+1} = cc;
+                        ind{end+1} = 1;
+                    elseif isnumeric(cc) || islogical(cc)
+                        if isempty(cc)
+                            cc = nan;
+                        end
+
+                        if islogical(cc)
+                            hasLogical = true;
+                        else
+                            hasNumeric = true;
+                        end
+                        
+                        indx = struct('type', '()');
+                        indx.subs = ind;
+                        m = subsasgn(m, indx, cc);
+                        ind{end} = 1+ind{end};
+                    else
+                        m = c;
+                        return;
+                    end
+                else
+                    stack = stack(1:end-1);
+                    if isempty(stack)
+                        break;
+                    end
+                    ind = ind(1:end-1);
+                    ind{end} = 1 + ind{end};
+                end
+            end
+
+            if any(isinf(m(:)))
+               m = c;
+            elseif hasNumeric && hasLogical
+                m=c 
+            elseif hasLogical
+                l = true(dims(:));
+                l(~m) = false;
+                m = l;
+            end
+
+        end
+
+        function mergedObject = mergeDefaults(object, schema)
+            assert(isstruct(object));
+
+            mergedObject = object;
+
+            props = JSON.getPath(schema, '/properties');
+            if ~isstruct(props)
+                return
+            end
+
+            propertyNames = fieldnames(props);
+
+            for i=1:length(propertyNames)
+                name = propertyNames{i};
+                property = props.(name);
+                if isfield(property, 'default') && ~isfield(mergedObject, name)
+                    mergedObject.(name) = property.default;
+                end
+            end
+        end
+
     end
 end
 
