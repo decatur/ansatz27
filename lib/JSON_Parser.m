@@ -79,17 +79,14 @@ classdef JSON_Parser < JSON
             this.len_esc = length(this.esc);
             
             this.skip_whitespace();
-            holder = StructHolder();
-
-            this.parse_value(holder, [], 'value', context);
+            value = this.parse_value(context);
             this.skip_whitespace();
+
             if this.pos ~= this.len+1
                 % Not all text was consumed.
                 this.error_pos('Unexpected trailing text');
             end
 
-            value = holder.value.value;
-            
             errors = this.errors;
         end
         
@@ -109,22 +106,16 @@ classdef JSON_Parser < JSON
         
         
         
-        function parse_object(this, holder, index, holderKey, context)
-            
+        function val = parse_object(this, context)
             this.parse_char('{');
-            
-            if strcmp(class(holder), 'StructArrayHolder')
-                c = holder;
-            else
-                c = StructHolder();
-            end
+            val = struct();
             
             if this.next_char() ~= '}'
                 while 1
                     key = this.parseStr(struct());
                     key = this.valid_field(key);
                     this.parse_char(':');
-                    this.parse_value(c, index, key, this.childContext(context, key));
+                    val.(key) = this.parse_value(this.childContext(context, key));
                     if this.next_char() == '}'
                         break;
                     end
@@ -133,20 +124,37 @@ classdef JSON_Parser < JSON
             end
             this.parse_char('}');
             
-            if ~strcmp(class(holder), 'StructArrayHolder')
-                holder.setVal(index, holderKey, c.value);
-            end
-            
         end
         
-        function parse_array(this, holder, context) % JSON array is written in row-major order
+        function val = parse_array(this, context) % JSON array is written in row-major order
             this.parse_char('[');
             index = 0;
+
+            items = getPath(context, '/schema/items');
+            itemType = getPath(items, '/type');
+            
+            if ~isempty(itemType) && ismember('object', itemType) && getPath(items, '/additionalProperties') == false
+                val = struct();
+            else
+                val = {};
+            end
             
             if this.next_char() ~= ']'
                 while 1
                     index = index + 1;
-                    this.parse_value(holder, index, [], this.childContext(context, index));
+                    subContext = this.childContext(context, index);
+                    subContext.isArray = true;
+                    v = this.parse_value(subContext);
+                    if isstruct(val)
+                        % Note: Simply assigning val(index) = v will break if v and val have different fields!
+                        names = fieldnames(v);
+                        for k=1:length(names)
+                            val(index).(names{k}) = v.(names{k});
+                        end
+                    else
+                        val{index} = v;
+                    end
+
                     if this.next_char() == ']'
                         break;
                     end
@@ -155,6 +163,11 @@ classdef JSON_Parser < JSON
             end
             
             this.parse_char(']');
+
+            if iscell(val) && ~isfield(context, 'isArray')
+                % End-of-line of a nested cell array. Try to convert to matrix.
+                val = cellToMat(val);
+            end
         end
         
         function vec = json1D2array(this, path)
@@ -295,32 +308,16 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function parse_value(this, holder, index, key, context)
+        function val = parse_value(this, context)
             schema = getPath(context, '/schema');
             
             switch(this.json(this.pos))
                 case '"'
                     val = this.parseStr(context);
                 case '['
-                    items = getPath(schema, '/items');
-                    itemType = getPath(items, '/type');
-
-                    if ~isempty(itemType) && ismember('object', itemType) && getPath(items, '/additionalProperties') == false
-                        c = StructArrayHolder();
-                    else
-                        c = CellArrayHolder();
-                    end
-
-                    this.parse_array(c, context);
-                    val = c.value;
-
-                    if strcmp(class(c), 'CellArrayHolder') && ~strcmp(class(holder), 'CellArrayHolder')
-                        % End-of-line of a nested cell array. Try to convert to matrix.
-                        val = cellToMat(val);
-                    end
+                    val = this.parse_array(context);
                 case '{'
-                    this.parse_object(holder, index, key, context);
-                    val = holder.getVal(index, key);
+                    val = this.parse_object(context);
                     if ~isempty(schema)
                         val = mergeDefaults(val, schema);
                     end
@@ -361,8 +358,6 @@ classdef JSON_Parser < JSON
                     end
                 end
             end
-
-            holder.setVal(index, key, val);
         end
         
         function error_pos(this, msg)
