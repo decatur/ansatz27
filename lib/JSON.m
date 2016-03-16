@@ -69,11 +69,11 @@ classdef JSON < handle
             end
             
             if ischar(key)
-                if ismember('object', getPath(schema, '/type'))
-                    childSchema = getPath(schema, ['/properties/' key]);
+                if ismember('object', JSON.getPath(schema, '/type'))
+                    childSchema = JSON.getPath(schema, ['/properties/' key]);
                 end
             elseif isnumeric(key)
-                items = getPath(schema, '/items');
+                items = JSON.getPath(schema, '/items');
                 if isstruct(items)
                     childSchema = items;
                 elseif iscell(items)
@@ -104,7 +104,7 @@ classdef JSON < handle
                 
                 ref = strtrim(ref);
                 if ref(1) == '#'
-                    ref = [getPath(rootSchema, '/url', '') ref];
+                    ref = [JSON.getPath(rootSchema, '/url', '') ref];
                 end
                 
                 if ismember(ref, refs)
@@ -129,7 +129,7 @@ classdef JSON < handle
                 end
                 
                 if length(parts) == 2
-                    schema = getPath(rootSchema, parts{2});
+                    schema = JSON.getPath(rootSchema, parts{2});
                     if isempty(schema)
                         error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
                     end
@@ -260,6 +260,44 @@ classdef JSON < handle
             errors = stringifier.errors;
         end
         
+        function obj = getPath(obj, pointer, default)
+            %GETPATH Returns the value under the pointer or empty if the pointer does not exist.
+            % The pointer must be in JSON pointer syntax, so each component must be prefixed by /.
+            %
+            % Example:
+            %    obj = struct('foo', struct('bar', 13))
+            %    getPath(obj, '/foo/bar') -> 13
+
+            if isempty(pointer)
+                if isempty(obj)
+                    obj = default;
+                end
+                return;
+            end
+
+
+            if pointer(1) ~= '/'
+                % TODO: Do not throw here
+                error('Invalid pointer %s', pointer)
+            end
+
+            parts = strsplit(pointer, '/');
+
+            for k = 2:length(parts)
+                if isfield(obj, parts{k})
+                    obj = obj.(parts{k});
+                else
+                    if nargin >= 3
+                        obj = default;
+                    else
+                        obj = [];
+                    end
+                    return;
+                end
+            end
+
+        end
+
         function text = readFileToString(path, encoding )
             if JSON.isoct
                 [fid, msg] = fopen(path, 'r');

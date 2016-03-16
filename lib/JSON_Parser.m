@@ -130,10 +130,10 @@ classdef JSON_Parser < JSON
             this.parse_char('[');
             index = 0;
 
-            items = getPath(context, '/schema/items');
-            itemType = getPath(items, '/type');
+            items = JSON.getPath(context, '/schema/items');
+            itemType = JSON.getPath(items, '/type');
             
-            if ~isempty(itemType) && ismember('object', itemType) && getPath(items, '/additionalProperties') == false
+            if ~isempty(itemType) && ismember('object', itemType) && JSON.getPath(items, '/additionalProperties') == false
                 val = struct();
             else
                 val = {};
@@ -309,7 +309,7 @@ classdef JSON_Parser < JSON
         end
         
         function val = parse_value(this, context)
-            schema = getPath(context, '/schema');
+            schema = JSON.getPath(context, '/schema');
             
             switch(this.json(this.pos))
                 case '"'
@@ -349,7 +349,7 @@ classdef JSON_Parser < JSON
             
             if ~isempty(schema)
                 validate(this, val, schema, context.path);
-                format = getPath(schema, '/format');
+                format = JSON.getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);
                     [val errMsg] = formatter(val);

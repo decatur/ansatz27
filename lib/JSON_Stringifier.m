@@ -131,7 +131,7 @@ classdef JSON_Stringifier < JSON
                 value = this.normalize2nan(value);
             end
 
-            format = getPath(schema, '/format');
+            format = JSON.getPath(schema, '/format');
             if this.formatters.isKey(format)
                 formatter = this.formatters(format);
                 [value errMsg] = formatter(value);
@@ -241,7 +241,7 @@ classdef JSON_Stringifier < JSON
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            items = getPath(schema, '/items');    
+            items = JSON.getPath(schema, '/items');    
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             l = length(value);
@@ -296,7 +296,7 @@ classdef JSON_Stringifier < JSON
             s = size(tensor);
             assert(s(1) > 0);
             
-            items = getPath(schema, '/items');
+            items = JSON.getPath(schema, '/items');
             if isempty(items)
                 % Make sure a column vector such as [1;2] is generated as [[1],[2]].
                 items = struct();
@@ -337,7 +337,7 @@ classdef JSON_Stringifier < JSON
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
             
-            items = getPath(schema, '/items');
+            items = JSON.getPath(schema, '/items');
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
