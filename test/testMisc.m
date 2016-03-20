@@ -36,3 +36,7 @@ assert(isequal(m, permute(cat(3, [1 3;2 4], [5 7; 6 8]), [3 2 1])));
 
 m = JSON_Parser.cellToMat({1 NaN 3});
 assert(isequaln(m, [1 NaN 3]));
+
+% A JSON Schema is a JSON document, and that document MUST be an object
+[obj, errors] = JSON.parse('1', '2');
+assert(strcmp(errors{1}{2}), 'A JSON Schema MUST be an object');

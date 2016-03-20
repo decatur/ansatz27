@@ -139,7 +139,7 @@ classdef JSON < handle
         
         function schema = normalizeSchema_(this, rootSchema, schema, path)
             if ~isstruct(schema)
-                return
+                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
             
             if isfield(schema, 'x_ref')
@@ -165,6 +165,10 @@ classdef JSON < handle
             
             if isfield(schema, 'required') && ~iscell(schema.required)
                 error('JSON:PARSE_SCHEMA', 'Invalid required at %s', path);
+            end
+
+            if isfield(schema, 'pattern') && ~ischar(schema.pattern)
+                error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', path);
             end
             
             if ismember('object', type) && isfield(schema, 'properties') && ~isempty(schema.properties)
