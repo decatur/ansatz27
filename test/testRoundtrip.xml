@@ -92,15 +92,16 @@
     <test>
         <description>Dictionary</description>
         <matlab>
-            a = struct()
+            a = struct();
             a.DEAL_A = struct('start', 736409);
-            a.DEAL_Z = struct('start', 736410);
+            a.DEAL_XY = struct('start', 736410);
+            a.DEAL_Z = struct('start', 736411);
         </matlab>
         <schema>
             {
                 "type": "object",
                 "patternProperties": {
-                    "DEAL_*": { 
+                    "^DEAL_[A-Z]+$": { 
                         "type": "object",
                         "properties": {
                             "start": { "type": "string", "format": "date" }
@@ -112,7 +113,8 @@
         <json>
             {
                 "DEAL_A": { "start": "2016-03-20" },
-                "DEAL_Z": { "start": "2016-03-21" }
+                "DEAL_XY": { "start": "2016-03-21" },
+                "DEAL_Z": { "start": "2016-03-22" }
             }
         </json>
     </test>

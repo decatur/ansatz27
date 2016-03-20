@@ -420,6 +420,7 @@ struct('foo', {1 2}, 'bar', {3 4})
 [//]: # "Reuse with Schema References"
 
 ## Schema Inheritance with allOf
+
 [//]: # "Schema Inheritance with allOf"
 *MATLAB*
 ```MATLAB
@@ -466,6 +467,50 @@ struct('foo', {1 2}, 'bar', {3 4})
 ```
 
 [//]: # "Schema Inheritance with allOf"
+
+## Dictionary
+
+Sometimes an object is used for arbitrary key-value mapping, also called a dictonary or a map.
+In practice you should consider not to use dictionaries, use arrays and some extra lookup logic instead.
+
+[//]: # "Dictionary"
+*MATLAB*
+```MATLAB
+
+            a = struct();
+            a.DEAL_A = struct('start', 736409);
+            a.DEAL_XY = struct('start', 736410);
+            a.DEAL_Z = struct('start', 736411);
+        
+```
+*Schema*
+```JSON
+
+            {
+                "type": "object",
+                "patternProperties": {
+                    "^DEAL_[A-Z]+$": { 
+                        "type": "object",
+                        "properties": {
+                            "start": { "type": "string", "format": "date" }
+                        }
+                    }
+                }
+            }
+        
+```
+*JSON*
+```JSON
+
+            {
+                "DEAL_A": { "start": "2016-03-20" },
+                "DEAL_XY": { "start": "2016-03-21" },
+                "DEAL_Z": { "start": "2016-03-22" }
+            }
+        
+```
+
+[//]: # "Dictionary"
 
 # Validation by Schema
 
@@ -548,15 +593,6 @@ TODO: Do these apply
 * DoS like [billion laughs](https://en.wikipedia.org/wiki/Billion_laughs)
 * External entity expansion
 * External schema resolution
-
-
-# Validation Test Cases
-
-[//]: # "VALIDATION"
-
-
-[//]: # "VALIDATION"
-
 
 # Building
 
