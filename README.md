@@ -54,6 +54,22 @@ obj = struct('foo', 1, 'bar', 2);
 
 [//]: # "Usage"
 
+# Conformance with JSON Schema Specification
+
+## Supported Features
+
+* Supports all primitive types array, boolean, integer, number, null, object and string 
+* A type may be a list of primitive types, i.e. `"type": ["number", "null"]` meaning numeric or null
+* Internal and external referencing with "$ref" keyword
+* Keywords "minimum", "maximum", "pattern", "additionalItems", "additionalProperties", "properties", "enum", "type", "allOf", "definitions", "default", "format"
+
+## MUST keywords (yet) ignored
+```
+$schema, id (scope alteration), multipleOf, exclusiveMaximum, exclusiveMinimum,
+maxLength, minLength, maxItems, minItems, uniqueItems, maxProperties, minProperties,
+patternProperties, dependencies, anyOf, oneOf, not
+```
+
 # Comprehensive Example
 
 [//]: # "Comprehensive Roundtrip Example"
