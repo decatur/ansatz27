@@ -13,7 +13,11 @@ schema = struct('type', 'object');
 obj = struct('foo', 1, 'bar', 2);
 [json, errors] = JSON.stringify(obj, 'file:schema.json');
 [json, errors] = JSON.stringify(obj, schema);
-
+        </matlab>
+    </test>
+    <test>
+        <description>Formatters</description>
+        <matlab>
 stringifier = JSON_Stringifier();
 stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x);
 stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
@@ -52,6 +56,9 @@ end
     <test>
         <description>Structured Array with Defaults</description>
         <matlab>struct('foo', {1 2}, 'bar', {3 4})</matlab>
+        <json>
+            [ { "foo": 1 }, { "foo": 2, "bar": 4 } ]
+        </json>
         <schema>
             {
                 "type": "array",
@@ -64,12 +71,7 @@ end
                 }
             }
         </schema>
-        <json>
-            [
-                {"foo":1},
-                {"foo":2,"bar":4}
-            ]
-        </json>
+        
     </test>
     <test>
         <description>Non-MATLAB Keys</description>

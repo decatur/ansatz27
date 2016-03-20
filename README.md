@@ -1,7 +1,7 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
 ```
-    ↱ MATLAB  ⬎
+      ↱ MATLAB  ⬎
       ↑          ↓
       ↑← Schema →↓
       ↑          ↓
@@ -39,7 +39,6 @@ JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 [//]: # "Usage"
 *MATLAB*
 ```MATLAB
-
 addpath('lib', 'test');
 
 schema = struct('type', 'object');
@@ -50,10 +49,6 @@ schema = struct('type', 'object');
 obj = struct('foo', 1, 'bar', 2);
 [json, errors] = JSON.stringify(obj, 'file:schema.json');
 [json, errors] = JSON.stringify(obj, schema);
-
-stringifier = JSON_Stringifier();
-stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x);
-stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
         
 ```
 
@@ -64,15 +59,11 @@ stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
 [//]: # "Comprehensive Roundtrip Example"
 *MATLAB*
 ```MATLAB
-
             a = struct('id', '4711');
             a.portfolio.index = 3;
             a.portfolio.value = 4.32;
-            a.deals = struct( ...
-                'name', {'DEAL-A' 'DEAL-B'}, ...
-                'value', {13.13 42.42});
+            a.deals = struct( 'name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42} );
             a.dealValues = [13.13 42.42];
-        
 ```
 *Schema*
 ```JSON
@@ -154,7 +145,7 @@ the value of the format property (if any) is the name of a registered formatter.
 On parse, formatters are applied *after* all parseing and validation steps have been performed.
 On stringify, formatters are performed *before* all validation and stringifying takes place.
 
-There are two predefined formatters `date` and `date-time`, see [some examples](#date-formater).
+There are two predefined formatters `date` and `date-time`, see [Date Coercion](#date-coercion).
 
 # Array Type Coercion
 
@@ -555,10 +546,7 @@ struct('H_ll_', 1, 'x_ref', 2)
 
 [//]: # "Non-MATLAB Keys"
 
-
- `$ref -> x_ref` or `He@@o -> He__o`.
 Because you loose round-tripping, please avoid such names.
-
 
 # Security Considerations
 

@@ -6,11 +6,23 @@
             a = struct('id', '4711');
             a.portfolio.index = 3;
             a.portfolio.value = 4.32;
-            a.deals = struct( ...
-                'name', {'DEAL-A' 'DEAL-B'}, ...
-                'value', {13.13 42.42});
+            a.deals = struct( 'name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42} );
             a.dealValues = [13.13 42.42];
         </matlab>
+        <json>
+            {
+                "id": "4711",
+                "portfolio": {
+                    "index": 3,
+                    "value": 4.32
+                },
+                "deals": [
+                    { "name": "DEAL-A", "value": 13.13 },
+                    { "name": "DEAL-B", "value": 42.42 }
+                ],
+                "dealValues": [ 13.13, 42.42 ]
+            }
+        </json>
         <schema>
             {
                 "type": "object",
@@ -21,13 +33,8 @@
                     "portfolio": {
                         "type": "object",
                         "properties": {
-                            "index": {
-                                "type": "integer",
-                                "minimum": 1
-                            },
-                            "value": {
-                                "type": "number"
-                            }
+                            "index": { "type": "integer", "minimum": 1 },
+                            "value": { "type": "number" }
                         }
                     },
                     "deals": {
@@ -36,43 +43,14 @@
                             "type": "object",
                             "additionalProperties": false,
                             "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "pattern": "^DEAL-\\w+$"
-                                },
-                                "value": {
-                                    "type": "number",
-                                    "minimum": 0
-                                }
+                                "name":  { "type": "string", "pattern": "^DEAL-\\w+$" },
+                                "value": { "type": "number", "minimum": 0 }
                             }
                         }
                     }
                 }
             }
         </schema>
-        <json>
-            {
-                "id": "4711",
-                "portfolio": {
-                    "index": 3,
-                    "value": 4.32
-                },
-                "deals": [
-                    {
-                        "name": "DEAL-A",
-                        "value": 13.13
-                    },
-                    {
-                        "name": "DEAL-B",
-                        "value": 42.42
-                    }
-                ],
-                "dealValues": [
-                    13.13,
-                    42.42
-                ]
-            }
-        </json>
     </test>
     <test>
         <description>Schema Inheritance with allOf</description>
