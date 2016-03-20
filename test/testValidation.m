@@ -6,8 +6,6 @@ document = xmlread(fullfile(dir, 'testValidation.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
 tc = TestCase();
 
-fid = fopen(fullfile(dir, '..', 'build', 'validation.md'), 'w');
-
 for k=1:tests.getLength()
     test = tests.item(k-1);
 
@@ -22,18 +20,6 @@ for k=1:tests.getLength()
     schema = getElementText(test, 'schema');
     jsonExpected = getElementText(test, 'json');
     errorText = getElementText(test, 'errors');
-
-    if strcmp(char(test.getAttribute('readme')), 'true')
-        fprintf(fid, '### %s\n', desc);
-        if ~isempty(code)
-            fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
-        end
-        if ~isempty(jsonExpected)
-            fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', jsonExpected);
-        end
-        fprintf(fid, 'Schema\n```JSON\n%s\n```\n', schema);
-        fprintf(fid, 'Errors\n```MATLAB\n%s\n```\n', errorText);
-    end
 
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
@@ -61,7 +47,5 @@ for k=1:tests.getLength()
     end
 
 end
-
-fclose(fid);
 
 end

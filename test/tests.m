@@ -13,7 +13,6 @@ testParse();
 testValidation();
 testMisc;
 testDateFormat;
-testUsage;
 
 
 

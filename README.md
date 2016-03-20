@@ -1,7 +1,7 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
 ```
-      ↱ MATLAB  ⬎
+    ↱ MATLAB  ⬎
       ↑          ↓
       ↑← Schema →↓
       ↑          ↓
@@ -18,6 +18,9 @@ There are no dependencies.
 
 [Understanding JSON Schema](http://spacetelescope.github.io/understanding-json-schema/)
 
+You can also validated JSON and JSON schema online with [jsonschemalint](http://jsonschemalint.com/draft4)
+
+
 # JSON Schema and Type Coersion
 
 For all use cases of ansatz27, schemas are optional. However, their use is strongly encouraged.
@@ -33,494 +36,551 @@ JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 
 # Usage
 
-[//]: # "Comment"
-
+[//]: # "Usage"
+*MATLAB*
 ```MATLAB
-addpath('lib', 'test')
 
-schema = struct('type', 'object')
+addpath('lib', 'test');
 
-[obj, errors] = JSON.parse('file:document.json', 'file:schema.json')
-[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', schema)
+schema = struct('type', 'object');
 
-obj = struct('foo', 1, 'bar', 2)
-[json, errors] = JSON.stringify(obj, 'file:schema.json')
-[json, errors] = JSON.stringify(obj, schema)
+[obj, errors] = JSON.parse('file:document.json', 'file:schema.json');
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', schema);
 
+obj = struct('foo', 1, 'bar', 2);
+[json, errors] = JSON.stringify(obj, 'file:schema.json');
+[json, errors] = JSON.stringify(obj, schema);
+
+stringifier = JSON_Stringifier();
+stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x);
+stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
+        
 ```
 
-## Mapping
+[//]: # "Usage"
 
-### Key mapping
+# Comprehensive Example
 
-Object keys which are not valid MATLAB variable names are mapped, for example `$ref -> x_ref` or `He@@o -> He__o`.
+[//]: # "Comprehensive Roundtrip Example"
+*MATLAB*
+```MATLAB
+
+            a = struct('id', '4711');
+            a.portfolio.index = 3;
+            a.portfolio.value = 4.32;
+            a.deals = struct( ...
+                'name', {'DEAL-A' 'DEAL-B'}, ...
+                'value', {13.13 42.42});
+            a.dealValues = [13.13 42.42];
+        
+```
+*Schema*
+```JSON
+
+            {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "portfolio": {
+                        "type": "object",
+                        "properties": {
+                            "index": {
+                                "type": "integer",
+                                "minimum": 1
+                            },
+                            "value": {
+                                "type": "number"
+                            }
+                        }
+                    },
+                    "deals": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "pattern": "^DEAL-\\w+$"
+                                },
+                                "value": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        
+```
+*JSON*
+```JSON
+
+            {
+                "id": "4711",
+                "portfolio": {
+                    "index": 3,
+                    "value": 4.32
+                },
+                "deals": [
+                    {
+                        "name": "DEAL-A",
+                        "value": 13.13
+                    },
+                    {
+                        "name": "DEAL-B",
+                        "value": 42.42
+                    }
+                ],
+                "dealValues": [
+                    13.13,
+                    42.42
+                ]
+            }
+        
+```
+
+[//]: # "Comprehensive Roundtrip Example"
 
 # Formatter
 
-Formatters allow to make custom transformations. A typical candidate are dates and their mapping bewteen
+Formatters allow to make custom transformations. A typical candidate is the mapping of dates between
 string representation and MATLABs numerical representation. A formatter is invoked on an element if
-the value of the format property (if any) is the name of a registered formatter. 
-
-```MATLAB
-TODO
-```
+the value of the format property (if any) is the name of a registered formatter.
 
 On parse, formatters are applied *after* all parseing and validation steps have been performed.
 On stringify, formatters are performed *before* all validation and stringifying takes place.
 
-There are two predefined formatters `date` and `date-time`, see [some examples](#date-formater) below.
+There are two predefined formatters `date` and `date-time`, see [some examples](#date-formater).
 
-# Array comprehensions
+# Array Type Coercion
 
-| Schema       | JSON     | MATLAB       | Motivation                 |
-|--------------|----------|--------------|----------------------------|
-| no schema    |  [...]   | cell array   | Array may be inhomogenious |
-| items: [...] |  [...]   | cell array   | Array is inhomogenious     |
-| items: {...} |  [...]   | struct array | Array is homogenious       |
+JSON arrays are converted to cell arrays with the exception of structured arrays and numeric matrices.
 
-# Defaults
+## Structured Array Coercion
 
-A schema may specify a default value. On stringify, defaults are ignored.
-On parse, default values are set for unspecified object properties, see test cases below.
+A JSON array is coerced to a structured array if
 
+1. there is a schema,
+2. and `schema.items` is an object
+3. and `schema.items.type` is `'object'`
+4. and the *default* value of `schema.format` is `'structured-array'`
 
-# Roundtrip Test Cases
-
-[//]: # "ROUNDTRIP"
-
-### Comprehensive
-MATLAB
+[//]: # "Roundtrip Structured Array"
+*MATLAB*
 ```MATLAB
-a = struct('id', '4711');
-a.portfolio.index = 3;
-a.portfolio.value = 4.32;
-a.deals = struct( ...
-    'name', {'DEAL-A' 'DEAL-B'}, ...
-    'value', {13.13 42.42});
-a.dealValues = [13.13 42.42];
+struct('foo', {1 2}, 'bar', {3 4})
 ```
-JSON
+*Schema*
 ```JSON
-{
-    "id": "4711",
-    "portfolio": {
-        "index": 3,
-        "value": 4.32
-    },
-    "deals": [
-        {
-            "name": "DEAL-A",
-            "value": 13.13
-        },
-        {
-            "name": "DEAL-B",
-            "value": 42.42
-        }
-    ],
-    "dealValues": [
-        13.13,
-        42.42
-    ]
-}
-```
 
-Schema
-```JSON
-{
-    "type": "object",
-    "properties": {
-        "id": {
-            "type": "string"
-        },
-        "portfolio": {
-            "type": "object",
-            "properties": {
-                "index": {
-                    "type": "integer",
-                    "minimum": 1
-                },
-                "value": {
-                    "type": "number"
-                }
-            }
-        },
-        "deals": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                    "name": {
-                        "type": "string",
-                        "pattern": "^DEAL-\\w+$"
-                    },
-                    "value": {
-                        "type": "number",
-                        "minimum": 0
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "foo": {},
+                        "bar": {}
                     }
                 }
             }
-        }
-    }
-}
+        
 ```
-### AllOf
-MATLAB
-```MATLAB
-struct( ...
-    'id', '4711', ...
-    'foo', 2, ...
-    'bar', 'DEF_VAL')
-```
-JSON
+*JSON*
 ```JSON
-{
-    "id":"4711",
-    "foo":2,
-    "bar":"DEF_VAL"
-}
+
+            [
+                {"foo":1,"bar":3},
+                {"foo":2,"bar":4}
+            ]
+        
 ```
 
-Schema
+[//]: # "Roundtrip Structured Array"
+
+## Numeric Matrix Coercion
+
+A JSON array is coerced to a numeric matrix if 
+1. at each level the sub-arrays have the same length,
+2. and if *all* items at the lowest level are numbers or null.
+
+[//]: # "Roundtrip Numeric Matrix"
+*MATLAB*
+```MATLAB
+[ [1 2 NaN]; [4 -5 6] ]
+```
+*Schema*
 ```JSON
-{
-    "allOf": [
-        {
-            "$ref": "schema2.json"
-        },
-        {
-            "type": "object",
-            "required": ["id"],
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "foo": {
-                    "type": "number"
+
+            {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": ["number", "null"]
+                    }
                 }
             }
-        }
-    ]
-}
+        
 ```
-### Cell array
-MATLAB
-```MATLAB
-{struct('foo', 1) struct('bar', 2)}
-```
-JSON
+*JSON*
 ```JSON
-[{"foo":1},{"bar":2}]
+[[1,2,null],[4,-5,6]]
 ```
 
-Schema
-```JSON
-{
-    "type": "array",
-    "items": {
-        "type": "object"
-    }
-}
-```
-### Hint array of arrays
-MATLAB
-```MATLAB
-1
-```
-JSON
-```JSON
-[[1]]
-```
+[//]: # "Roundtrip Numeric Matrix"
 
-Schema
-```JSON
-{ 
-  "type": "array",
-  "items": {
-    "type": "array",  
-    "items": { 
-        "type": ["number", "null"]
-    }
-  }
-}
-```
-### 3D matrix
-MATLAB
+[//]: # "Roundtrip 3D Matrix"
+*MATLAB*
 ```MATLAB
-a = NaN(2,2,2);
-a(1,:,:) = [1 2; 3 4];
-a(2,:,:) = [5 6; 7 8];
+
+            a = NaN(2,2,2);
+            a(1,:,:) = [1 2; 3 4];
+            a(2,:,:) = [5 6; 7 8];
+        
 ```
-JSON
+*JSON*
 ```JSON
-[
+
     [
-        [1,2],
-        [3,4]
-    ], [
-        [5,6],
-        [7,8]
+        [ [1,2], [3,4] ],
+        [ [5,6], [7,8] ]
     ]
-]
+        
 ```
 
-Schema
-```JSON
+[//]: # "Roundtrip 3D Matrix"
 
-```
-### List of from-till-value tripples
-MATLAB
+# Date Coercion
+
+The two predefined formatters `date` and `date-time` coerce string dates to numeric values.
+
+[//]: # "Roundtrip Date Formater"
+*MATLAB*
 ```MATLAB
-[
-    [736330 736360 13.13]
-    [736361 736389 42.42]
-]
+
+            struct( ...
+                'myDate', 1+datenum('2016-01-02'), ...
+                'myDateTime', 1.5+datenum('2016-01-02') ...
+            )
+        
 ```
-JSON
+*Schema*
 ```JSON
-[
-    ["2016-01-01", "2016-01-31", 13.13],
-    ["2016-02-01", "2016-02-29", 42.42]
-]
+
+            {
+                "type": "object",
+                "properties": {
+                    "myDate": { 
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "myDateTime": { 
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                }
+            }
+        
+```
+*JSON*
+```JSON
+
+            {
+                "myDate":"2016-01-03",
+                "myDateTime":"2016-01-03T12:00:00+01:00"
+            }
+        
 ```
 
-Schema
-```JSON
-{
-    "type": "array",
-    "items": {
-        "type": "array",
-        "items": [
-            {"type": "string", "format": "date"},
-            {"type": "string", "format": "date"},
-            {"type": ["number", "null"] }
-        ]
-    }
-}
-```
-### Date formater
-MATLAB
+[//]: # "Roundtrip Date Formater"
+
+# Defaults
+
+A schema may specify a default value. On stringify, defaults are ignored. In particular, values which are equals to defaults are not removed.
+
+On parse, default values are set for unspecified object properties.
+
+[//]: # "Structured Array with Defaults"
+*MATLAB*
 ```MATLAB
-struct( ...
-    'myDate', 1+datenum('2016-01-02'), ...
-    'myDateTime', 1.5+datenum('2016-01-02') ...
-)
+struct('foo', {1 2}, 'bar', {3 4})
 ```
-JSON
+*Schema*
 ```JSON
-{
-    "myDate":"2016-01-03",
-    "myDateTime":"2016-01-03T12:00:00+01:00"
-}
+
+            {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "foo": {},
+                        "bar": { "type": "number", "default": 3 }
+                    }
+                }
+            }
+        
+```
+*JSON*
+```JSON
+
+            [
+                {"foo":1},
+                {"foo":2,"bar":4}
+            ]
+        
 ```
 
-Schema
-```JSON
-{
-    "type": "object",
-    "properties": {
-        "myDate": { 
-            "type": "string",
-            "format": "date"
-        },
-        "myDateTime": { 
-            "type": "string",
-            "format": "date-time"
-        }
-    }
-}
-```
-### Reuse
-MATLAB
+[//]: # "Structured Array with Defaults"
+
+# Typical Use Cases
+
+## List of From-Fill-Value Tripples
+[//]: # "List of From-Fill-Value Tripples"
+*MATLAB*
 ```MATLAB
-struct( ...
-    'shipping_address', ...
-        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
-    'billing_address', ...
-    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
+
+            [
+                [736330 736360 13.13]
+                [736361 736389 42.42]
+            ]
+        
 ```
-JSON
+*Schema*
 ```JSON
-{
-    "shipping_address": {
-        "street_address": "1600 Pennsylvania Avenue NW",
-        "city":           "Washington",
-        "state":          "DC"
-    },
-    "billing_address": {
-        "street_address": "1st Street SE",
-        "city":           "Washington",
-        "state":          "DC"
-    }
-}
-```
 
-Schema
+            {
+                "type": "array",
+                "items": {
+                    "type": "array",
+                    "items": [
+                        {"type": "string", "format": "date"},
+                        {"type": "string", "format": "date"},
+                        {"type": ["number", "null"] }
+                    ]
+                }
+            }
+        
+```
+*JSON*
 ```JSON
-{
-    "$schema": "http://json-schema.org/draft-04/schema#",
-    "definitions": {
-        "address": {
-            "type": "object",
-            "properties": {
-                "street_address": { "type": "string" },
-                "city":           { "type": "string" },
-                "state":          { "type": "string" }
-            },
-            "required": ["street_address", "city", "state"]
-        }
-    },
-    "type": "object",
-    "properties": {
-        "billing_address":  { "$ref": "#/definitions/address" },
-        "shipping_address": { "$ref": "#/definitions/address" }
-    }
-}
+
+            [
+                ["2016-01-01", "2016-01-31", 13.13],
+                ["2016-02-01", "2016-02-29", 42.42]
+            ]
+        
 ```
 
+[//]: # "List of From-Fill-Value Tripples"
 
-[//]: # "ROUNDTRIP"
+## Reuse with Schema References
+[//]: # "Reuse with Schema References"
+*MATLAB*
+```MATLAB
+
+                struct( ...
+                    'shipping_address', ...
+                        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
+                    'billing_address', ...
+                    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
+        
+```
+*Schema*
+```JSON
+
+            {
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "definitions": {
+                    "address": {
+                        "type": "object",
+                        "properties": {
+                            "street_address": { "type": "string" },
+                            "city":           { "type": "string" },
+                            "state":          { "type": "string" }
+                        },
+                        "required": ["street_address", "city", "state"]
+                    }
+                },
+                "type": "object",
+                "properties": {
+                    "billing_address":  { "$ref": "#/definitions/address" },
+                    "shipping_address": { "$ref": "#/definitions/address" }
+                }
+            }
+        
+```
+*JSON*
+```JSON
+
+            {
+                "shipping_address": {
+                    "street_address": "1600 Pennsylvania Avenue NW",
+                    "city":           "Washington",
+                    "state":          "DC"
+                },
+                "billing_address": {
+                    "street_address": "1st Street SE",
+                    "city":           "Washington",
+                    "state":          "DC"
+                }
+            }
+        
+```
+
+[//]: # "Reuse with Schema References"
+
+## Schema Inheritance with allOf
+[//]: # "Schema Inheritance with allOf"
+*MATLAB*
+```MATLAB
+
+            struct( ...
+                'id', '4711', ...
+                'foo', 2, ...
+                'bar', 'DEF_VAL')
+        
+```
+*Schema*
+```JSON
+
+            {
+                "allOf": [
+                    {
+                        "$ref": "schema2.json"
+                    },
+                    {
+                        "type": "object",
+                        "required": ["id"],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "foo": {
+                                "type": "number"
+                            }
+                        }
+                    }
+                ]
+            }
+        
+```
+*JSON*
+```JSON
+
+            {
+                "id":"4711",
+                "foo":2,
+                "bar":"DEF_VAL"
+            }
+        
+```
+
+[//]: # "Schema Inheritance with allOf"
+
+# Validation by Schema
+
+Appart from type coercion, schemas are used to validate the input to `parse` or `stringify`.
+Validation errors are returned by these methods, see [Usage](#usage).
+It is best practise to *always* check for errors and to discard the input if errors have occured:
+
+[//]: # "Error Handling"
+*MATLAB*
+```MATLAB
+
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'file:schema.json');
+if ~isempty(errors)
+    % Report errors and stop processing
+end
+        
+```
+
+[//]: # "Error Handling"
+
+For each validation error one item in the errors cell array is generated:
+
+[//]: # "Format Validation on Parse"
+*Schema*
+```JSON
+
+            {
+                "type": "object",
+                "properties": {
+                    "a": { "type": "string", "format": "date" },
+                    "b": { "type": "string", "format": "date" },
+                    "c": { "type": "string", "format": "date-time" },
+                    "d": { "type": "string", "format": "date-time" }
+                }
+            }
+        
+```
+*JSON*
+```JSON
+
+            {
+                "a": "2016-01-01",
+                "b": "2016-01-01T12:00:00Z",
+                "c": "2016-01-01T12:00:00Z",
+                "d": "2016-01-01T12:00:00Y"
+            }
+        
+```
+```MATLAB
+
+            {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+            {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
+        
+```
+
+[//]: # "Format Validation on Parse"
+
+# Advanced Usage
+
+## Key mapping
+
+Object keys which are not valid MATLAB variable names are normalized, for example
+
+[//]: # "Non-MATLAB Keys"
+*JSON*
+```JSON
+{ "H@ll@":1, "$ref":2 }
+```
+*MATLAB*
+```MATLAB
+struct('H_ll_', 1, 'x_ref', 2)
+```
+
+[//]: # "Non-MATLAB Keys"
+
+
+ `$ref -> x_ref` or `He@@o -> He__o`.
+Because you loose round-tripping, please avoid such names.
+
+
+# Security Considerations
+
+TODO: Do these apply
+* DoS like [billion laughs](https://en.wikipedia.org/wiki/Billion_laughs)
+* External entity expansion
+* External schema resolution
 
 
 # Validation Test Cases
 
 [//]: # "VALIDATION"
 
-### Pattern
-MATLAB
-```MATLAB
-'Hello World'
-```
-JSON
-```JSON
-"Hello World"
-```
-
-Schema
-```JSON
-{
-    "type": "string",
-    "pattern": "^\\w+$"
-}
-```
-Errors
-```MATLAB
-{'' 'does not match pattern ^\w+$' 'Hello World'}
-```
-### Cyclic Schema References
-MATLAB
-```MATLAB
-struct('id', '4711', 'bar', 2)
-```
-JSON
-```JSON
-{
-    "id": "4711",
-    "bar": 2
-}
-```
-
-Schema
-```JSON
-{
-    "type": "object",
-    "properties": {
-        "id": { "type": "string" },
-        "bar": { "$ref": "#/definitions/barType" }
-    },
-    "additionalProperties": false,
-    "definitions": {
-        "barType": { "$ref": "#/properties/bar" }
-    }
-}
-```
-Errors
-```MATLAB
-{[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}
-```
-### Format validation on stringify
-MATLAB
-```MATLAB
-struct('a', 736330, 'b', 736330.5, 'c', 736330.5, 'd', 'i')
-```
-Schema
-```JSON
-{
-    "type": "object",
-    "properties": {
-        "a": { "type": "string", "format": "date" },
-        "b": { "$ref": "#/properties/a" },
-        "c": { "type": "string", "format": "date-time" },
-        "d": { "$ref": "#/properties/c" }
-    }
-}
-```
-Errors
-```MATLAB
-{'/b' 'must be an integer' '736330.5'}
-{'/b' 'does not match type string' '736330.5'}
-{'/d' 'must be a number' 'i'}
-```
-### Format validation on parse
-JSON
-```JSON
-{
-    "a": "2016-01-01",
-    "b": "2016-01-01T12:00:00Z",
-    "c": "2016-01-01T12:00:00Z",
-    "d": "2016-01-01T12:00:00Y"
-}
-```
-
-Schema
-```JSON
-{
-    "type": "object",
-    "properties": {
-        "a": { "type": "string", "format": "date" },
-        "b": { "type": "string", "format": "date" },
-        "c": { "type": "string", "format": "date-time" },
-        "d": { "type": "string", "format": "date-time" }
-    }
-}
-```
-Errors
-```MATLAB
-{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
-```
-
 
 [//]: # "VALIDATION"
 
-# Parse Oneway Test Cases
-
-[//]: # "PARSE"
-
-
-
-[//]: # "PARSE"
-
-# Stringify Oneway Test Cases
-
-[//]: # "STRINGIFY"
-
-
-
-[//]: # "STRINGIFY"
 
 # Building
 
-1. Execute `tests.m`
-2. Execute `build.py`
-3. Copy `build/README.md` to `README.md`
+1. Execute `tests.m` and fix all errors
+2. Execute `build.py` will replace all code fragments in `README.md`.
 
 # Octave Limitations
-Encoding of files
 
-Design
 We do not use functions in private directories. Octave Version 4.0 cannot resolve those from class member functions.
-
-# Testing
-
-The schemas and documents in the tests where validated with http://jsonschemalint.com/draft4/

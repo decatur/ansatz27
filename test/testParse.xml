@@ -1,6 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tests>
     <test>
+        <description>Usage</description>
+        <matlab>
+addpath('lib', 'test');
+
+schema = struct('type', 'object');
+
+[obj, errors] = JSON.parse('file:document.json', 'file:schema.json');
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', schema);
+
+obj = struct('foo', 1, 'bar', 2);
+[json, errors] = JSON.stringify(obj, 'file:schema.json');
+[json, errors] = JSON.stringify(obj, schema);
+
+stringifier = JSON_Stringifier();
+stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x);
+stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
+        </matlab>
+    </test>
+    <test>
+        <description>Error Handling</description>
+        <matlab>
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'file:schema.json');
+if ~isempty(errors)
+    % Report errors and stop processing
+end
+        </matlab>
+    </test>
+    <test>
         <description>Structure array</description>
         <matlab>{'foo'}</matlab>
         <schema></schema>
@@ -22,7 +50,7 @@
         </json>
     </test>
     <test>
-        <description>Structure array with defaults</description>
+        <description>Structured Array with Defaults</description>
         <matlab>struct('foo', {1 2}, 'bar', {3 4})</matlab>
         <schema>
             {
@@ -32,8 +60,7 @@
                     "properties": {
                         "foo": {},
                         "bar": { "type": "number", "default": 3 }
-                    },
-                    "additionalProperties": false
+                    }
                 }
             }
         </schema>
@@ -43,5 +70,10 @@
                 {"foo":2,"bar":4}
             ]
         </json>
+    </test>
+    <test>
+        <description>Non-MATLAB Keys</description>
+        <json>{ "H@ll@":1, "$ref":2 }</json>
+        <matlab>struct('H_ll_', 1, 'x_ref', 2)</matlab>
     </test>
 </tests>

@@ -6,8 +6,6 @@ document = xmlread(fullfile(dir, 'testRoundtrip.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
 tc = TestCase();
 
-fid = fopen (fullfile(dir, '../build/roundtrip.md'), 'w');
-
 for k=1:tests.getLength()
     test = tests.item(k-1);
     
@@ -41,15 +39,6 @@ for k=1:tests.getLength()
     tc.assertEqual(actualMatlab, expectedMatlab);
     tc.assertEqual(islogical(actualMatlab), islogical(expectedMatlab));
 
-    if strcmp(char(test.getAttribute('readme')), 'true')
-        fprintf(fid, '### %s\n', desc);
-        fprintf(fid, 'MATLAB\n```MATLAB\n%s\n```\n', code);
-        fprintf(fid, 'JSON\n```JSON\n%s\n```\n\n', expectedJSON);
-        fprintf(fid, 'Schema\n```JSON\n%s\n```\n', schema);
-    end
-
 end
-
-fclose(fid);
 
 end

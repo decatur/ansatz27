@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <tests>
-    <test readme="true">
-        <description>Comprehensive</description>
+    <test>
+        <description>Comprehensive Roundtrip Example</description>
         <matlab>
             a = struct('id', '4711');
             a.portfolio.index = 3;
@@ -74,8 +74,8 @@
             }
         </json>
     </test>
-    <test readme="true">
-        <description>AllOf</description>
+    <test>
+        <description>Schema Inheritance with allOf</description>
         <matlab>
             struct( ...
                 'id', '4711', ...
@@ -111,21 +111,22 @@
             }
         </json>
     </test>
-    <test readme="true">
-        <description>Cell array</description>
+    <test>
+        <description>Cell Array</description>
         <matlab>{struct('foo', 1) struct('bar', 2)}</matlab>
         <schema>
             {
                 "type": "array",
                 "items": {
                     "type": "object"
-                }
+                },
+                "format": "cell-array"
             }
         </schema>
         <json>[{"foo":1},{"bar":2}]</json>
     </test>
-    <test>
-        <description>Structure array</description>
+    <test readme='true'>
+        <description>Roundtrip Structured Array</description>
         <matlab>struct('foo', {1 2}, 'bar', {3 4})</matlab>
         <schema>
             {
@@ -135,8 +136,7 @@
                     "properties": {
                         "foo": {},
                         "bar": {}
-                    },
-                    "additionalProperties": false
+                    }
                 }
             }
         </schema>
@@ -173,7 +173,6 @@
     <test>
         <description>Array of strings</description>
         <matlab>{'foo'}</matlab>
-        <schema></schema>
         <json>["foo"]</json>
     </test>
     <test>
@@ -221,7 +220,6 @@
     <test>
         <description>Row vector</description>
         <matlab>[1 2]</matlab>
-        <schema></schema>
         <json>[1,2]</json>
     </test>
     <test>
@@ -249,7 +247,7 @@
         <json>[1,null,2]</json>
     </test>
     <test>
-        <description>Matrix</description>
+        <description>Roundtrip Numeric Matrix</description>
         <matlab>[ [1 2 NaN]; [4 -5 6] ]</matlab>
         <schema>
             {
@@ -267,13 +265,11 @@
     <test>
         <description>Simple object</description>
         <matlab>struct('foo', 'bar')</matlab>
-        <schema></schema>
         <json>{"foo":"bar"}</json>
     </test>
     <test>
         <description>Empty object, no schema</description>
         <matlab>struct()</matlab>
-        <schema></schema>
         <json>{}</json>
     </test>
     <test>
@@ -290,67 +286,56 @@
                 struct('foo',2)
             }
         </matlab>
-        <schema></schema>
         <json>[{"foo":1},{"foo":2}]</json>
     </test>
     <test>
         <description>Row vector (Fragile)</description>
         <matlab>[1 2]</matlab>
-        <schema></schema>
         <json>[1,2]</json>
     </test>
     <test>
         <description>Matrix 2x2 (Fragile)</description>
         <matlab>[1 2;3 4]</matlab>
-        <schema></schema>
         <json>[[1,2],[3,4]]</json>
     </test>
     <test>
         <description>Column vector (Fragile)</description>
         <matlab>[1; 2]</matlab>
-        <schema></schema>
         <json>[[1],[2]]</json>
     </test>
     <test>
         <description>Array of strings</description>
         <matlab>{'foo' 'bar'}</matlab>
-        <schema></schema>
         <json>["foo","bar"]</json>
     </test>
     <test>
         <description>Single number</description>
         <matlab>1</matlab>
-        <schema></schema>
         <json>1</json>
     </test>
     <test>
         <description>Single boolean</description>
         <matlab>true</matlab>
-        <schema></schema>
         <json>true</json>
     </test>
     <test>
         <description>Single string</description>
         <matlab>'Hello-World'</matlab>
-        <schema></schema>
         <json>"Hello-World"</json>
     </test>
     <test>
         <description>Single boolean</description>
         <matlab>true</matlab>
-        <schema></schema>
         <json>true</json>
     </test>
     <test>
         <description>Single boolean</description>
         <matlab>false</matlab>
-        <schema></schema>
         <json>false</json>
     </test>
     <test>
         <description>Boolean array (Fragile)</description>
         <matlab>[true false]</matlab>
-        <schema></schema>
         <json>[true,false]</json>
     </test>
     <test>
@@ -363,7 +348,7 @@
         </schema>
         <json>[1]</json>
     </test>
-    <test readme="true">
+    <test>
         <description>Hint array of arrays</description>
         <matlab>1</matlab>
         <schema>
@@ -400,24 +385,18 @@
         </schema>
         <json>[]</json>
     </test>
-    <test readme="true">
-        <description>3D matrix</description>
+    <test>
+        <description>Roundtrip 3D Matrix</description>
         <matlab>
             a = NaN(2,2,2);
             a(1,:,:) = [1 2; 3 4];
             a(2,:,:) = [5 6; 7 8];
         </matlab>
-        <schema></schema>
         <json>
-            [
-                [
-                    [1,2],
-                    [3,4]
-                ], [
-                    [5,6],
-                    [7,8]
-                ]
-            ]
+    [
+        [ [1,2], [3,4] ],
+        [ [5,6], [7,8] ]
+    ]
         </json>
     </test>
     <test>
@@ -456,8 +435,8 @@
         </schema>
         <json>["2016-01-01","2016-01-31",13]</json>
     </test>
-    <test readme="true">
-        <description>List of from-till-value tripples</description>
+    <test>
+        <description>List of From-Fill-Value Tripples</description>
         <matlab>
             [
                 [736330 736360 13.13]
@@ -508,8 +487,8 @@
         </schema>
         <json>"Hello"</json>
     </test>
-    <test readme="true">
-        <description>Date formater</description>
+    <test>
+        <description>Roundtrip Date Formater</description>
         <matlab>
             struct( ...
                 'myDate', 1+datenum('2016-01-02'), ...
@@ -538,8 +517,8 @@
             }
         </json>
     </test>
-    <test readme="true">
-        <description>Reuse</description>
+    <test>
+        <description>Reuse with Schema References</description>
         <matlab>
                 struct( ...
                     'shipping_address', ...

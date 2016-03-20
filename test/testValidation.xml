@@ -78,7 +78,7 @@
         <json>["foo"]</json>
         <errors>{'' 'does not match type object' '[array]'}</errors>
     </test>
-    <test readme="true">
+    <test>
         <description>Pattern</description>
         <matlab>'Hello World'</matlab>
         <schema>
@@ -161,7 +161,6 @@
                     "id": { "type": "string" },
                     "bar": { "$ref": "#/definitions/bar" }
                 },
-                "additionalProperties": false,
                 "definitions": {
                     "bar": { "type": "string" }
                 }
@@ -254,7 +253,7 @@
         </json>
         <errors>{[] 'Invalid $ref at #/properties/bar' ''}</errors>
     </test>
-    <test readme="true">
+    <test>
         <description>Cyclic Schema References</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
@@ -278,7 +277,7 @@
         </json>
         <errors>{[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}</errors>
     </test>
-    <test readme="true">
+    <test>
         <description>Format validation on stringify</description>
         <matlab>struct('a', 736330, 'b', 736330.5, 'c', 736330.5, 'd', 'i')</matlab>
         <schema>
@@ -298,8 +297,8 @@
             {'/d' 'must be a number' 'i'}
         </errors>
     </test>
-    <test readme="true">
-        <description>Format validation on parse</description>
+    <test>
+        <description>Format Validation on Parse</description>
         <schema>
             {
                 "type": "object",
