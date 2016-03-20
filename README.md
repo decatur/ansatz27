@@ -39,6 +39,7 @@ JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
 [//]: # "Usage"
 *MATLAB*
 ```MATLAB
+
 addpath('lib', 'test');
 
 schema = struct('type', 'object');
@@ -61,13 +62,12 @@ obj = struct('foo', 1, 'bar', 2);
 * Supports all primitive types array, boolean, integer, number, null, object and string 
 * A type may be a list of primitive types, i.e. `"type": ["number", "null"]` meaning numeric or null
 * Internal and external referencing with "$ref" keyword
-* Keywords "minimum", "maximum", "pattern", "additionalItems", "additionalProperties", "properties", "enum", "type", "allOf", "definitions", "default", "format"
+* Keywords "minimum", "maximum", "pattern", "additionalItems", "additionalProperties", "properties", "patternProperties", "enum", "type", "allOf", "definitions", "default", "format"
 
 ## MUST keywords (yet) ignored
 ```
 $schema, id (scope alteration), multipleOf, exclusiveMaximum, exclusiveMinimum,
-maxLength, minLength, maxItems, minItems, uniqueItems, maxProperties, minProperties,
-patternProperties, dependencies, anyOf, oneOf, not
+maxLength, minLength, maxItems, minItems, uniqueItems, maxProperties, minProperties, dependencies, anyOf, oneOf, not
 ```
 
 # Comprehensive Example
@@ -75,11 +75,30 @@ patternProperties, dependencies, anyOf, oneOf, not
 [//]: # "Comprehensive Roundtrip Example"
 *MATLAB*
 ```MATLAB
+
             a = struct('id', '4711');
             a.portfolio.index = 3;
             a.portfolio.value = 4.32;
             a.deals = struct( 'name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42} );
             a.dealValues = [13.13 42.42];
+        
+```
+*JSON*
+```JSON
+
+            {
+                "id": "4711",
+                "portfolio": {
+                    "index": 3,
+                    "value": 4.32
+                },
+                "deals": [
+                    { "name": "DEAL-A", "value": 13.13 },
+                    { "name": "DEAL-B", "value": 42.42 }
+                ],
+                "dealValues": [ 13.13, 42.42 ]
+            }
+        
 ```
 *Schema*
 ```JSON
@@ -93,13 +112,8 @@ patternProperties, dependencies, anyOf, oneOf, not
                     "portfolio": {
                         "type": "object",
                         "properties": {
-                            "index": {
-                                "type": "integer",
-                                "minimum": 1
-                            },
-                            "value": {
-                                "type": "number"
-                            }
+                            "index": { "type": "integer", "minimum": 1 },
+                            "value": { "type": "number" }
                         }
                     },
                     "deals": {
@@ -108,44 +122,12 @@ patternProperties, dependencies, anyOf, oneOf, not
                             "type": "object",
                             "additionalProperties": false,
                             "properties": {
-                                "name": {
-                                    "type": "string",
-                                    "pattern": "^DEAL-\\w+$"
-                                },
-                                "value": {
-                                    "type": "number",
-                                    "minimum": 0
-                                }
+                                "name":  { "type": "string", "pattern": "^DEAL-\\w+$" },
+                                "value": { "type": "number", "minimum": 0 }
                             }
                         }
                     }
                 }
-            }
-        
-```
-*JSON*
-```JSON
-
-            {
-                "id": "4711",
-                "portfolio": {
-                    "index": 3,
-                    "value": 4.32
-                },
-                "deals": [
-                    {
-                        "name": "DEAL-A",
-                        "value": 13.13
-                    },
-                    {
-                        "name": "DEAL-B",
-                        "value": 42.42
-                    }
-                ],
-                "dealValues": [
-                    13.13,
-                    42.42
-                ]
             }
         
 ```
@@ -316,6 +298,12 @@ On parse, default values are set for unspecified object properties.
 ```MATLAB
 struct('foo', {1 2}, 'bar', {3 4})
 ```
+*JSON*
+```JSON
+
+            [ { "foo": 1 }, { "foo": 2, "bar": 4 } ]
+        
+```
 *Schema*
 ```JSON
 
@@ -329,15 +317,6 @@ struct('foo', {1 2}, 'bar', {3 4})
                     }
                 }
             }
-        
-```
-*JSON*
-```JSON
-
-            [
-                {"foo":1},
-                {"foo":2,"bar":4}
-            ]
         
 ```
 
@@ -537,6 +516,7 @@ For each validation error one item in the errors cell array is generated:
 ```
 ```MATLAB
 
+            {'/b' 'is not a date' '2016-01-01T12:00:00Z'}
             {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
             {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
         
@@ -553,16 +533,14 @@ Object keys which are not valid MATLAB variable names are normalized, for exampl
 [//]: # "Non-MATLAB Keys"
 *JSON*
 ```JSON
-{ "H@ll@":1, "$ref":2 }
+{ "H@ll@": 1, "$ref": 2 }
 ```
 *MATLAB*
 ```MATLAB
-struct('H_ll_', 1, 'x_ref', 2)
+struct('x_48406c6c40', 1, 'x_24726566', 2)
 ```
 
 [//]: # "Non-MATLAB Keys"
-
-Because you loose round-tripping, please avoid such names.
 
 # Security Considerations
 

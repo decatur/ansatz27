@@ -25,7 +25,7 @@ classdef JSON < handle
             schemaURL = [];
             
             if ischar(schema)
-                if regexp(schema, '^file:')
+                if 1 == regexp(schema, '^file:')
                     schemaURL = regexprep(schema, '^file:', '');
                     schema = JSON.readFileToString(schemaURL, 'latin1');
                     %schema.url = schemaURL;
@@ -71,6 +71,16 @@ classdef JSON < handle
             if ischar(key)
                 if ismember('object', JSON.getPath(schema, '/type'))
                     childSchema = JSON.getPath(schema, ['/properties/' key]);
+                    if isempty(childSchema) && isfield(schema, 'patternProperties')
+                        patterns = fieldnames(schema.patternProperties);
+                        for k=1:length(patterns)
+                            pattern = JSON.denormalizeKey(patterns{k});
+                            if ~isempty(regexp(key, pattern))
+                                childSchema = schema.patternProperties.(patterns{k});
+                                break;
+                            end
+                        end
+                    end
                 end
             elseif isnumeric(key)
                 items = JSON.getPath(schema, '/items');
@@ -95,8 +105,8 @@ classdef JSON < handle
             %resolveRef swaps in the referenced schema.
             
             refs = {['#' path]};
-            while isfield(schema, 'x_ref')
-                ref = schema.x_ref;
+            while isfield(schema, 'x_24726566') % $ref
+                ref = schema.x_24726566;
                 
                 if ~ischar(ref) || isempty(strtrim(ref))
                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
@@ -142,7 +152,7 @@ classdef JSON < handle
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
             
-            if isfield(schema, 'x_ref')
+            if isfield(schema, 'x_24726566') % $ref
                 schema = this.resolveRef(rootSchema, schema, path);
             end
             
@@ -209,7 +219,7 @@ classdef JSON < handle
             
             for k=1:length(schema.allOf)
                 subSchema = this.normalizeSchema_(rootSchema, schema.allOf{k}, [path '/allOf']);
-                
+                % TODO: Assert properties is member
                 keys = fieldnames(subSchema.properties);
                 for l=1:length(keys)
                     key = keys{l};
@@ -310,10 +320,24 @@ classdef JSON < handle
                 end
 
                 if JSON.getPath(schema, '/additionalProperties') == false
-                    actualKeys = fieldnames(value);
-                    allowedKeys = fieldnames(JSON.getPath(schema, '/properties', struct()));
-                    if any(~ismember(actualKeys, allowedKeys))
-                        this.addError(path, 'contains additional properties', value);
+                    s = fieldnames(value);
+                    p = fieldnames(JSON.getPath(schema, '/properties', struct()));
+                    s = s(~ismember(s, p));
+                    pp = fieldnames(JSON.getPath(schema, '/patternProperties', struct()));
+                    sFound = {};
+                    for l=1:length(pp)
+                        pattern = pattern = JSON.denormalizeKey(pp{l});
+                        for k=1:length(s)
+                            if ~isempty(regexp(s{k}, pattern))
+                                sFound{end+1} = s{k};
+                                break;
+                            end
+                        end
+                    end
+
+                    sNotFound = s(~ismember(s, sFound));
+                    for k=1:length(sNotFound)
+                        this.addError(path, 'contains additional property', sNotFound{k});
                     end
                 end
             elseif ischar(value)
@@ -326,7 +350,7 @@ classdef JSON < handle
                 format = JSON.getPath(schema, '/format');
                 
                 if strcmp(format, 'date')
-                    if ~regexp(value, '^\d{4}-\d{2}-\d{2}$')
+                    if isempty(regexp(value, '^\d{4}-\d{2}-\d{2}$'))
                         this.addError(path, 'is not a date', value);
                     end
                 end
@@ -373,7 +397,7 @@ classdef JSON < handle
             try
                 value = parser.parse_(varargin{:});
             catch e
-                if regexp(e.identifier, '^JSON:', 'once')
+                if 1 == regexp(e.identifier, '^JSON:', 'once')
                     value = [];
                     parser.addError([], e.message, [], e.identifier);
                 else
@@ -390,7 +414,7 @@ classdef JSON < handle
             try
                 json = stringifier.stringify_(varargin{:});
             catch e
-                if regexp(e.identifier, '^JSON:', 'once')
+                if 1 == regexp(e.identifier, '^JSON:', 'once')
                     json = [];
                     stringifier.addError([], e.message, [], e.identifier);
                 else
@@ -437,6 +461,14 @@ classdef JSON < handle
                 end
             end
 
+        end
+
+        function key = denormalizeKey(key)
+            if length(key) > 2 && strcmp(key(1:2), 'x_')
+                key = key(3:end);
+                a = arrayfun(@(x) sscanf(x, '%x'), reshape(key, 2, []));
+                key = char(16*a(1,:)+a(2,:));
+            end
         end
 
         function text = readFileToString(path, encoding )

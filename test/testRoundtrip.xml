@@ -90,6 +90,33 @@
         </json>
     </test>
     <test>
+        <description>Dictionary</description>
+        <matlab>
+            a = struct()
+            a.DEAL_A = struct('start', 736409);
+            a.DEAL_Z = struct('start', 736410);
+        </matlab>
+        <schema>
+            {
+                "type": "object",
+                "patternProperties": {
+                    "DEAL_*": { 
+                        "type": "object",
+                        "properties": {
+                            "start": { "type": "string", "format": "date" }
+                        }
+                    }
+                }
+            }
+        </schema>
+        <json>
+            {
+                "DEAL_A": { "start": "2016-03-20" },
+                "DEAL_Z": { "start": "2016-03-21" }
+            }
+        </json>
+    </test>
+    <test>
         <description>Cell Array</description>
         <matlab>{struct('foo', 1) struct('bar', 2)}</matlab>
         <schema>
@@ -539,5 +566,10 @@
                 }
             }
         </json>
+    </test>
+    <test>
+        <description>Non-MATLAB Keys</description>
+        <json>{ "H@ll@": 1, "$ref": 2 }</json>
+        <matlab>struct('x_48406c6c40', 1, 'x_24726566', 2)</matlab>
     </test>
 </tests>

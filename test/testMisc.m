@@ -39,4 +39,4 @@ assert(isequaln(m, [1 NaN 3]));
 
 % A JSON Schema is a JSON document, and that document MUST be an object
 [obj, errors] = JSON.parse('1', '2');
-assert(strcmp(errors{1}{2}), 'A JSON Schema MUST be an object');
+assert(strcmp(errors{1}{2}, 'A JSON Schema MUST be an object'));

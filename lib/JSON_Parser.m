@@ -44,7 +44,7 @@ classdef JSON_Parser < JSON
                 rootschema = [];
             end
 
-            if regexp(json, '^file:')
+            if 1 == regexp(json, '^file:')
                 this.json = JSON.readFileToString(regexprep(json, '^file:', ''), 'latin1');
             else
                 this.json = json;
@@ -64,13 +64,7 @@ classdef JSON_Parser < JSON
             end
 
             if isfield(context, 'schema')
-                try
-                    context.schema = this.normalizeSchema(context.schema);
-                catch e
-                    this.addError(this.schemaURL, e.message, []);
-                    errors = this.errors;
-                    return
-                end
+                context.schema = this.normalizeSchema(context.schema);
             end
             
             % String delimiters and escape chars identified to improve speed:
@@ -374,17 +368,14 @@ classdef JSON_Parser < JSON
             error('JSON:PARSE_JSON', msg);
         end % function error_pos
         
-        function validKey = valid_field(this, key)
+        function key = valid_field(this, key)
             % Valid field names must begin with a letter, which may be
             % followed by any combination of letters, digits, and underscores.
-            % Any invalid character will be replaced by '_', a leading invalid character will be replaced by 'x_'.
-            if isempty(key)
-                validKey = 'x____';
-            else
-                validKey = regexprep(key,'^[^A-Za-z]', 'x_');
-                validKey = regexprep(validKey,'[^0-9A-Za-z_]', '_');
+            
+            if strcmp(key, 'x_') || isempty(regexp(key,'^[A-Za-z][0-9A-Za-z_]*$', 'once'))
+                key = ['x_' sprintf('%x', uint8(key))];
             end
-        end % function valid_field
+        end
         
     end
 

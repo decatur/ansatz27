@@ -208,7 +208,7 @@
                 }
             ]
         </json>
-        <errors>{'/2' 'contains additional properties' '{object}'}</errors>
+        <errors>{'/2' 'contains additional property' 'foo'}</errors>
     </test>
     <test>
         <description>Invalid Reference</description>
@@ -319,6 +319,7 @@
             }
         </json>
         <errors>
+            {'/b' 'is not a date' '2016-01-01T12:00:00Z'}
             {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
             {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
         </errors>

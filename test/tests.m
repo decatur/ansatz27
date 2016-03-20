@@ -1,8 +1,6 @@
 addpath('lib', 'test');
 addpath('lib/polyfill', '-end');
 
-mkdir('build');
-
 if JSON.isoct
     debug_on_error(true);
 end

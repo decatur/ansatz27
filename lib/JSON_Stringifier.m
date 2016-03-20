@@ -80,15 +80,7 @@ classdef JSON_Stringifier < JSON
             end
 
             if ~isempty(rootschema)
-                try
-                    rootschema = this.normalizeSchema(rootschema);
-                catch e
-                    %lasterror.message
-                    %lasterror.stack(1)
-                    this.addError(this.schemaURL, e.message, []);
-                    errors = this.errors;
-                    return
-                end
+                rootschema = this.normalizeSchema(rootschema);
             end
             
             context = struct();
@@ -206,10 +198,9 @@ classdef JSON_Stringifier < JSON
             path = context.path;
             
             names = fieldnames(value);
-            l = length(names);
             isFirstItem = true;
             
-            for k=1:l
+            for k=1:length(names)
                 key = names{k};
                 context.path = [path '/' key];
                 item_str = this.value2json(value.(key), context, this.getChildSchema(schema, key));
@@ -217,12 +208,13 @@ classdef JSON_Stringifier < JSON
                     continue;
                 end
                 
-                if ~isFirstItem
+                if isFirstItem
+                    isFirstItem = false;
+                else
                     txt = sprintf('%s,%s', txt, this.nl);
                 end
                 
-                isFirstItem = false;
-                txt = sprintf('%s%s"%s":%s%s', txt, context.gap, key, this.sepPostfix, item_str);
+                txt = sprintf('%s%s"%s":%s%s', txt, context.gap, JSON.denormalizeKey(key), this.sepPostfix, item_str);
             end
             
             if ~isempty(this.indent)
