@@ -131,9 +131,9 @@ classdef JSON_Parser < JSON
             index = 0;
 
             items = JSON.getPath(context, '/schema/items');
-            itemType = JSON.getPath(items, '/type');
+            itemType = JSON.getPath(items, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
             
-            if ~isempty(itemType) && ismember('object', itemType) && JSON.getPath(items, '/additionalProperties') == false
+            if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(context, '/schema/format', 'structured-array'), 'structured-array')
                 val = struct();
             else
                 val = {};
