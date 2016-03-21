@@ -39,7 +39,7 @@ classdef Map < handle
                 otherwise
                     % Enable o.foo('bar'). We expect
                     %     idx = struct('type', { '.' '()' }, 'subs', { 'foo' {'bar'} })
-                    if length(idx) ~= 2 || idx(1).type ~= '.' || ~strcmp(idx(2).type, '()') 
+                    if ~strcmp(cat(2, idx.type), '.()') 
                         error('Invalid subscript call');
                     end
 
