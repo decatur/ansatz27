@@ -569,9 +569,4 @@
             }
         </json>
     </test>
-    <test>
-        <description>Non-MATLAB Keys</description>
-        <json>{ "H@ll@": 1, "$ref": 2 }</json>
-        <matlab>struct('x_48406c6c40', 1, 'x_24726566', 2)</matlab>
-    </test>
 </tests>

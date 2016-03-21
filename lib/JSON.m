@@ -72,11 +72,10 @@ classdef JSON < handle
                 if ismember('object', JSON.getPath(schema, '/type'))
                     childSchema = JSON.getPath(schema, ['/properties/' key]);
                     if isempty(childSchema) && isfield(schema, 'patternProperties')
-                        patterns = fieldnames(schema.patternProperties);
+                        patterns = schema.patternProperties.keys();
                         for k=1:length(patterns)
-                            pattern = JSON.denormalizeKey(patterns{k});
-                            if ~isempty(regexp(key, pattern))
-                                childSchema = schema.patternProperties.(patterns{k});
+                            if ~isempty(regexp(key, patterns{k}))
+                                childSchema = schema.patternProperties(patterns{k});
                                 break;
                             end
                         end
@@ -105,8 +104,8 @@ classdef JSON < handle
             %resolveRef swaps in the referenced schema.
             
             refs = {['#' path]};
-            while isfield(schema, 'x_24726566') % $ref
-                ref = schema.x_24726566;
+            while isfield(schema, 'x_ref') % $ref
+                ref = schema.x_ref;
                 
                 if ~ischar(ref) || isempty(strtrim(ref))
                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
@@ -152,7 +151,7 @@ classdef JSON < handle
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
             
-            if isfield(schema, 'x_24726566') % $ref
+            if isfield(schema, 'x_ref') % $ref
                 schema = this.resolveRef(rootSchema, schema, path);
             end
             
@@ -323,10 +322,12 @@ classdef JSON < handle
                     s = fieldnames(value);
                     p = fieldnames(JSON.getPath(schema, '/properties', struct()));
                     s = s(~ismember(s, p));
-                    pp = fieldnames(JSON.getPath(schema, '/patternProperties', struct()));
+
+                    pP = JSON.getPath(schema, '/patternProperties', containers.Map());
+                    pp = pP.keys();
                     sFound = {};
                     for l=1:length(pp)
-                        pattern = pattern = JSON.denormalizeKey(pp{l});
+                        pattern = pp{l};
                         for k=1:length(s)
                             if ~isempty(regexp(s{k}, pattern))
                                 sFound{end+1} = s{k};
@@ -418,6 +419,9 @@ classdef JSON < handle
                     json = [];
                     stringifier.addError([], e.message, [], e.identifier);
                 else
+                    for k=1:numel(e.stack)
+                        e.stack(k)
+                    end
                     rethrow(e);
                 end
             end
@@ -461,14 +465,6 @@ classdef JSON < handle
                 end
             end
 
-        end
-
-        function key = denormalizeKey(key)
-            if length(key) > 2 && strcmp(key(1:2), 'x_')
-                key = key(3:end);
-                a = arrayfun(@(x) sscanf(x, '%x'), reshape(key, 2, []));
-                key = char(16*a(1,:)+a(2,:));
-            end
         end
 
         function text = readFileToString(path, encoding )

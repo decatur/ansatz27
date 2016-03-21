@@ -214,7 +214,7 @@ classdef JSON_Stringifier < JSON
                     txt = sprintf('%s,%s', txt, this.nl);
                 end
                 
-                txt = sprintf('%s%s"%s":%s%s', txt, context.gap, JSON.denormalizeKey(key), this.sepPostfix, item_str);
+                txt = sprintf('%s%s"%s":%s%s', txt, context.gap, key, this.sepPostfix, item_str);
             end
             
             if ~isempty(this.indent)

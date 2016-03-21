@@ -57,7 +57,7 @@ classdef JSON_Parser < JSON
             context.path = '';;
             this.schemaURL = [];
 
-            if ~isempty(rootschema) && ischar(rootschema) 
+            if ~isempty(rootschema) && ischar(rootschema)
                 [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
             elseif isstruct(rootschema)
                 context.schema = rootschema;
@@ -102,14 +102,25 @@ classdef JSON_Parser < JSON
         
         function val = parse_object(this, context)
             this.parse_char('{');
-            val = struct();
+
+            if ~isempty(regexp(context.path, 'patternProperties$'))
+                val = containers.Map();
+            else
+                val = struct();
+            end
             
             if this.next_char() ~= '}'
                 while 1
                     key = this.parseStr(struct());
-                    key = this.valid_field(key);
                     this.parse_char(':');
-                    val.(key) = this.parse_value(this.childContext(context, key));
+                    v = this.parse_value(this.childContext(context, key));
+                    
+                    if isstruct(val)
+                        val.(this.valid_field(key)) = v;
+                    else
+                        val(key) = v;
+                    end
+
                     if this.next_char() == '}'
                         break;
                     end
@@ -372,9 +383,12 @@ classdef JSON_Parser < JSON
             % Valid field names must begin with a letter, which may be
             % followed by any combination of letters, digits, and underscores.
             
-            if strcmp(key, 'x_') || isempty(regexp(key,'^[A-Za-z][0-9A-Za-z_]*$', 'once'))
-                key = ['x_' sprintf('%x', uint8(key))];
+            if isempty(key)
+                key = 'x_';
             end
+
+            key = regexprep(key, '[^A-Za-z0-9_]', '_');
+            key = regexprep(key, '^[^A-Za-z0-9]', 'x_');
         end
         
     end

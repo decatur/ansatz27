@@ -71,6 +71,10 @@ end
                 }
             }
         </schema>
-        
+    </test>
+    <test>
+        <description>Non-MATLAB Keys</description>
+        <json>{ "H@ll@": 1, "$ref": 2 }</json>
+        <matlab>struct('H_ll_', 1, 'x_ref', 2)</matlab>
     </test>
 </tests>

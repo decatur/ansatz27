@@ -14,8 +14,13 @@ classdef Map < handle
             this.s = struct;
         end
 
-        function name = makeName(this, key)
-            name = ['a' sprintf('%x', uint8(key))];
+        function key = denormalizeKey(this, key)
+            a = arrayfun(@(x) sscanf(x, '%x'), reshape(key(3:end), 2, []));
+            key = char(16*a(1,:)+a(2,:));
+        end
+
+        function key = normalizeKey(this, key)
+            key = ['x_' sprintf('%x', uint8(key))];
         end
 
         function value = subsref(this, idx)
@@ -26,23 +31,32 @@ classdef Map < handle
             switch idx(1).type
                 case '()'
                     key = idx(1).subs{1};
-                    name = this.makeName(key);
+                    name = this.normalizeKey(key);
                     if ~isfield(this.s, name)
                         error('Map has no field %s', key);
                     end
                     value = this.s.(name);
-                    return;
                 otherwise
-                    %keyboard
-                    % Enable dot notation for all properties and methods
+                    % Enable o.foo('bar'). We expect
+                    %     idx = struct('type', { '.' '()' }, 'subs', { 'foo' {'bar'} })
+                    if length(idx) ~= 2 || idx(1).type ~= '.' || ~strcmp(idx(2).type, '()') 
+                        error('Invalid subscript call');
+                    end
+
                     [fName, args] = idx.subs;
                     if strcmp(fName, 'isKey')
-                        value = isfield(this.s, this.makeName(args{1}));
-                        return;
+                        value = isfield(this.s, this.normalizeKey(args{1}));
+                    elseif strcmp(fName, 'keys')
+                        normalizedNames = fieldnames(this.s);
+                        value = cell(1, length(normalizedNames));
+                        for k=1:length(normalizedNames)
+                            value{k} = this.denormalizeKey(normalizedNames{k});
+                        end
+                    else
+                        error('Invalid member %s', fName);
                     end
             end
 
-            error('Invalid subscript call')
         end
 
 
@@ -53,7 +67,7 @@ classdef Map < handle
 
             if strcmp(idx(1).type, '()')
                 key = idx(1).subs{1};
-                name = this.makeName(key);
+                name = this.normalizeKey(key);
                 ss = this.s;
                 ss.(name) = rhs;
                 this.s = ss;
