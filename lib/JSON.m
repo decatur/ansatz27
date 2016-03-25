@@ -9,7 +9,6 @@ classdef JSON < handle
     
     properties %(Access = private)
         errors
-        schemaURL
         formatters
         schemaCache
     end
@@ -21,35 +20,24 @@ classdef JSON < handle
             this.schemaCache = containers.Map();
         end
         
-        function [ schema, schemaURL ] = loadSchema(this, schema)
-            schemaURL = [];
-            
+        function schema = loadSchema(this, schema)      
             if ischar(schema)
                 if 1 == regexp(schema, '^file:')
                     schemaURL = regexprep(schema, '^file:', '');
                     schema = JSON.readFileToString(schemaURL, 'latin1');
-                    %schema.url = schemaURL;
                 end
-                schema = JSON.parse(schema);
+                schema = JSON.parse(schema, [], struct('objectToStruct', false));
             else
                 error('JSON:PARSE_SCHEMA', 'Schema must be of type char');
             end
         end
-        
-        %function rootDir = getRootDir(this)
-        %    if isempty(this.schemaURL)
-        %        rootDir = '.';
-        %    else
-        %        rootDir = fileparts(this.schemaURL);
-        %    end
-        %end
         
         function addError(this, path, msg, value, type)
             if nargin < 5
                 type = 'JSON:SCHEMA_VALIDATION';
             end
             
-            if isstruct(value)
+            if isstruct(value) || isa(value, 'Map')
                 value = '{object}';
             elseif iscell(value)
                 value = '[array]';
@@ -71,11 +59,16 @@ classdef JSON < handle
             if ischar(key)
                 if ismember('object', JSON.getPath(schema, '/type'))
                     childSchema = JSON.getPath(schema, ['/properties/' key]);
-                    if isempty(childSchema) && isfield(schema, 'patternProperties')
-                        patterns = schema.patternProperties.keys();
+                    if ~isempty(childSchema)
+                        return;
+                    end
+
+                    if schema.isKey('patternProperties')
+                        patternProperties = schema('patternProperties');
+                        patterns = patternProperties.keys();
                         for k=1:length(patterns)
                             if ~isempty(regexp(key, patterns{k}))
-                                childSchema = schema.patternProperties(patterns{k});
+                                childSchema = patternProperties(patterns{k});
                                 break;
                             end
                         end
@@ -83,7 +76,7 @@ classdef JSON < handle
                 end
             elseif isnumeric(key)
                 items = JSON.getPath(schema, '/items');
-                if isstruct(items)
+                if isa(items, 'Map')
                     childSchema = items;
                 elseif iscell(items)
                     childSchema = items{key};
@@ -104,8 +97,9 @@ classdef JSON < handle
             %resolveRef swaps in the referenced schema.
             
             refs = {['#' path]};
-            while isfield(schema, 'x_ref') % $ref
-                ref = schema.x_ref;
+
+            while schema.isKey('$ref')
+                ref = schema('$ref');
                 
                 if ~ischar(ref) || isempty(strtrim(ref))
                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
@@ -125,13 +119,12 @@ classdef JSON < handle
                 parts = strsplit(ref, '#');
                 
                 if ~isempty(parts{1})
-                    url = parts{1};
+                    url = ['file:' parts{1}];
                     if this.schemaCache.isKey(url)
                         rootSchema = this.schemaCache.isKey(url);
                     else
                         fprintf(1, 'Loading schema %s\n', url);
-                        rootSchema = JSON.parse(JSON.readFileToString( url, 'latin1' ));
-                        %rootSchema.url = url;
+                        rootSchema = this.loadSchema(url);
                         this.schemaCache(url) = rootSchema;
                         schema = rootSchema;
                     end
@@ -147,54 +140,57 @@ classdef JSON < handle
         end
         
         function schema = normalizeSchema_(this, rootSchema, schema, path)
-            if ~isstruct(schema)
+            if ~isa(schema, 'Map')
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
             
-            if isfield(schema, 'x_ref') % $ref
+            if schema.isKey('$ref')
                 schema = this.resolveRef(rootSchema, schema, path);
             end
             
-            if isfield(schema, 'allOf')
+            if schema.isKey('allOf')
                 schema = this.mergeSchemas(rootSchema, schema);
             end
             
-            if ~isfield(schema, 'type') || isempty(schema.type)
-                schema.type = {};
+            if ~schema.isKey('type') || isempty(schema('type'))
+                schema('type') = {};
                 return
             end
             
-            type = schema.type;
+            type = schema('type');
             
             if ischar(type)
                 type = {type};
             end
             
-            schema.type = type;
+            schema('type') = type;
             
-            if isfield(schema, 'required') && ~iscell(schema.required)
+            if schema.isKey('required') && ~iscell(schema('required'))
                 error('JSON:PARSE_SCHEMA', 'Invalid required at %s', path);
             end
 
-            if isfield(schema, 'pattern') && ~ischar(schema.pattern)
+            if schema.isKey('pattern') && ~ischar(schema('pattern'))
                 error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', path);
             end
             
-            if ismember('object', type) && isfield(schema, 'properties') && ~isempty(schema.properties)
-                props = schema.properties;
-                pNames = fieldnames(props);
+            if ismember('object', type) && schema.isKey('properties') && ~isempty(schema('properties'))
+                props = schema('properties');
+                pNames = props.keys();
                 for k=1:length(pNames)
                     subPath = [path '/properties/' pNames{k}];
-                    schema.properties.(pNames{k}) = this.normalizeSchema_(rootSchema, props.(pNames{k}), subPath);
+                    props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath);
                 end
-            elseif ismember('array', type) && isfield(schema, 'items')
-                if isstruct(schema.items)
-                    schema.items = this.normalizeSchema_(rootSchema, schema.items, [path '/items']);
-                elseif iscell(schema.items)
-                    for k=1:length(schema.items)
+                schema('properties') = props;
+            elseif ismember('array', type) && schema.isKey('items')
+                items = schema('items');
+                if isa(items, 'Map')
+                    schema('items') = this.normalizeSchema_(rootSchema, items, [path '/items']);
+                elseif iscell(items)
+                    for k=1:length(items)
                         subPath = [path '/items/' num2str(k)];
-                        schema.items{k} = this.normalizeSchema_(rootSchema, schema.items{k}, subPath);
+                        items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath);
                     end
+                    schema('items') = items;
                 end
             elseif any(ismember({'number' 'integer'}, type))
                 %if isfield(schema, 'enum') && iscell(schema.enum)
@@ -211,25 +207,28 @@ classdef JSON < handle
             %   Detailed explanation goes here
             
             % Merge properties and required fields of all schemas.
-            mergedSchema = struct;
-            mergedSchema.type = 'object';
-            mergedSchema.properties = struct;
-            mergedSchema.required = {};
+            mergedSchema = containers.Map();
+            mergedSchema('type') = 'object'; % TODO: Why not {'object'}?
+            mergedProperties = containers.Map();
+            mergedSchema('properties') = mergedProperties;
+            mergedSchema('required') = {};
+            allOf = schema('allOf');
             
-            for k=1:length(schema.allOf)
-                subSchema = this.normalizeSchema_(rootSchema, schema.allOf{k}, [path '/allOf']);
+            for k=1:length(allOf)
+                subSchema = this.normalizeSchema_(rootSchema, allOf{k}, [path '/allOf']);
                 % TODO: Assert properties is member
-                keys = fieldnames(subSchema.properties);
+                props = subSchema('properties');
+                keys = props.keys();
                 for l=1:length(keys)
                     key = keys{l};
-                    mergedSchema.properties.(key) = subSchema.properties.(key);
+                    mergedProperties(key) = props(key);
                 end
                 
-                if isfield(subSchema, 'required')
-                    if isfield(mergedSchema, 'required')
-                        mergedSchema.required = [mergedSchema.required subSchema.required];
+                if subSchema.isKey('required')
+                    if mergedSchema.isKey('required')
+                        mergedSchema('required') = [mergedSchema('required') subSchema('required')];
                     else
-                        mergedSchema.required = subSchema.required;
+                        mergedSchema('required') = subSchema('required');
                     end
                 end
             end
@@ -250,7 +249,7 @@ classdef JSON < handle
             end
 
 
-            type = schema.type;
+            type = schema('type');
             pType = [];
 
             if isempty(type); return; end;
@@ -310,17 +309,18 @@ classdef JSON < handle
             end
 
             if isstruct(value)
-                if isfield(schema, 'required')
-                    for i=1:length(schema.required)
-                        if ~isfield(value, schema.required{i})
-                            this.addError(path, sprintf('is missing required field %s', schema.required{i}), value);
+                if schema.isKey('required')
+                    required = schema('required');
+                    for i=1:length(required)
+                        if ~isfield(value, required{i})
+                            this.addError(path, sprintf('is missing required field %s', required{i}), value);
                         end
                     end
                 end
 
                 if JSON.getPath(schema, '/additionalProperties') == false
                     s = fieldnames(value);
-                    p = fieldnames(JSON.getPath(schema, '/properties', struct()));
+                    p = JSON.getPath(schema, '/properties', containers.Map()).keys();
                     s = s(~ismember(s, p));
 
                     pP = JSON.getPath(schema, '/patternProperties', containers.Map());
@@ -342,9 +342,9 @@ classdef JSON < handle
                     end
                 end
             elseif ischar(value)
-                if isfield(schema, 'pattern')
-                    if isempty(regexp(value, schema.pattern))
-                        this.addError(path, sprintf('does not match pattern %s', schema.pattern), value);
+                if schema.isKey('pattern')
+                    if isempty(regexp(value, schema('pattern')))
+                        this.addError(path, sprintf('does not match pattern %s', schema('pattern')), value);
                     end
                 end
                 
@@ -365,23 +365,23 @@ classdef JSON < handle
                     end
                 end
                 
-                if isfield(schema, 'minimum')
-                    badPath = getBadPath(path, value < schema.minimum);
+                if schema.isKey('minimum')
+                    badPath = getBadPath(path, value < schema('minimum'));
                     if ~isempty(badPath)
-                        this.addError(badPath, sprintf('is smaller than minimum %g', schema.minimum), value);
+                        this.addError(badPath, sprintf('is smaller than minimum %g', schema('minimum')), value);
                     end
                 end
                 
-                if isfield(schema, 'maximum')
-                    badPath = getBadPath(path, value > schema.maximum);
+                if schema.isKey('maximum')
+                    badPath = getBadPath(path, value > schema('maximum'));
                     if ~isempty(badPath)
-                        this.addError(badPath, sprintf('is bigger than maximum %g', schema.maximum), value);
+                        this.addError(badPath, sprintf('is bigger than maximum %g', schema('maximum')), value);
                     end
                 end
             end
 
-            if isfield(schema, 'enum')
-                if ~ismember(value, schema.enum)
+            if schema.isKey('enum')
+                if ~ismember(value, schema('enum'))
                     this.addError(path, 'is not contained in enumeration', value);
                 end
             end
@@ -402,6 +402,9 @@ classdef JSON < handle
                     value = [];
                     parser.addError([], e.message, [], e.identifier);
                 else
+                    for k=1:numel(e.stack)
+                        e.stack(k)
+                    end
                     rethrow(e);
                 end
             end
@@ -434,7 +437,7 @@ classdef JSON < handle
             % The pointer must be in JSON pointer syntax, so each component must be prefixed by /.
             %
             % Example:
-            %    obj = struct('foo', struct('bar', 13))
+            %    obj = containers.Map(); obj.foo = containers.Map(); obj.foo.bar = 13;
             %    getPath(obj, '/foo/bar') -> 13
 
             if isempty(pointer)
@@ -444,7 +447,6 @@ classdef JSON < handle
                 return;
             end
 
-
             if pointer(1) ~= '/'
                 % TODO: Do not throw here
                 error('Invalid pointer %s', pointer)
@@ -453,8 +455,8 @@ classdef JSON < handle
             parts = strsplit(pointer, '/');
 
             for k = 2:length(parts)
-                if isfield(obj, parts{k})
-                    obj = obj.(parts{k});
+                if isa(obj, 'Map') && obj.isKey(parts{k})
+                    obj = obj(parts{k});
                 else
                     if nargin >= 3
                         obj = default;

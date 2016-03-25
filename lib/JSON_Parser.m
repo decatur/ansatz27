@@ -3,9 +3,7 @@
 
 classdef JSON_Parser < JSON
     %JSON_PARSER Validating JSON parser
-    %   
-    %    Usage:
-    %       [value, errors] = JSON.parse('file:doc.json', 'file:schema.json')
+    % See https://github.com/decatur/ansatz27
     
     properties %(Access = private)
         pos
@@ -14,6 +12,7 @@ classdef JSON_Parser < JSON
         esc
         index_esc
         len_esc
+        options
     end
     
     methods
@@ -32,7 +31,7 @@ classdef JSON_Parser < JSON
     
     methods
         
-        function [value, errors] = parse_(this, json, rootschema)
+        function [value, errors] = parse_(this, json, rootschema, options)
             if nargin < 2 || ~ischar(json) || isempty(json)
                 error('JSON:PARSE_JSON', 'JSON must be non-empty string');
             end
@@ -42,6 +41,16 @@ classdef JSON_Parser < JSON
 
             if nargin < 3
                 rootschema = [];
+            end
+
+            if nargin < 4
+                this.options = struct();
+            else
+                this.options = options;
+            end
+
+            if ~isfield(this.options, 'objectToStruct')
+                this.options.objectToStruct = true;
             end
 
             if 1 == regexp(json, '^file:')
@@ -54,13 +63,15 @@ classdef JSON_Parser < JSON
             this.len = length(this.json);
             
             context = struct();
-            context.path = '';;
-            this.schemaURL = [];
+            context.path = '';
 
-            if ~isempty(rootschema) && ischar(rootschema)
-                [ context.schema, this.schemaURL ] = this.loadSchema( rootschema );
-            elseif isstruct(rootschema)
-                context.schema = rootschema;
+            if ~isempty(rootschema)
+                if ischar(rootschema)
+                    context.schema = this.loadSchema( rootschema );
+                else
+                    assert(isa(rootschema, 'Map'));
+                    context.schema = rootschema;
+                end
             end
 
             if isfield(context, 'schema')
@@ -103,20 +114,22 @@ classdef JSON_Parser < JSON
         function val = parse_object(this, context)
             this.parse_char('{');
 
-            if ~isempty(regexp(context.path, 'patternProperties$'))
-                val = containers.Map();
-            else
+            if this.options.objectToStruct
                 val = struct();
+            else
+                val = containers.Map();
             end
             
             if this.next_char() ~= '}'
                 while 1
-                    key = this.parseStr(struct());
+                    key = this.parseStr();
                     this.parse_char(':');
                     v = this.parse_value(this.childContext(context, key));
                     
                     if isstruct(val)
-                        val.(this.valid_field(key)) = v;
+                        if 1 == regexp(key, '^[a-z][a-z0-9_]*$', 'ignorecase')
+                            val.(key) = v;
+                        end
                     else
                         val(key) = v;
                     end
@@ -135,10 +148,15 @@ classdef JSON_Parser < JSON
             this.parse_char('[');
             index = 0;
 
-            items = JSON.getPath(context, '/schema/items');
+            schema = [];
+            if isfield(context, 'schema')
+                schema = context.schema;
+            end
+
+            items = JSON.getPath(schema, '/items');
             itemType = JSON.getPath(items, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
             
-            if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(context, '/schema/format', 'structured-array'), 'structured-array')
+            if this.options.objectToStruct && ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
                 val = struct();
             else
                 val = {};
@@ -222,7 +240,7 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function str = parseStr(this, context)
+        function str = parseStr(this)
             if this.json(this.pos) ~= '"'
                 this.error_pos('" expected');
             end
@@ -314,11 +332,14 @@ classdef JSON_Parser < JSON
         end
         
         function val = parse_value(this, context)
-            schema = JSON.getPath(context, '/schema');
-            
+            schema = [];
+            if isfield(context, 'schema')
+                schema = context.schema;
+            end
+
             switch(this.json(this.pos))
                 case '"'
-                    val = this.parseStr(context);
+                    val = this.parseStr();
                 case '['
                     val = this.parse_array(context);
                 case '{'
@@ -378,18 +399,6 @@ classdef JSON_Parser < JSON
 
             error('JSON:PARSE_JSON', msg);
         end % function error_pos
-        
-        function key = valid_field(this, key)
-            % Valid field names must begin with a letter, which may be
-            % followed by any combination of letters, digits, and underscores.
-            
-            if isempty(key)
-                key = 'x_';
-            end
-
-            key = regexprep(key, '[^A-Za-z0-9_]', '_');
-            key = regexprep(key, '^[^A-Za-z0-9]', 'x_');
-        end
         
     end
 
@@ -482,17 +491,17 @@ classdef JSON_Parser < JSON
             mergedObject = object;
 
             props = JSON.getPath(schema, '/properties');
-            if ~isstruct(props)
+            if ~isa(props, 'Map')
                 return
             end
 
-            propertyNames = fieldnames(props);
+            propertyNames = props.keys();
 
             for i=1:length(propertyNames)
                 name = propertyNames{i};
-                property = props.(name);
-                if isfield(property, 'default') && ~isfield(mergedObject, name)
-                    mergedObject.(name) = property.default;
+                property = props(name);
+                if property.isKey('default') && ~isfield(mergedObject, name)
+                    mergedObject.(name) = property('default');
                 end
             end
         end

@@ -30,9 +30,6 @@ classdef JSON_Stringifier < JSON
             %json=JSON_stringify(value, space) converts an object to JSON
             %   notation representing it.
             %
-            % See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify
-            % The JSON format and much more can be found at http://json.org.
-            %
             % Arguments
             %   value: The value to convert to a JSON string.
             %   rootschema: (Optional) A JSON schema.
@@ -40,14 +37,6 @@ classdef JSON_Stringifier < JSON
             %
             % Returns
             %   json: A string in the JSON format (see http://json.org)
-            %
-            % Examples
-            %   JSON_stringify(struct('foo', 'Hello', 'bar', 1))
-            %   JSON_stringify(rand(10))
-            %   JSON_stringify(struct('foo', 'Hello', 'password', 'keep_me_secret')
-            %
-            %   schema = JSON_parse('{"type": "object", "properties": { "bar": { "type": "numeric", "format": "matrix" }}}');
-            %   JSON_stringify(struct('bar', 1))
             %
             % Authors:
             %   Wolfgang Kuehn 2015, 2016
@@ -69,13 +58,12 @@ classdef JSON_Stringifier < JSON
                 space = 4;
             end
 
-            this.schemaURL = [];
             this.errors = {};
 
             if ischar(rootschema)
                 rootschema = strtrim(rootschema);
                 if ~isempty(rootschema)
-                    [ rootschema, this.schemaURL ] = this.loadSchema( rootschema );
+                    rootschema = this.loadSchema( rootschema );
                 end
             end
 
@@ -131,7 +119,8 @@ classdef JSON_Stringifier < JSON
             if isempty(schema)
                 type = {};
             else
-                type = schema.type;
+                assert(isa(schema, 'Map'));
+                type = schema('type');
             end
 
             json = [];
@@ -180,9 +169,9 @@ classdef JSON_Stringifier < JSON
         end
         
         function fmt = numberFormat(this, schema)
-            if isfield(schema, 'fixedPrecision') && isnumeric(schema.fixedPrecision)
+            if isa(schema, 'Map') && schema.isKey('fixedPrecision') && isnumeric(schema('fixedPrecision'))
                 % Note: '%.nf' means n number of digits to the right of the decimal point
-                fmt = sprintf('%%.%if', fix(schema.fixedPrecision));
+                fmt = sprintf('%%.%if', fix(schema('fixedPrecision')));
             else
                 fmt = '%.11g';
             end
@@ -286,8 +275,8 @@ classdef JSON_Stringifier < JSON
             items = JSON.getPath(schema, '/items');
             if isempty(items)
                 % Make sure a column vector such as [1;2] is generated as [[1],[2]].
-                items = struct();
-                items.type = { 'array' };
+                items = containers.Map();
+                items('type') = { 'array' };
             end
 
             itemContext = context;
