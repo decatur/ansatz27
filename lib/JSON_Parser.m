@@ -167,9 +167,9 @@ classdef JSON_Parser < JSON
             
             if this.next_char() ~= ']'
                 while 1
-                    index = index + 1;
                     subContext = this.childContext(context, index);
                     subContext.isArray = true;
+                    index = index + 1;
                     v = this.parse_value(subContext);
                     if isstruct(val)
                         % Note: Simply assigning val(index) = v will break if v and val have different fields!
@@ -377,7 +377,11 @@ classdef JSON_Parser < JSON
             end
             
             if ~isempty(schema)
-                this.validate(val, schema, context.path);
+                pType = this.inferePrimitiveType(val, schema, context.path);
+                if ~isempty(pType)
+                    % TODO: There must always be a pType
+                    this.validate(val, pType, schema, context.path);
+                end
                 format = JSON.getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);

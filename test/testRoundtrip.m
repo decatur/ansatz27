@@ -14,7 +14,12 @@ for k=1:tests.getLength()
         continue;
     end
 
-    fprintf(1, '\n%s', desc);
+    fprintf(1, '%s', desc);
+
+    if strcmp(test.getAttribute('skip'), 'true')
+        fprintf(1, '\t\tSkipping\n');
+        continue;
+    end
 
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
@@ -28,17 +33,18 @@ for k=1:tests.getLength()
 
     expectedMatlab = a;
 
-    fprintf(1, ' ... stringify ');
+    fprintf(1, '\t\tstringify ... ');
     [actualJSON, errors] = JSON.stringify(a, schema, 0);
     tc.assertEmpty(errors);
     tc.assertEqual(regexprep(actualJSON, '\s', ''), regexprep(expectedJSON, '\s', ''));
 
-    fprintf(1, ' ... parse ');
+    fprintf(1, '\t\tparse ... ');
     [actualMatlab, errors] = JSON.parse(expectedJSON, schema);
     tc.assertEmpty(errors);
     tc.assertEqual(actualMatlab, expectedMatlab);
     tc.assertEqual(islogical(actualMatlab), islogical(expectedMatlab));
 
+    fprintf(1, 'OK\n');
 end
 
 end

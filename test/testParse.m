@@ -14,7 +14,7 @@ for k=1:tests.getLength()
         continue;
     end
 
-    fprintf(1, '\n%s ... ', desc)
+    fprintf(1, '%s ... ', desc);
 
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
@@ -34,6 +34,8 @@ for k=1:tests.getLength()
         tc.assertEmpty(errors);
         tc.assertEqual(actualMatlab, expectedMatlab);
     end
+
+    fprintf(1, 'OK\n');
 
 end
 

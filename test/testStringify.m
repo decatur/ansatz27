@@ -14,6 +14,8 @@ for k=1:tests.getLength()
         continue;
     end
 
+    fprintf(1, '%s ... ', desc);
+
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
     jsonExpected = getElementText(test, 'json');
@@ -28,6 +30,8 @@ for k=1:tests.getLength()
 
     tc.assertEmpty(errors);
     tc.assertEqual(jsonActual, jsonExpected);
+
+    fprintf(1, 'OK\n');
 
 end
 

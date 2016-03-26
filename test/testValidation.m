@@ -14,7 +14,7 @@ for k=1:tests.getLength()
         continue;
     end
 
-    fprintf(1, '%s\n', desc);
+    fprintf(1, '%s', desc);
 
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
@@ -24,6 +24,7 @@ for k=1:tests.getLength()
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
 
     if ~isempty(code)
+        fprintf(1, '\t\tstringify ... ');
         if isempty(regexp(code, '^a\s*=', 'once'))
             a = eval(code);
         else
@@ -39,12 +40,15 @@ for k=1:tests.getLength()
     end
 
     if ~isempty(jsonExpected)
+        fprintf(1, '\t\tparse ... ');
         [actualMatlab, actualErrors] = JSON.parse(jsonExpected, schema);
         for l=1:length(actualErrors)
             actualErrors{l} = actualErrors{l}(1:end-1);
         end
         tc.assertEqual(actualErrors, expectedErrors);
     end
+
+    fprintf(1, '\n');
 
 end
 

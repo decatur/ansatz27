@@ -335,7 +335,7 @@
         <matlab>[1 2;3 4]</matlab>
         <json>[[1,2],[3,4]]</json>
     </test>
-    <test>
+    <test skip="false">
         <description>Column vector (Fragile)</description>
         <matlab>[1; 2]</matlab>
         <json>[[1],[2]]</json>

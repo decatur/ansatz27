@@ -79,7 +79,11 @@ classdef JSON < handle
                 if isa(items, 'Map')
                     childSchema = items;
                 elseif iscell(items)
-                    childSchema = items{key};
+                    if key < length(items)
+                        childSchema = items{key+1};
+                    else
+                        childSchema = [];
+                    end
                 end
             end
         end
@@ -243,7 +247,68 @@ classdef JSON < handle
             end
         end
 
-        function pType = validate(this, value, schema, path)
+        function pType = inferePrimitiveType(this, value, schema, path)
+
+            type = schema('type');
+            pType = [];
+
+            if isempty(type); return; end;
+
+            if isempty(value)
+                pType = type{1};
+            else
+                n = numel(value);
+
+                if ischar(value)
+                    if ismember('string', type)
+                        pType = 'string';
+                    end
+                elseif isstruct(value) || isa(value, 'Map')
+                    if n==1 && ismember('object', type)
+                        pType = 'object';
+                    elseif ismember('array', type)
+                        pType = 'array';
+                    end
+                elseif iscell(value)
+                    if ismember('array', type)
+                        pType = 'array';
+                    end
+                elseif isnumeric(value)
+                    if n == 1
+                        if isnan(value) 
+                            if ismember('null', type)
+                                pType = 'null';
+                            end
+                        elseif rem(value, 1) == 0 % integer value
+                            if ismember('integer', type)
+                                pType = 'integer';
+                            elseif ismember('number', type) 
+                                pType = 'number';
+                            end
+                        elseif ismember('number', type)
+                            pType = 'number';
+                        end
+                    end
+
+                    if isempty(pType) && ismember('array', type)
+                        pType = 'array';
+                    end
+                elseif islogical(value)
+                    if n == 1 && ismember('boolean', type)
+                        pType = 'boolean';
+                    elseif ismember('array', type)
+                        pType = 'array';
+                    end
+                end
+
+                if isempty(pType)
+                    this.addError(path, sprintf('does not match type %s', strjoin(type, ' or ')), value);
+                    return
+                end
+            end
+        end
+
+        function validate(this, value, pType, schema, path)
 
             function p = getBadPath(path, indices)
                 isVec = length(indices) > 1;
@@ -257,67 +322,8 @@ classdef JSON < handle
                 end
             end
 
-
-            type = schema('type');
-            pType = [];
-
-            if isempty(type); return; end;
-
-            if isempty(value)
-                pType = type{1};
-                return
-            end
-
-            n = numel(value);
-
-            if ischar(value)
-                if ismember('string', type)
-                    pType = 'string';
-                end
-            elseif isstruct(value) || isa(value, 'Map')
-                if n==1 && ismember('object', type)
-                    pType = 'object';
-                elseif ismember('array', type)
-                    pType = 'array';
-                end
-            elseif iscell(value)
-                if ismember('array', type)
-                    pType = 'array';
-                end
-            elseif isnumeric(value)
-                if n == 1
-                    if isnan(value) 
-                        if ismember('null', type)
-                            pType = 'null';
-                        end
-                    elseif rem(value, 1) == 0 % integer value
-                        if ismember('integer', type)
-                            pType = 'integer';
-                        elseif ismember('number', type) 
-                            pType = 'number';
-                        end
-                    elseif ismember('number', type)
-                        pType = 'number';
-                    end
-                end
-
-                if isempty(pType) && ismember('array', type)
-                    pType = 'array';
-                end
-            elseif islogical(value)
-                if n == 1 && ismember('boolean', type)
-                    pType = 'boolean';
-                elseif ismember('array', type)
-                    pType = 'array';
-                end
-            end
-
-            if isempty(pType)
-                this.addError(path, sprintf('does not match type %s', strjoin(type, ' or ')), value);
-                return
-            end
-
             if strcmp(pType, 'object')
+
                 if isstruct(value)
                     s = fieldnames(value);
                 else
@@ -331,6 +337,14 @@ classdef JSON < handle
                             this.addError(path, sprintf('is missing required field %s', required{k}), value);
                         end
                     end
+                end
+
+                if schema.isKey('minProperties') && length(s) < schema('minProperties')
+                    this.addError(path, sprintf('has less than %g properties', schema('minProperties')), value);
+                end
+
+                if schema.isKey('maxProperties') && length(s) > schema('maxProperties')
+                    this.addError(path, sprintf('has more than %g properties', schema('maxProperties')), value);
                 end
 
                 if JSON.getPath(schema, '/additionalProperties') == false
@@ -354,11 +368,21 @@ classdef JSON < handle
                         this.addError(path, 'contains additional property', sNotFound{k});
                     end
                 end
+
+                
+
             elseif ischar(value)
-                if schema.isKey('pattern')
-                    if isempty(regexp(value, schema('pattern')))
-                        this.addError(path, sprintf('does not match pattern %s', schema('pattern')), value);
-                    end
+
+                if schema.isKey('pattern') && isempty(regexp(value, schema('pattern')))
+                    this.addError(path, sprintf('does not match pattern %s', schema('pattern')), value);
+                end
+
+                if schema.isKey('minLength') && length(value) < schema('minLength')
+                    this.addError(path, sprintf('has length less than %g', schema('minLength')), value);
+                end
+
+                if schema.isKey('maxLength') && length(value) > schema('maxLength')
+                    this.addError(path, sprintf('has length greater than %g', schema('maxLength')), value);
                 end
                 
                 format = JSON.getPath(schema, '/format');
@@ -369,27 +393,52 @@ classdef JSON < handle
                     end
                 end
                 
-            elseif isnumeric(value)
+            elseif ismember(pType, {'integer' 'number'})
                 
-                if strcmp(type, 'integer')
-                    badPath = getBadPath(path, rem(value, 1));
-                    if ~isempty(badPath)
-                        this.addError(badPath, 'is not an integer', value);
-                    end
+                if strcmp(pType, 'integer') && rem(value, 1)
+                    this.addError(badPath, 'is not an integer', value);
+                end
+
+                if schema.isKey('multipleOf') && rem(value, schema('multipleOf'))
+                    this.addError(path, sprintf('is not a multiple of %g', schema('multipleOf')), value);
                 end
                 
                 if schema.isKey('minimum')
-                    badPath = getBadPath(path, value < schema('minimum'));
+                    if schema.isKey('exclusiveMinimum') && schema('exclusiveMinimum')
+                        idx = value <= schema('minimum');
+                    else
+                        idx = value < schema('minimum');
+                    end
+                    badPath = getBadPath(path, idx);
                     if ~isempty(badPath)
-                        this.addError(badPath, sprintf('is smaller than minimum %g', schema('minimum')), value);
+                        this.addError(badPath, sprintf('violates minimum %g', schema('minimum')), value);
                     end
                 end
                 
                 if schema.isKey('maximum')
-                    badPath = getBadPath(path, value > schema('maximum'));
-                    if ~isempty(badPath)
-                        this.addError(badPath, sprintf('is bigger than maximum %g', schema('maximum')), value);
+                    if schema.isKey('exclusiveMaximum') && schema('exclusiveMaximum')
+                        idx = value >= schema('maximum');
+                    else
+                        idx = value > schema('maximum');
                     end
+                    badPath = getBadPath(path, idx);
+                    if ~isempty(badPath)
+                        this.addError(badPath, sprintf('violates maximum %g', schema('maximum')), value);
+                    end
+                end
+                
+            elseif strcmp(pType, 'array')
+                if schema.isKey('additionalItems') && ~schema('additionalItems') && ...
+                   schema.isKey('items') && iscell(schema('items')) && length(value)>length(schema('items'))
+                    this.addError(path, sprintf('does not allow additional items'), '[array]');
+                end
+
+                if schema.isKey('minItems') && length(value) < schema('minItems')
+                    this.addError(path, sprintf('has less than %g items', schema('minItems')), '[array]');
+                end
+                
+                if schema.isKey('maxItems') && length(value) > schema('maxItems')
+                    this.addError(path, sprintf('has more than %g items', schema('maxItems')), '[array]');
                 end
             end
 

@@ -127,7 +127,7 @@ classdef JSON_Stringifier < JSON
             pType = [];
 
             if ~isempty(type)
-                pType = this.validate(value, schema, context.path);
+                pType = this.inferePrimitiveType(value, schema, context.path);
                 isarray = strcmp(pType, 'array');
                 
                 if ~isempty(json)
@@ -165,6 +165,10 @@ classdef JSON_Stringifier < JSON
                     json = strrep(json, '1', 'true');
                     json = strrep(json, '0', 'false');
                 end
+            end
+
+            if ~isempty(pType)
+                this.validate(value, pType, schema, context.path);
             end
         end
         
@@ -229,18 +233,13 @@ classdef JSON_Stringifier < JSON
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            items = JSON.getPath(schema, '/items');    
+            %items = JSON.getPath(schema, '/items');    
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             l = length(value);
             
             for k=1:l
-
-                if iscell(items)
-                    itemSchema = items{k};
-                else
-                    itemSchema = items;
-                end
+                itemSchema = this.getChildSchema(schema, k-1);
 
                 if isstruct(value)
                     item = value(k);
@@ -248,7 +247,7 @@ classdef JSON_Stringifier < JSON
                     item = value{k};
                 end
                 
-                itemContext.path = [context.path '/' num2str(k)];
+                itemContext.path = [context.path '/' num2str(k-1)];
                 item_str = this.value2json(item, itemContext, itemSchema);
                 
                 if isempty(item_str)
@@ -307,13 +306,10 @@ classdef JSON_Stringifier < JSON
                 indx.subs = cat(1, { k }, cellstr(repmat(':', ndims(tensor)-1, 1)));
                 m = squeeze(subsref(tensor, indx));
 
-                if iscell(items)
-                    itemSchema = items{k};
-                else
-                    itemSchema = items;
-                end
+                We have to use items here!
+                itemSchema = this.getChildSchema(schema, k-1);
 
-                itemContext.path = [context.path '/' num2str(k)];
+                itemContext.path = [context.path '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(m, itemContext, itemSchema));
                 sep = ',';
@@ -325,7 +321,7 @@ classdef JSON_Stringifier < JSON
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
             
-            items = JSON.getPath(schema, '/items');
+            %items = JSON.getPath(schema, '/items');
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -335,13 +331,8 @@ classdef JSON_Stringifier < JSON
 
 
             for k=1:numel(row)
-                if iscell(items)
-                    itemSchema = items{k};
-                else
-                    itemSchema = items;
-                end
-
-                itemContext.path = [context.path '/' num2str(k)];
+                itemSchema = this.getChildSchema(schema, k-1);
+                itemContext.path = [context.path '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(row(k), itemContext, itemSchema));
                 sep = ',';
