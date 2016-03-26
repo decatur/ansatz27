@@ -26,7 +26,7 @@ classdef JSON < handle
                     schemaURL = regexprep(schema, '^file:', '');
                     schema = JSON.readFileToString(schemaURL, 'latin1');
                 end
-                schema = JSON.parse(schema, [], struct('objectToStruct', false));
+                schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
             else
                 error('JSON:PARSE_SCHEMA', 'Schema must be of type char');
             end
@@ -140,6 +140,19 @@ classdef JSON < handle
         end
         
         function schema = normalizeSchema_(this, rootSchema, schema, path)
+            function processProperties(schema, propertyType)
+                if schema.isKey(propertyType) && ~isempty(schema(propertyType))
+                    props = schema(propertyType);
+                    pNames = props.keys();
+                    for k=1:length(pNames)
+                        subPath = [path '/' propertyType '/' pNames{k}];
+                        props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath);
+                    end
+                    schema(propertyType) = props;
+                end
+            end
+
+
             if ~isa(schema, 'Map')
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
@@ -161,10 +174,9 @@ classdef JSON < handle
             
             if ischar(type)
                 type = {type};
+                schema('type') = type;
             end
-            
-            schema('type') = type;
-            
+                        
             if schema.isKey('required') && ~iscell(schema('required'))
                 error('JSON:PARSE_SCHEMA', 'Invalid required at %s', path);
             end
@@ -172,16 +184,11 @@ classdef JSON < handle
             if schema.isKey('pattern') && ~ischar(schema('pattern'))
                 error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', path);
             end
-            
-            if ismember('object', type) && schema.isKey('properties') && ~isempty(schema('properties'))
-                props = schema('properties');
-                pNames = props.keys();
-                for k=1:length(pNames)
-                    subPath = [path '/properties/' pNames{k}];
-                    props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath);
-                end
-                schema('properties') = props;
-            elseif ismember('array', type) && schema.isKey('items')
+
+            processProperties(schema, 'properties');
+            processProperties(schema, 'patternProperties');
+
+            if ismember('array', type) && schema.isKey('items')
                 items = schema('items');
                 if isa(items, 'Map')
                     schema('items') = this.normalizeSchema_(rootSchema, items, [path '/items']);
@@ -192,7 +199,9 @@ classdef JSON < handle
                     end
                     schema('items') = items;
                 end
-            elseif any(ismember({'number' 'integer'}, type))
+            end
+
+            if any(ismember({'number' 'integer'}, type))
                 %if isfield(schema, 'enum') && iscell(schema.enum)
                 %    if all(cellfun(@isnumeric, schema.enum))
                 %        schema.enum = cell2mat(schema.enum);
@@ -265,7 +274,7 @@ classdef JSON < handle
                 if ismember('string', type)
                     pType = 'string';
                 end
-            elseif isstruct(value)
+            elseif isstruct(value) || isa(value, 'Map')
                 if n==1 && ismember('object', type)
                     pType = 'object';
                 elseif ismember('array', type)
@@ -308,21 +317,25 @@ classdef JSON < handle
                 return
             end
 
-            if isstruct(value)
+            if strcmp(pType, 'object')
+                if isstruct(value)
+                    s = fieldnames(value);
+                else
+                    s = value.keys();
+                end
+
                 if schema.isKey('required')
                     required = schema('required');
-                    for i=1:length(required)
-                        if ~isfield(value, required{i})
-                            this.addError(path, sprintf('is missing required field %s', required{i}), value);
+                    for k=1:length(required)
+                        if ~ismember(required{k}, s)
+                            this.addError(path, sprintf('is missing required field %s', required{k}), value);
                         end
                     end
                 end
 
                 if JSON.getPath(schema, '/additionalProperties') == false
-                    s = fieldnames(value);
                     p = JSON.getPath(schema, '/properties', containers.Map()).keys();
                     s = s(~ismember(s, p));
-
                     pP = JSON.getPath(schema, '/patternProperties', containers.Map());
                     pp = pP.keys();
                     sFound = {};

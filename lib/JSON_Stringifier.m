@@ -141,11 +141,11 @@ classdef JSON_Stringifier < JSON
                 json = this.string2json(value);
             elseif iscell(value)
                 json = this.objArray2json(value, context, schema);
-            elseif isstruct(value)
+            elseif isstruct(value) || isa(value, 'Map')
                 if isarray
                     json = this.objArray2json(value, context, schema);
                 else
-                    json = this.struct2json(value, context, schema);
+                    json = this.object2json(value, context, schema);
                 end
             elseif isnumeric(value) || islogical(value) % Note empty [] is numeric
                 if isarray
@@ -178,21 +178,33 @@ classdef JSON_Stringifier < JSON
             
         end
         
-        function txt = struct2json(this, value, context, schema)
-            assert(isstruct(value), 'input is not a struct');
+        function txt = object2json(this, value, context, schema)
+            assert(isstruct(value) || isa(value, 'Map'));
             
             txt = sprintf('{%s', this.nl);
             mind = context.gap;
             context.gap = [context.gap this.indent];
             path = context.path;
             
-            names = fieldnames(value);
+            if isstruct(value)
+                names = fieldnames(value);
+            else
+                names = value.keys();
+            end
+
             isFirstItem = true;
             
             for k=1:length(names)
                 key = names{k};
                 context.path = [path '/' key];
-                item_str = this.value2json(value.(key), context, this.getChildSchema(schema, key));
+
+                if isstruct(value)
+                    v = value.(key);
+                else
+                    v = value(key);
+                end
+
+                item_str = this.value2json(v, context, this.getChildSchema(schema, key));
                 if isempty(item_str) || strcmp(item_str, 'null') % TODO: Can it be empty?
                     continue;
                 end

@@ -14,6 +14,8 @@ for k=1:tests.getLength()
         continue;
     end
 
+    fprintf(1, '\n%s ... ', desc)
+
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
     json = getElementText(test, 'json');

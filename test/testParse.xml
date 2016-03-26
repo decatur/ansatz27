@@ -18,18 +18,18 @@ obj = struct('foo', 1, 'bar', 2);
     <test>
         <description>Formatters</description>
         <matlab>
-stringifier = JSON_Stringifier();
-stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x);
-stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
+            stringifier = JSON_Stringifier();
+            stringifier.formatters('date') = @(x) JSON_Handler.datenum2string(x);
+            stringifier.formatters('date-time') = @(x) JSON_Handler.datetimenum2string(x);
         </matlab>
     </test>
     <test>
         <description>Error Handling</description>
         <matlab>
-[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'file:schema.json');
-if ~isempty(errors)
-    % Report errors and stop processing
-end
+            [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'file:schema.json');
+            if ~isempty(errors)
+                % Report errors and stop processing
+            end
         </matlab>
     </test>
     <test>
@@ -67,6 +67,35 @@ end
                     "properties": {
                         "foo": {},
                         "bar": { "type": "number", "default": 3 }
+                    }
+                }
+            }
+        </schema>
+    </test>
+    <test>
+        <description>Dictionary with Defaults</description>
+        <matlab>
+            a = containers.Map();
+            a('1') = struct('foo', 1, 'bar', 3);
+            a('2') = struct('foo', 2, 'bar', 4);
+        </matlab>
+        <json>
+            { 
+                "1": { "foo": 1 }, 
+                "2": { "foo": 2, "bar": 4 }
+            }
+        </json>
+        <schema>
+            {
+                "type": "object",
+                "format": "Map",
+                "patternProperties": {
+                    ".*": {
+                        "type": "object",
+                        "properties": {
+                            "foo": {},
+                            "bar": { "type": "number", "default": 3 }
+                        }
                     }
                 }
             }

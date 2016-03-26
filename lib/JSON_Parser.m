@@ -49,8 +49,8 @@ classdef JSON_Parser < JSON
                 this.options = options;
             end
 
-            if ~isfield(this.options, 'objectToStruct')
-                this.options.objectToStruct = true;
+            if ~isfield(this.options, 'objectFormat')
+                this.options.objectFormat = 'struct';
             end
 
             if 1 == regexp(json, '^file:')
@@ -111,12 +111,15 @@ classdef JSON_Parser < JSON
         
         
         
-        function val = parse_object(this, context)
+        function val = parse_object(this, context, schema)
             this.parse_char('{');
 
-            if this.options.objectToStruct
+            objectFormat = JSON.getPath(schema, '/format', this.options.objectFormat);
+
+            if strcmp(objectFormat, 'struct')
                 val = struct();
             else
+                assert(strcmp(objectFormat, 'Map'));
                 val = containers.Map();
             end
             
@@ -156,7 +159,7 @@ classdef JSON_Parser < JSON
             items = JSON.getPath(schema, '/items');
             itemType = JSON.getPath(items, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
             
-            if this.options.objectToStruct && ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
+            if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
                 val = struct();
             else
                 val = {};
@@ -343,7 +346,7 @@ classdef JSON_Parser < JSON
                 case '['
                     val = this.parse_array(context);
                 case '{'
-                    val = this.parse_object(context);
+                    val = this.parse_object(context, schema);
                     if ~isempty(schema)
                         val = JSON_Parser.mergeDefaults(val, schema);
                     end
@@ -486,7 +489,13 @@ classdef JSON_Parser < JSON
         end
 
         function mergedObject = mergeDefaults(object, schema)
-            assert(isstruct(object));
+            assert(isstruct(object) || isa(object, 'Map'));
+
+            if isstruct(object)
+                s = fieldnames(object);
+            else
+                s = object.keys();
+            end
 
             mergedObject = object;
 
@@ -500,8 +509,12 @@ classdef JSON_Parser < JSON
             for i=1:length(propertyNames)
                 name = propertyNames{i};
                 property = props(name);
-                if property.isKey('default') && ~isfield(mergedObject, name)
-                    mergedObject.(name) = property('default');
+                if property.isKey('default') && ~ismember(name, s)
+                    if isstruct(mergedObject)
+                        mergedObject.(name) = property('default');
+                    else
+                        mergedObject(name) = property('default');
+                    end
                 end
             end
         end
