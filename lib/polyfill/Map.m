@@ -75,6 +75,10 @@ classdef Map < handle
                 error('Invalid subscript assignment')
             end
         end
+
+        function disp(this)
+            disp(JSON.stringify(this, [], 4));
+        end
         
     end
 end
