@@ -99,18 +99,11 @@ classdef JSON_Parser < JSON
     
     methods (Access=private)
         
-        function child = childContext(this, context, key)
+        function child = getChildContext(this, context, key)
             child = struct();
             child.path = [context.path '/' num2str(key)];
-            if ~isfield(context, 'schema')
-                return
-            end
-
-            child.schema = this.getChildSchema(context.schema, key);
         end
-        
-        
-        
+
         function val = parse_object(this, context, schema)
             this.parse_char('{');
 
@@ -127,7 +120,10 @@ classdef JSON_Parser < JSON
                 while 1
                     key = this.parseStr();
                     this.parse_char(':');
-                    v = this.parse_value(this.childContext(context, key));
+                    subContext = this.getChildContext(context, key);
+                    subContext.schema = this.getPropertySchema(schema, key);
+
+                    v = this.parse_value(subContext);
                     
                     if isstruct(val)
                         if 1 == regexp(key, '^[a-z][a-z0-9_]*$', 'ignorecase')
@@ -167,7 +163,9 @@ classdef JSON_Parser < JSON
             
             if this.next_char() ~= ']'
                 while 1
-                    subContext = this.childContext(context, index);
+                    subContext = this.getChildContext(context, index);
+                    subContext.schema = this.getItemSchema(items, index);
+
                     subContext.isArray = true;
                     index = index + 1;
                     v = this.parse_value(subContext);

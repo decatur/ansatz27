@@ -49,42 +49,45 @@ classdef JSON < handle
             this.errors{end+1} = {path msg value type};
         end
         
-        function childSchema = getChildSchema(this, schema, key)
-            childSchema = [];
+        function childSchema = getPropertySchema(this, schema, key)
+            assert(ischar(key));
             
-            if isempty(schema)
+            if isempty(schema) % Shortcut
+                childSchema = [];
                 return;
             end
             
-            if ischar(key)
-                if ismember('object', JSON.getPath(schema, '/type'))
-                    childSchema = JSON.getPath(schema, ['/properties/' key]);
-                    if ~isempty(childSchema)
-                        return;
-                    end
+            childSchema = JSON.getPath(schema, ['/properties/' key]);
+            
+            if ~isempty(childSchema)
+                return;
+            end
 
-                    if schema.isKey('patternProperties')
-                        patternProperties = schema('patternProperties');
-                        patterns = patternProperties.keys();
-                        for k=1:length(patterns)
-                            if ~isempty(regexp(key, patterns{k}))
-                                childSchema = patternProperties(patterns{k});
-                                break;
-                            end
-                        end
+            if schema.isKey('patternProperties')
+                patternProperties = schema('patternProperties');
+                patterns = patternProperties.keys();
+                for k=1:length(patterns)
+                    if ~isempty(regexp(key, patterns{k}))
+                        childSchema = patternProperties(patterns{k});
+                        break;
                     end
                 end
-            elseif isnumeric(key)
-                items = JSON.getPath(schema, '/items');
-                if isa(items, 'Map')
-                    childSchema = items;
-                elseif iscell(items)
-                    if key < length(items)
-                        childSchema = items{key+1};
-                    else
-                        childSchema = [];
-                    end
-                end
+            end
+
+        end
+
+        function childSchema = getItemSchema(this, items, key)
+            assert(isnumeric(key) && ~rem(key, 1));
+            childSchema = [];
+            
+            if isempty(items) % Shortcut
+                return;
+            end
+            
+            if isa(items, 'Map')
+                childSchema = items;
+            elseif iscell(items) && key < length(items)
+                childSchema = items{key+1};
             end
         end
         
@@ -495,12 +498,21 @@ classdef JSON < handle
         end
         
         function obj = getPath(obj, pointer, default)
-            %GETPATH Returns the value under the pointer or empty if the pointer does not exist.
-            % The pointer must be in JSON pointer syntax, so each component must be prefixed by /.
+            %GETPATH Returns the value referenced by the pointer.
+            % The pointer must be a JSON pointer, so each reference token must be
+            % prefixed by / and numerical tokens referencing an array are zero-based.
+            % Returns default or empty if the pointer does not resolve.
+            % See https://tools.ietf.org/html/rfc6901
             %
-            % Example:
-            %    obj = containers.Map(); obj.foo = containers.Map(); obj.foo.bar = 13;
-            %    getPath(obj, '/foo/bar') -> 13
+            % Examples:
+            %    obj = containers.Map();
+            %    obj('foo') = struct('bar', 13);
+            %    obj('bar') = {'foo' 'bar'};
+            %    obj('foo/bar') = 42;                   % Not recommended! 
+            %    JSON.getPath(obj, '/foo/bar')          % -> 13
+            %    JSON.getPath(obj, '/bar/1')            % -> 'bar'
+            %    JSON.getPath(obj, '/foo~1bar')         % -> 42
+            %    JSON.getPath(obj, '/foobar', 4711)     % -> 4711
 
             if isempty(pointer)
                 if isempty(obj)
@@ -511,22 +523,40 @@ classdef JSON < handle
 
             if pointer(1) ~= '/'
                 % TODO: Do not throw here
-                error('Invalid pointer %s', pointer)
+                error('Invalid pointer %s', pointer);
             end
 
-            parts = strsplit(pointer, '/');
+            tokens = strsplit(pointer, '/');
 
-            for k = 2:length(parts)
-                if isa(obj, 'Map') && obj.isKey(parts{k})
-                    obj = obj(parts{k});
-                else
-                    if nargin >= 3
-                        obj = default;
-                    else
-                        obj = [];
-                    end
-                    return;
+            for k = 2:length(tokens)
+                token = tokens{k};
+                % '~' needs to be encoded as '~0' and '/' needs to be encoded as '~1'
+                token = strrep(strrep(token, '~0', '~'), '~1', '/');
+                
+                if isa(obj, 'Map') && obj.isKey(token)
+                    obj = obj(token);
+                    continue;
                 end
+
+                if iscell(obj) && 1 == regexp(token, '^\d+$', 'once')
+                    l = str2double(token);
+                    if l < length(obj) % This will also handle l is not a number
+                        obj = obj{l+1};
+                        continue;
+                    end
+                end
+
+                if isstruct(obj) && isfield(obj, token)
+                    obj = obj.(token);
+                    continue;
+                end
+
+                if nargin >= 3
+                    obj = default;
+                else
+                    obj = [];
+                end
+                break;
             end
 
         end

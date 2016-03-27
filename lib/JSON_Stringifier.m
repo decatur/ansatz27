@@ -208,7 +208,7 @@ classdef JSON_Stringifier < JSON
                     v = value(key);
                 end
 
-                item_str = this.value2json(v, context, this.getChildSchema(schema, key));
+                item_str = this.value2json(v, context, this.getPropertySchema(schema, key));
                 if isempty(item_str) || strcmp(item_str, 'null') % TODO: Can it be empty?
                     continue;
                 end
@@ -233,13 +233,13 @@ classdef JSON_Stringifier < JSON
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            %items = JSON.getPath(schema, '/items');    
+            items = JSON.getPath(schema, '/items');    
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             l = length(value);
             
             for k=1:l
-                itemSchema = this.getChildSchema(schema, k-1);
+                itemSchema = this.getItemSchema(items, k-1);
 
                 if isstruct(value)
                     item = value(k);
@@ -306,8 +306,7 @@ classdef JSON_Stringifier < JSON
                 indx.subs = cat(1, { k }, cellstr(repmat(':', ndims(tensor)-1, 1)));
                 m = squeeze(subsref(tensor, indx));
 
-                We have to use items here!
-                itemSchema = this.getChildSchema(schema, k-1);
+                itemSchema = this.getItemSchema(items, k-1);
 
                 itemContext.path = [context.path '/' num2str(k-1)];
 
@@ -321,7 +320,7 @@ classdef JSON_Stringifier < JSON
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
             
-            %items = JSON.getPath(schema, '/items');
+            items = JSON.getPath(schema, '/items');
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -331,7 +330,7 @@ classdef JSON_Stringifier < JSON
 
 
             for k=1:numel(row)
-                itemSchema = this.getChildSchema(schema, k-1);
+                itemSchema = this.getItemSchema(items, k-1);
                 itemContext.path = [context.path '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(row(k), itemContext, itemSchema));

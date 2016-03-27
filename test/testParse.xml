@@ -10,7 +10,11 @@ schema = struct('type', 'object');
 [obj, errors] = JSON.parse('file:document.json', 'file:schema.json');
 [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', schema);
 
-obj = struct('foo', 1, 'bar', 2);
+obj = containers.Map();
+obj('foo') = struct('bar', 13);
+obj('bar') = {'foo' 'bar'};
+
+json = JSON.stringify(obj);
 [json, errors] = JSON.stringify(obj, 'file:schema.json');
 [json, errors] = JSON.stringify(obj, schema);
         </matlab>

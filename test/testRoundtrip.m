@@ -7,6 +7,7 @@ tests = document.getDocumentElement().getElementsByTagName('test');
 tc = TestCase();
 
 for k=1:tests.getLength()
+    tic();
     test = tests.item(k-1);
     
     desc = getElementText(test, 'description');
@@ -44,7 +45,7 @@ for k=1:tests.getLength()
     tc.assertEqual(actualMatlab, expectedMatlab);
     tc.assertEqual(islogical(actualMatlab), islogical(expectedMatlab));
 
-    fprintf(1, 'OK\n');
+    fprintf(1, 'OK in %g[sec]\n', toc());
 end
 
 end
