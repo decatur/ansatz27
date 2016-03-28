@@ -52,11 +52,10 @@ assert(m.isKey('_*'));
 
 
 
-obj = containers.Map();
-obj('foo') = struct('bar', 13);
-obj('bar') = {'foo' 'bar'};
-obj('foo/bar') = 42; % Not recommended! 
-assert(JSON.getPath(obj, '/foo/bar') == 13)
-assert(strcmp(JSON.getPath(obj, '/bar/1'), 'bar'))
-assert(JSON.getPath(obj, '/foo~1bar') == 42)
-assert(JSON.getPath(obj, '/foobar', 4711) == 4711)
+[json, errors] = JSON.parse(sprintf('{"f":12\n,}'));
+assert(strcmp(errors{1}{2}, 'tangling comma before line 2, column 2'));
+
+[json, errors] = JSON.parse('[1, 2,]');
+assert(strcmp(errors{1}{2}, 'tangling comma before line 1, column 7'));
+
+

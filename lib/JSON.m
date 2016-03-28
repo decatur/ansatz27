@@ -20,11 +20,37 @@ classdef JSON < handle
             this.schemaCache = containers.Map();
         end
         
+        function uri = resolveURI(this, uri)
+        %resolveURI resolves the URI from the load path.
+        % Also does a mild normalization
+
+            names = regexp(uri, '^(?<scope>[a-z]+:)(?<authority>//[^/]+)?(?<path>.*)$', 'names', 'once', 'ignorecase');
+            names.scope = lower(names.scope);           % Normalize scope port
+            names.authority = lower(names.authority);   % Normalize authority port
+            if strcmp(names.scope, 'file:') && names.path ~= '/'
+                s = which(names.path);
+                if ~isempty(s)
+                    names.path = which(s);
+                end
+            elseif strcmp(names.scope, 'http:') && ~isempty(names.authority)
+                % Normalize default port
+                names.authority = regexprep(names.authority, ':80$', '');
+            elseif strcmp(names.scope, 'https:') && ~isempty(names.authority)
+                % Normalize default port
+                names.authority = regexprep(names.authority, ':443$', '');
+            end
+            uri = [names.scope names.authority names.path];
+        end
+
         function schema = loadSchema(this, schema)      
             if ischar(schema)
-                if 1 == regexp(schema, '^file:')
-                    schemaURL = regexprep(schema, '^file:', '');
-                    schema = JSON.readFileToString(schemaURL, 'latin1');
+                if 1 == regexp(schema, '^[a-z]+:', 'ignorecase') % If it starts with a scheme it is a URI
+                    try
+                        schema = this.resolveURI(schema);
+                        schema = urlread(schema);
+                    catch e
+                        error('JSON:PARSE_SCHEMA', 'Could not read schema from %s because: %s', schema, e.message);
+                    end
                 end
                 schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
             else
@@ -372,7 +398,9 @@ classdef JSON < handle
                     end
                 end
 
-                
+                if schema.isKey('enum')
+                    this.addError(path, 'is not contained in enumeration', value);
+                end
 
             elseif ischar(value)
 
@@ -393,6 +421,13 @@ classdef JSON < handle
                 if strcmp(format, 'date')
                     if isempty(regexp(value, '^\d{4}-\d{2}-\d{2}$'))
                         this.addError(path, 'is not a date', value);
+                    end
+                end
+
+                if schema.isKey('enum')
+                    enum = schema('enum');
+                    if ~iscellstr(enum) || ~ismember(value, enum)
+                        this.addError(path, 'is not contained in enumeration', value);
                     end
                 end
                 
@@ -429,8 +464,16 @@ classdef JSON < handle
                         this.addError(badPath, sprintf('violates maximum %g', schema('maximum')), value);
                     end
                 end
+
+                if schema.isKey('enum')
+                    enum = schema('enum');
+                    if ~isnumeric(enum) || ~ismember(value, enum)
+                        this.addError(path, 'is not contained in enumeration', value);
+                    end
+                end
                 
             elseif strcmp(pType, 'array')
+                
                 if schema.isKey('additionalItems') && ~schema('additionalItems') && ...
                    schema.isKey('items') && iscell(schema('items')) && length(value)>length(schema('items'))
                     this.addError(path, sprintf('does not allow additional items'), '[array]');
@@ -443,11 +486,21 @@ classdef JSON < handle
                 if schema.isKey('maxItems') && length(value) > schema('maxItems')
                     this.addError(path, sprintf('has more than %g items', schema('maxItems')), '[array]');
                 end
-            end
 
-            if schema.isKey('enum')
-                if ~ismember(value, schema('enum'))
+                if schema.isKey('enum')
                     this.addError(path, 'is not contained in enumeration', value);
+                end
+            
+            elseif strcmp(pType, 'array')
+                if schema.isKey('enum')
+                    this.addError(path, 'is not contained in enumeration', value);
+                end
+            elseif strcmp(pType, 'boolean')
+                if schema.isKey('enum')
+                    enum = schema('enum');
+                    if ~islogical(enum) || ~ismember(value, enum)
+                        this.addError(path, 'is not contained in enumeration', value);
+                    end
                 end
             end
 
@@ -523,7 +576,7 @@ classdef JSON < handle
 
             if pointer(1) ~= '/'
                 % TODO: Do not throw here
-                error('Invalid pointer %s', pointer);
+                error('Invalid pointer syntax for %s', pointer);
             end
 
             tokens = strsplit(pointer, '/');
@@ -561,7 +614,7 @@ classdef JSON < handle
 
         end
 
-        function text = readFileToString(path, encoding )
+        function text = ___readFileToString(path, encoding )
             if JSON.isoct
                 [fid, msg] = fopen(path, 'r');
             else

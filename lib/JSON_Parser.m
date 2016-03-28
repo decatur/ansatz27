@@ -8,6 +8,8 @@ classdef JSON_Parser < JSON
     properties %(Access = private)
         pos
         len
+        lineCount
+        posCurrentNewline
         json
         esc
         index_esc
@@ -53,14 +55,21 @@ classdef JSON_Parser < JSON
                 this.options.objectFormat = 'struct';
             end
 
-            if 1 == regexp(json, '^file:')
-                this.json = JSON.readFileToString(regexprep(json, '^file:', ''), 'latin1');
+            if 1 == regexp(json, '^[a-z]+:', 'ignorecase') % If it starts with a scheme it is a URI
+                try
+                    json = this.resolveURI(json);
+                    this.json = urlread(json);
+                catch e
+                    error('JSON:PARSE', 'Could not read JSON from %s because: %s', json, e.message);
+                end
             else
                 this.json = json;
             end
 
             this.pos = 1;
             this.len = length(this.json);
+            this.lineCount = 1;
+            this.posCurrentNewline = 0;
             
             context = struct();
             context.path = '';
@@ -89,7 +98,7 @@ classdef JSON_Parser < JSON
 
             if this.pos ~= this.len+1
                 % Not all text was consumed.
-                this.error_pos('Unexpected trailing text');
+                this.error_pos('Unexpected trailing text at');
             end
 
             errors = this.errors;
@@ -137,6 +146,10 @@ classdef JSON_Parser < JSON
                         break;
                     end
                     this.parse_char(',');
+                    if this.json(this.pos) ~= '"'
+                        % Common error, we better handle it here than with parseStr() above
+                        this.error_pos('tangling comma before');
+                    end
                 end
             end
             this.parse_char('}');
@@ -183,6 +196,10 @@ classdef JSON_Parser < JSON
                         break;
                     end
                     this.parse_char(',');
+                    if this.json(this.pos) == ']'
+                        % Common error, we better handle it here than with parseStr() above
+                        this.error_pos('tangling comma before');
+                    end
                 end
             end
             
@@ -216,7 +233,7 @@ classdef JSON_Parser < JSON
         function parse_char(this, c)
             this.skip_whitespace();
             if this.pos > this.len || this.json(this.pos) ~= c
-                this.error_pos(['Expected ' c]);
+                this.error_pos(sprintf('Expected character %s at', c));
             else
                 this.pos = this.pos + 1;
                 this.skip_whitespace();
@@ -237,13 +254,17 @@ classdef JSON_Parser < JSON
             % return. isspace() also includes vertical tab, line feed and other
             % Unicode white space. So better use regexp with [\x20\x09\x0A\x0D].
             while this.pos <= this.len && isspace(this.json(this.pos))
+                if this.json(this.pos) == 10 % newline
+                    this.lineCount = this.lineCount + 1;
+                    this.posCurrentNewline = this.pos;
+                end
                 this.pos = this.pos + 1;
             end
         end
         
         function str = parseStr(this)
             if this.json(this.pos) ~= '"'
-                this.error_pos('" expected');
+                this.error_pos('expected character " at');
             end
 
             startPos = this.pos;            
@@ -273,7 +294,7 @@ classdef JSON_Parser < JSON
                         break;
                     case '\'
                         if this.pos+1 > this.len
-                            this.error_pos('End of text reached right after escape character');
+                            this.error_pos('End of text reached right after escape character at');
                         end
                         this.pos = this.pos + 1;
                         switch this.json(this.pos)
@@ -285,7 +306,7 @@ classdef JSON_Parser < JSON
                                 this.pos = this.pos + 1;
                             case 'u'
                                 if this.pos+4 > this.len
-                                    this.error_pos('End of text reached in escaped unicode character');
+                                    this.error_pos('End of text reached in escaped unicode character at');
                                 end
                                 
                                 if JSON.isoct
@@ -305,11 +326,11 @@ classdef JSON_Parser < JSON
             startIndices = regexp(str, '[\x0-\x1f]');
             if startIndices
                 this.pos = startPos + startIndices(1);
-                this.error_pos('Invalid char found in range #00-#1F');
+                this.error_pos('Invalid char found in range #00-#1F at');
             end
 
             if ~closed
-                this.error_pos('Expected closing quote at end of text');
+                this.error_pos('Expected closing quote at end of text at');
             end
         end
         
@@ -317,7 +338,7 @@ classdef JSON_Parser < JSON
             [num, count, ~, nextIndex] = sscanf(this.json(this.pos: end), '%f', 1);
             
             if count ~= 1
-                this.error_pos('Error reading number');
+                this.error_pos('Error reading number after');
             end
             
             this.pos = this.pos + nextIndex - 1;
@@ -355,23 +376,23 @@ classdef JSON_Parser < JSON
                         val = true;
                         this.pos = this.pos + 4;
                     else
-                        this.error_pos('Token true expected');
+                        this.error_pos('Token true expected after');
                     end
                 case 'f'
                     if this.pos+4 <= this.len && strcmp(this.json(this.pos:this.pos+4), 'false')
                         val = false;
                         this.pos = this.pos + 5;
                     else
-                        this.error_pos('Token false expected');
+                        this.error_pos('Token false expected after');
                     end
                 case 'n'
                     if this.parse_null()
                         val = NaN;
                     else
-                        this.error_pos('Token null expected');
+                        this.error_pos('Token null expected before');
                     end
                 otherwise
-                    this.error_pos('Illegal token');
+                    this.error_pos('Illegal token at');
             end
             
             if ~isempty(schema)
@@ -392,18 +413,9 @@ classdef JSON_Parser < JSON
         end
         
         function error_pos(this, msg)
-            startPos = max(1, this.pos-15);
-            endPos   = min(this.len, this.pos+15);
-
-            part = this.json(startPos:endPos);
-            index = min(length(part), this.pos-startPos+1);
-            msg = [msg ' ' part(1:index) '^^^'];
-            if index < length(part)
-                msg = [msg part(index+1:end)];
-            end
-
+            msg = sprintf('%s line %i, column %i', msg, this.lineCount, this.pos-this.posCurrentNewline);
             error('JSON:PARSE_JSON', msg);
-        end % function error_pos
+        end
         
     end
 
