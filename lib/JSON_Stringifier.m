@@ -59,17 +59,7 @@ classdef JSON_Stringifier < JSON
             end
 
             this.errors = {};
-
-            if ischar(rootschema)
-                rootschema = strtrim(rootschema);
-                if ~isempty(rootschema)
-                    rootschema = this.loadSchema( rootschema );
-                end
-            end
-
-            if ~isempty(rootschema)
-                rootschema = this.normalizeSchema(rootschema);
-            end
+            rootschema = this.loadSchema( rootschema );
             
             context = struct();
             

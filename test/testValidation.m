@@ -1,8 +1,9 @@
 function testValidation(description)
 
-dir = fileparts(mfilename ('fullpath'));
+absdir = fileparts(which('testValidation.xml'));
+absdir = strrep(absdir, '\', '/');
 
-document = xmlread(fullfile(dir, 'testValidation.xml'));
+document = xmlread(fullfile(absdir, 'testValidation.xml'));
 tests = document.getDocumentElement().getElementsByTagName('test');
 tc = TestCase();
 
@@ -20,8 +21,8 @@ for k=1:tests.getLength()
     schema = getElementText(test, 'schema');
     jsonExpected = getElementText(test, 'json');
     errorText = getElementText(test, 'errors');
-
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
+    schema = strrep(schema, 'BASE_URI', ['file:' absdir]);
 
     if ~isempty(code)
         fprintf(1, '\t\tstringify ... ');

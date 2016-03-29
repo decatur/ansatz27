@@ -194,7 +194,7 @@
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
-                "$ref": "schema2.json"
+                "$ref": "BASE_URI/schema2.json"
             }
         </schema>
         <json>
@@ -210,6 +210,7 @@
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
+                "id": "BASE_URI/",
                 "type": "object",
                 "properties": {
                     "bar": {

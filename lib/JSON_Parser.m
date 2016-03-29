@@ -55,12 +55,13 @@ classdef JSON_Parser < JSON
                 this.options.objectFormat = 'struct';
             end
 
-            if 1 == regexp(json, '^[a-z]+:', 'ignorecase') % If it starts with a scheme it is a URI
+            % If is does not look like JSON it must be a URI
+            if isempty(regexp(json, '^\s*(\[|\{|"|true|false|null|\+?\-?\d)'))
+                uri = this.resolveURIagainstLoadPath(json);
                 try
-                    json = this.resolveURI(json);
-                    this.json = urlread(json);
+                    this.json = urlread(uri);
                 catch e
-                    error('JSON:PARSE', 'Could not read JSON from %s because: %s', json, e.message);
+                    error('JSON:PARSE', 'Could not read JSON from %s because: %s', uri, e.message);
                 end
             else
                 this.json = json;
@@ -73,19 +74,7 @@ classdef JSON_Parser < JSON
             
             context = struct();
             context.path = '';
-
-            if ~isempty(rootschema)
-                if ischar(rootschema)
-                    context.schema = this.loadSchema( rootschema );
-                else
-                    assert(isa(rootschema, 'Map'));
-                    context.schema = rootschema;
-                end
-            end
-
-            if isfield(context, 'schema')
-                context.schema = this.normalizeSchema(context.schema);
-            end
+            context.schema = this.loadSchema( rootschema );
             
             % String delimiters and escape chars identified to improve speed:
             this.esc = find(this.json=='"' | this.json=='\' ); % comparable to: regexp(this.json, '["\\]');

@@ -11,50 +11,94 @@ classdef JSON < handle
         errors
         formatters
         schemaCache
+        baseURI
     end
     
     methods
-        
+
         function this = JSON()
             this.formatters = containers.Map();
             this.schemaCache = containers.Map();
         end
-        
-        function uri = resolveURI(this, uri)
-        %resolveURI resolves the URI from the load path.
-        % Also does a mild normalization
 
-            names = regexp(uri, '^(?<scope>[a-z]+:)(?<authority>//[^/]+)?(?<path>.*)$', 'names', 'once', 'ignorecase');
-            names.scope = lower(names.scope);           % Normalize scope port
-            names.authority = lower(names.authority);   % Normalize authority port
-            if strcmp(names.scope, 'file:') && names.path ~= '/'
-                s = which(names.path);
-                if ~isempty(s)
-                    names.path = which(s);
-                end
-            elseif strcmp(names.scope, 'http:') && ~isempty(names.authority)
-                % Normalize default port
-                names.authority = regexprep(names.authority, ':80$', '');
-            elseif strcmp(names.scope, 'https:') && ~isempty(names.authority)
-                % Normalize default port
-                names.authority = regexprep(names.authority, ':443$', '');
+        function uri = resolveURI(this, uri, base)
+        %resolveURI resolves the reference against the base URI.
+        % See https://tools.ietf.org/html/rfc3986
+
+            if ~isempty(base)
+                base = javaObject('java.net.URI', base);
+                uri = char(base.resolve(uri));
             end
-            uri = [names.scope names.authority names.path];
         end
 
-        function schema = loadSchema(this, schema)      
+        function uri = resolveURIagainstLoadPath(this, uri)
+        %resolveURI resolves the reference against the base URI and normalizes.
+        % See https://tools.ietf.org/html/rfc3986
+            r = javaObject('java.net.URI', uri);
+            if isempty(r.getScheme())
+                % Relative reference
+                base = javaObject('java.net.URI', 'file:/');
+                uri = ['file:/' strrep(which(uri), '\', '/')];
+            end
+        end
+
+%        function uri = __resolveURI(this, uri)
+%        %resolveURI resolves the URI from the load path.
+%        % Also does a mild normalization
+%        % See https://tools.ietf.org/html/rfc3986
+%
+%            names = regexp(uri, '^(?<scope>[a-z]+:)(?<authority>//[^/]+)?(?<path>.*)$', 'names', 'once', 'ignorecase');
+%            names.scope = lower(names.scope);           % Normalize scope port
+%            names.authority = lower(names.authority);   % Normalize authority port
+%            if strcmp(names.scope, 'file:') && names.path ~= '/'
+%                s = which(names.path);
+%                if ~isempty(s)
+%                    names.path = which(s);
+%                end
+%            elseif strcmp(names.scope, 'http:') && ~isempty(names.authority)
+%                % Normalize default port
+%                names.authority = regexprep(names.authority, ':80$', '');
+%            elseif strcmp(names.scope, 'https:') && ~isempty(names.authority)
+%                % Normalize default port
+%                names.authority = regexprep(names.authority, ':443$', '');
+%            end
+%            uri = [names.scope names.authority names.path];
+%        end
+
+        function schema = loadSchema(this, schema)
             if ischar(schema)
-                if 1 == regexp(schema, '^[a-z]+:', 'ignorecase') % If it starts with a scheme it is a URI
-                    try
-                        schema = this.resolveURI(schema);
-                        schema = urlread(schema);
-                    catch e
-                        error('JSON:PARSE_SCHEMA', 'Could not read schema from %s because: %s', schema, e.message);
-                    end
+                if isempty(regexp(schema, '^\s*\{')) % A URI cannot start with an opening curly, but a schema will
+                    uri = this.resolveURIagainstLoadPath(schema);
+                    schema = this.loadSchemaByURI(uri);
+                else
+                    schema = this.postLoadSchema(schema, []);
                 end
-                schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
+                schema = this.normalizeSchema(schema);
+            elseif isa(schema, 'Map') || isempty(schema)
+                % Do nothing
             else
-                error('JSON:PARSE_SCHEMA', 'Schema must be of type char');
+                error('Invalid type: %s', class(schema));
+            end
+        end
+
+        function schema = loadSchemaByURI(this, uri)
+            fprintf(1, 'Loading schema from uri %s\n', uri);
+            
+            try
+                schema = urlread(uri);
+            catch e
+                error('JSON:PARSE_SCHEMA', 'Could not read schema from %s because: %s', uri, e.message);
+            end
+
+            schema = this.postLoadSchema(schema, uri);
+        end
+
+        function schema = postLoadSchema(this, schema, uri)
+            schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
+
+            if ~schema.isKey('id')
+                % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
+                schema('id') = uri;
             end
         end
         
@@ -122,11 +166,11 @@ classdef JSON < handle
             if nargin < 3
                 path = '';
             end
-            schema = normalizeSchema_(this, schema, schema, path);
+            schema = normalizeSchema_(this, schema, schema, path, schema('id'));
         end
         
         
-        function schema = resolveRef(this, rootSchema, schema, path)
+        function schema = resolveRef(this, rootSchema, schema, path, resolutionScope)
             %resolveRef swaps in the referenced schema.
             
             refs = {['#' path]};
@@ -139,9 +183,9 @@ classdef JSON < handle
                 end
                 
                 ref = strtrim(ref);
-                if ref(1) == '#'
-                    ref = [JSON.getPath(rootSchema, '/url', '') ref];
-                end
+                %if ref(1) == '#'
+                %    ref = [JSON.getPath(rootSchema, '/url', '') ref];
+                %end
                 
                 if ismember(ref, refs)
                     error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
@@ -152,54 +196,63 @@ classdef JSON < handle
                 parts = strsplit(ref, '#');
                 
                 if ~isempty(parts{1})
-                    url = ['file:' parts{1}];
+                    url = this.resolveURI(parts{1}, resolutionScope);
                     if this.schemaCache.isKey(url)
                         rootSchema = this.schemaCache.isKey(url);
                     else
-                        fprintf(1, 'Loading schema %s\n', url);
-                        rootSchema = this.loadSchema(url);
+                        rootSchema = this.loadSchemaByURI(url);
                         this.schemaCache(url) = rootSchema;
                         schema = rootSchema;
                     end
                 end
-                
+
                 if length(parts) == 2
-                    schema = JSON.getPath(rootSchema, parts{2});
+                    schema = JSON.getPath(rootSchema, parts{2});     
                     if isempty(schema)
                         error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
                     end
                 end
+
+                keyboard
             end
         end
         
-        function schema = normalizeSchema_(this, rootSchema, schema, path)
-            function processProperties(schema, propertyType)
+        function schema = normalizeSchema_(this, rootSchema, schema, path, resolutionScope)
+            
+            function processProperties(schema, propertyType, resolutionScope)
                 if schema.isKey(propertyType) && ~isempty(schema(propertyType))
                     props = schema(propertyType);
                     pNames = props.keys();
                     for k=1:length(pNames)
                         subPath = [path '/' propertyType '/' pNames{k}];
-                        props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath);
+                        props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath, resolutionScope);
                     end
                     schema(propertyType) = props;
                 end
             end
 
-
             if ~isa(schema, 'Map')
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
             
-            if schema.isKey('$ref')
-                schema = this.resolveRef(rootSchema, schema, path);
+            if schema.isKey('id')
+                % Change resolution scope.
+                % Note that we do this before processing $ref in case we have a schema
+                % containing $href AND id. We need this because we blindly inject id in loadSchema().
+                resolutionScope = this.resolveURI(schema('id'), resolutionScope);
             end
-            
+
+            if schema.isKey('$ref')
+                schema = this.resolveRef(rootSchema, schema, path, resolutionScope);
+            end
+
             if schema.isKey('allOf')
                 schema = this.mergeSchemas(rootSchema, schema);
             end
             
             if ~schema.isKey('type') || isempty(schema('type'))
                 schema('type') = {};
+                % TODO: This is NOT according the JSON Schema Spec
                 return
             end
             
@@ -218,17 +271,17 @@ classdef JSON < handle
                 error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', path);
             end
 
-            processProperties(schema, 'properties');
-            processProperties(schema, 'patternProperties');
+            processProperties(schema, 'properties', resolutionScope);
+            processProperties(schema, 'patternProperties', resolutionScope);
 
             if ismember('array', type) && schema.isKey('items')
                 items = schema('items');
                 if isa(items, 'Map')
-                    schema('items') = this.normalizeSchema_(rootSchema, items, [path '/items']);
+                    schema('items') = this.normalizeSchema_(rootSchema, items, [path '/items'], resolutionScope);
                 elseif iscell(items)
                     for k=1:length(items)
                         subPath = [path '/items/' num2str(k)];
-                        items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath);
+                        items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath, resolutionScope);
                     end
                     schema('items') = items;
                 end
@@ -244,7 +297,7 @@ classdef JSON < handle
             
         end
         
-        function [ mergedSchema ] = mergeSchemas(this, rootSchema, schema)
+        function [ mergedSchema ] = mergeSchemas(this, rootSchema, schema, resolutionScope)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
             
@@ -257,7 +310,7 @@ classdef JSON < handle
             allOf = schema('allOf');
             
             for k=1:length(allOf)
-                subSchema = this.normalizeSchema_(rootSchema, allOf{k}, [path '/allOf']);
+                subSchema = this.normalizeSchema_(rootSchema, allOf{k}, [path '/allOf'], resolutionScope);
                 % TODO: Assert properties is member
                 props = subSchema('properties');
                 keys = props.keys();
@@ -510,6 +563,41 @@ classdef JSON < handle
     
     methods (Static)
         
+        function value = configParam(key, value)
+            persistent config
+            if isempty(config)
+                config = struct();
+            end
+
+            if nargin == 1
+                if isfield(config, key)
+                    value = config.(key);
+                else
+                    value = [];
+                end
+            elseif nargin == 2
+                config.(key) = value;
+            else
+                value = config;
+            end
+        end
+
+%        function value = setBaseURI(baseURI)
+%            value = JSON.configParam('baseURI', strrep(baseURI, '\', '/'));
+%        end
+
+%        function value = getBaseURI()
+%            value = JSON.configParam('baseURI');
+%            if isempty(value)
+%                if exist('ctfroot', 'builtin') ~= 0
+%                    baseURI = ['file:' ctfroot];
+%                else
+%                    baseURI = ['file:' pwd()];
+%                end
+%                value = JSON.setBaseURI(baseURI);
+%            end
+%        end
+
         function [value, errors] = parse(varargin)
             parser = JSON_Parser();
             

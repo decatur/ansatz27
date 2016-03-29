@@ -8,7 +8,14 @@ A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MA
       ⬑  JSON   ↲
 ```
 
-The [JSON schema specification](http://json-schema.org) is used to map between JSON and MATLABs data types and to validate data.
+ansatz27 lets you
+* read and write JSON streams with a predictable behavior,
+* make JSON Schemas part of your public API, and
+* avoid boilerplate code to validate that input data is correct.
+
+There is no one-to-one correspondence between JSON and MATLAB data types.
+Even the number `1` is a 2-dimensional matrix in MATLAB, and could translate to a JSON type of `number`, `array of number` or `array of array of number`.
+ansatz27 uses [JSON Schema](http://json-schema.org) to coerce JSON and MATLAB data types consistiently and to validate the data.
 
 # Requirements
 GNU Octave version minimum 4.0 or MATLAB about version 2006 (verified for 2013b).
@@ -18,7 +25,7 @@ There are no dependencies.
 
 [Understanding JSON Schema](http://spacetelescope.github.io/understanding-json-schema/)
 
-You can also validated JSON and JSON schema online with [jsonschemalint](http://jsonschemalint.com/draft4)
+You can validated JSON by JSON Schema online with [jsonschemalint](http://jsonschemalint.com/draft4)
 
 
 # JSON Schema and Type Coersion
@@ -32,7 +39,9 @@ Without schemas, roundtripping may break structure, for example
 | { "foo": [1] } | struct('foo', 1) | { "foo": 1 } |
 
 
-JSON Schema is itself defined in JSON and can be parsed into a MATLAB structure.
+
+
+JSON Schema is itself defined in JSON and can be parsed into a MATLAB object.
 
 # Usage
 
@@ -59,16 +68,97 @@ obj = struct('foo', 1, 'bar', 2);
 
 ## Supported Features
 
-* Supports all primitive types array, boolean, integer, number, null, object and string 
-* A type may be a list of primitive types, i.e. `"type": ["number", "null"]` meaning numeric or null
-* Internal and external referencing with "$ref" keyword
-* Keywords "minimum", "maximum", "pattern", "additionalItems", "additionalProperties", "properties", "patternProperties", "enum", "type", "allOf", "definitions", "default", "format"
-
-## MUST keywords (yet) ignored
-```
-$schema, id (scope alteration), multipleOf, exclusiveMaximum, exclusiveMinimum,
-maxLength, minLength, maxItems, minItems, uniqueItems, maxProperties, minProperties, dependencies, anyOf, oneOf, not
-```
+<table>
+    <tr><th>Feature</th><th>Description</th></tr>
+    <tr>
+        <td>type</td>
+        <td>All primitive types (array, boolean, integer,  number, null, object, string) are supported; `type` keyword is string or list, i.e.  `"type": ["number", "null"]` meaning numeric or null</td>
+    </tr>
+    <tr><td colspan="2">object validation keywords</td></tr>
+    <tr>
+        <td>properties, patternProperties, maxProperties, minProperties</td>
+        <td>Fully supported</td>
+    </tr>
+    <tr>
+        <td>additionalProperties</td>
+        <td>Supports only `true` and `false`</td>
+    </tr>
+    <tr><td colspan="2">array validation keywords</td></tr>
+    <tr>
+        <td>maxItems, minItems</td>
+        <td>Fully supported</td>
+    </tr>
+    <tr>
+        <td>additionalItems</td>
+        <td>Supports only `true` and `false`</td>
+    </tr>
+    <tr><td colspan="2">string validation keywords</td></tr>
+    <tr>
+        <td>pattern</td>
+        <td>Supports valid MATLAB/Octave regular expressions. On Octave not supported from the V4 Spec are lazy quantifiers ("+?", "*?", "??")</td>
+    </tr>
+    <tr>
+        <td>maxLength, minLength</td>
+        <td>Do not always work correctly because the *overestimating* length(char) function is used, i.e. `length('®')==2`</td>
+    </tr>
+    <tr><td colspan="2">number validation keywords</td></tr>
+    <tr>
+        <td>minimum, exclusiveMinimum, maximum, exclusiveMaximum, multipleOf</td>
+        <td>Fully supported</td>
+    </tr>
+    <tr>
+        <td>$ref</td>
+        <td>Internal and external referencing fully supported</td>
+    </tr>
+    <tr>
+        <td>definitions</td>
+        <td>Fully supported</td>
+    </tr>
+    <tr>
+        <td>default</td>
+        <td>See [Defaults](#defaults)</td>
+    </tr>
+    <tr>
+        <td>format</td>
+        <td>Validates `date-time`, and adds `date`, `structured-array`, `cell-array` and `Map`</td>
+    </tr>
+    <tr>
+        <td>enum</td>
+        <td>Only supportes uniform arrays of either strings, numbers or booleans</td>
+    </tr>
+    <tr>
+        <td>$schema</td>
+        <td>Fully supported, which means ignored</td>
+    </tr>
+    <tr>
+        <td>id</td>
+        <td>Scope resolution alteration is fully supported, see [URI Resolution](#uri-resolution)</td>
+    </tr>
+    <tr>
+        <td>uniqueItems</td>
+        <td>Not supported</td>
+    </tr>
+    <tr>
+        <td>dependencies</td>
+        <td>Not supported</td>
+    </tr>
+    <tr>
+        <td>allOf</td>
+        <td>Supported. Use it as a poor man's schema inheritance</td>
+    </tr>
+    <tr>
+        <td>anyOf</td>
+        <td>Not supported</td>
+    </tr>
+    <tr>
+        <td>oneOf</td>
+        <td>Not supported</td>
+    </tr>
+    <tr>
+        <td>not</td>
+        <td>Not supported</td>
+    </tr>
+</table>
 
 # Comprehensive Example
 
@@ -134,6 +224,63 @@ maxLength, minLength, maxItems, minItems, uniqueItems, maxProperties, minPropert
 
 [//]: # "Comprehensive Roundtrip Example"
 
+# URI Resolution
+
+With ansatz27, you may reference a JSON or schema resource with a [Uniform Resource Identifier (URI)](https://tools.ietf.org/html/rfc3986).
+This is either direcly when calling `JSON.parse()` or `JSON.stringify`, or indirectly
+through the `$ref` keyword in schema documents.
+
+All relative (i.e. having no scheme like `file:` or `http:`) URIs are resolved against the current resolution scope
+as defined by the JSON Schema Specs.
+
+There is one exception: If the schema was not loaded  base URI of the JSON class.
+
+The default base URI of the JSON class is either `pwd()` or `ctfroot` with a `file` scheme.
+You can change this value with
+```MATLAB
+    JSON.setBaseURI('THE_BASE_URI')
+```
+
+Be aware how URI resolution works. You probably want the base URI ending in a slash (/), for example
+```MATLAB
+    JSON.parse('{...}', 'test/schema.json')
+    JSON.getBaseURI() ->  /home/decatur/ansatz27/
+```
+the resolved URI is `file:/home/decatur/ansatz27/test/schema.json`.
+
+After resolution the resource is loaded with the Octave/MATLAB `urlread()` function.
+
+In a standalone MATLAB application, be sure to include all schemas relative to your application into the CTF archive with [mcc](http://www.mathworks.com/access/helpdesk/help/toolbox/compiler/mcc.html)'s -a (add) flag.
+
+# Utilities
+
+# JSON.getPath
+
+Retrieve a value inside an object given its [JSON Pointer](See https://tools.ietf.org/html/rfc6901).
+The object may be one of `struct`, `cell array` or `containers.Map`.
+
+```MATLAB
+obj = getPath(obj, pointer, default)
+%GETPATH Returns the value under the pointer.
+% The pointer must be a JSON pointer, so each reference token must be
+% prefixed by / and numerical tokens referencing an array are zero-based.
+% Returns default or empty if the pointer does not resolve.
+```
+
+Example
+
+```MATLAB
+obj = containers.Map();
+obj('foo') = struct('bar', 13);
+obj('bar') = {'foo' 'bar'};
+obj('foo/bar') = 42;                % Not recommended!
+
+JSON.getPath(obj, '/foo/bar')       % -> 13
+JSON.getPath(obj, '/bar/1')         % -> 'bar'
+JSON.getPath(obj, 'foo~1bar')       % -> 42
+JSON.getPath(obj, 'foobar', 4711)   % -> 4711
+```
+
 # Formatter
 
 Formatters allow to make custom transformations. A typical candidate is the mapping of dates between
@@ -154,9 +301,9 @@ JSON arrays are converted to cell arrays with the exception of structured arrays
 A JSON array is coerced to a structured array if
 
 1. there is a schema,
-2. and `schema.items` is an object
-3. and `schema.items.type` is `'object'`
-4. and the *default* value of `schema.format` is `'structured-array'`
+2. and `/items` is an object
+3. and `/items/type` is `'object'`
+4. and the *default* value of `/format` is `'structured-array'`
 
 [//]: # "Roundtrip Structured Array"
 *MATLAB*
@@ -571,9 +718,9 @@ For each validation error one item in the errors cell array is generated:
 
 # Advanced Usage
 
-## Key mapping
+## Non-MATLAB Keys in Objects
 
-Object keys which are not valid MATLAB variable names are normalized, for example
+Object keys which are not valid MATLAB variable names are dropped, for example
 
 [//]: # "Non-MATLAB Keys"
 *JSON*
@@ -582,7 +729,7 @@ Object keys which are not valid MATLAB variable names are normalized, for exampl
 ```
 *MATLAB*
 ```MATLAB
-struct('x_48406c6c40', 1, 'x_24726566', 2)
+struct()
 ```
 
 [//]: # "Non-MATLAB Keys"
@@ -599,6 +746,18 @@ TODO: Do these apply
 1. Execute `tests.m` and fix all errors
 2. Execute `build.py` will replace all code fragments in `README.md`.
 
-# Octave Limitations
+# Design Decisions
 
 We do not use functions in private directories. Octave Version 4.0 cannot resolve those from class member functions.
+
+# Improvements by Priority
+1. Support id keyword
+1 Support http(s) via urlread(). Note that Octave uses libcurl, which supports, among others, the HTTP, FTP and FILE 
+1. Check enum values for uniquness
+1. Support mixed type enum
+1. Better parse error for {"foo":1,}
+1. Describe Best Practises
+1. Usage with webread() introduced in R2014b, via weboptions('ContentReader', @handler)
+1. ThingSpeak?
+1. Validate keyword multipleOf (integer>0)
+1. Validate exclusiveMinimum/Maximum (min/max must exist)
