@@ -47,7 +47,7 @@ json = JSON.stringify(obj);
         <matlab>struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL')</matlab>
         <schema>
             {
-                "$ref": "schema2.json"
+                "$ref": "BASE_URI/schema2.json"
             }
         </schema>
         <json>

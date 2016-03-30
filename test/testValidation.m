@@ -19,11 +19,11 @@ for k=1:tests.getLength()
 
     code = getElementText(test, 'matlab');
     schema = getElementText(test, 'schema');
+    schema = strrep(schema, 'BASE_URI', ['file:' absdir]);
     jsonExpected = getElementText(test, 'json');
     errorText = getElementText(test, 'errors');
     expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
-    schema = strrep(schema, 'BASE_URI', ['file:' absdir]);
-
+    
     if ~isempty(code)
         fprintf(1, '\t\tstringify ... ');
         if isempty(regexp(code, '^a\s*=', 'once'))

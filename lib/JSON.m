@@ -21,24 +21,23 @@ classdef JSON < handle
             this.schemaCache = containers.Map();
         end
 
-        function uri = resolveURI(this, uri, base)
-        %resolveURI resolves the reference against the base URI.
-        % See https://tools.ietf.org/html/rfc3986
-
-            if ~isempty(base)
-                base = javaObject('java.net.URI', base);
-                uri = char(base.resolve(uri));
-            end
-        end
-
         function uri = resolveURIagainstLoadPath(this, uri)
         %resolveURI resolves the reference against the base URI and normalizes.
         % See https://tools.ietf.org/html/rfc3986
-            r = javaObject('java.net.URI', uri);
+            try
+                r = javaObject('java.net.URI', uri);
+            catch e
+                error('JSON:URI', 'Could not resolve URI %s because: %s', uri, e.message);
+            end
+
             if isempty(r.getScheme())
                 % Relative reference
                 base = javaObject('java.net.URI', 'file:/');
-                uri = ['file:/' strrep(which(uri), '\', '/')];
+                location = which(uri);
+                if isempty(location)
+                    error('JSON:URI', 'Could not resolve URI %s', uri);
+                end
+                uri = ['file:/' strrep(location, '\', '/')];
             end
         end
 
@@ -67,42 +66,27 @@ classdef JSON < handle
 
         function schema = loadSchema(this, schema)
             if ischar(schema)
-                if isempty(regexp(schema, '^\s*\{')) % A URI cannot start with an opening curly, but a schema will
+                schema = strtrim(schema);
+                if isempty(schema)
+                    schema = [];
+                    return;
+                elseif isempty(regexp(schema, '^\s*\{')) % A URI cannot start with an opening curly, but a schema will
                     uri = this.resolveURIagainstLoadPath(schema);
                     schema = this.loadSchemaByURI(uri);
                 else
                     schema = this.postLoadSchema(schema, []);
                 end
                 schema = this.normalizeSchema(schema);
-            elseif isa(schema, 'Map') || isempty(schema)
+            elseif isa(schema, 'Map')
                 % Do nothing
+            elseif isempty(schema)
+                schema = [];
             else
                 error('Invalid type: %s', class(schema));
             end
         end
-
-        function schema = loadSchemaByURI(this, uri)
-            fprintf(1, 'Loading schema from uri %s\n', uri);
-            
-            try
-                schema = urlread(uri);
-            catch e
-                error('JSON:PARSE_SCHEMA', 'Could not read schema from %s because: %s', uri, e.message);
-            end
-
-            schema = this.postLoadSchema(schema, uri);
-        end
-
-        function schema = postLoadSchema(this, schema, uri)
-            schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
-
-            if ~schema.isKey('id')
-                % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
-                schema('id') = uri;
-            end
-        end
         
-        function addError(this, path, msg, value, type)
+        function addError(this, pointer, msg, value, type)
             if nargin < 5
                 type = 'JSON:SCHEMA_VALIDATION';
             end
@@ -116,7 +100,7 @@ classdef JSON < handle
             elseif isnumeric(value)
                 value = num2str(value);
             end
-            this.errors{end+1} = {path msg value type};
+            this.errors{end+1} = {pointer msg value type};
         end
         
         function childSchema = getPropertySchema(this, schema, key)
@@ -161,143 +145,7 @@ classdef JSON < handle
             end
         end
         
-        function schema = normalizeSchema(this, schema, path)
-            %normalizeSchema recursively descends the schema and resolves allOf references.
-            if nargin < 3
-                path = '';
-            end
-            schema = normalizeSchema_(this, schema, schema, path, schema('id'));
-        end
-        
-        
-        function schema = resolveRef(this, rootSchema, schema, path, resolutionScope)
-            %resolveRef swaps in the referenced schema.
-            
-            refs = {['#' path]};
-
-            while schema.isKey('$ref')
-                ref = schema('$ref');
-                
-                if ~ischar(ref) || isempty(strtrim(ref))
-                    error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
-                end
-                
-                ref = strtrim(ref);
-                %if ref(1) == '#'
-                %    ref = [JSON.getPath(rootSchema, '/url', '') ref];
-                %end
-                
-                if ismember(ref, refs)
-                    error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
-                end
-                
-                refs{end+1} = ref;
-                
-                parts = strsplit(ref, '#');
-                
-                if ~isempty(parts{1})
-                    url = this.resolveURI(parts{1}, resolutionScope);
-                    if this.schemaCache.isKey(url)
-                        rootSchema = this.schemaCache.isKey(url);
-                    else
-                        rootSchema = this.loadSchemaByURI(url);
-                        this.schemaCache(url) = rootSchema;
-                        schema = rootSchema;
-                    end
-                end
-
-                if length(parts) == 2
-                    schema = JSON.getPath(rootSchema, parts{2});     
-                    if isempty(schema)
-                        error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
-                    end
-                end
-
-                keyboard
-            end
-        end
-        
-        function schema = normalizeSchema_(this, rootSchema, schema, path, resolutionScope)
-            
-            function processProperties(schema, propertyType, resolutionScope)
-                if schema.isKey(propertyType) && ~isempty(schema(propertyType))
-                    props = schema(propertyType);
-                    pNames = props.keys();
-                    for k=1:length(pNames)
-                        subPath = [path '/' propertyType '/' pNames{k}];
-                        props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath, resolutionScope);
-                    end
-                    schema(propertyType) = props;
-                end
-            end
-
-            if ~isa(schema, 'Map')
-                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
-            end
-            
-            if schema.isKey('id')
-                % Change resolution scope.
-                % Note that we do this before processing $ref in case we have a schema
-                % containing $href AND id. We need this because we blindly inject id in loadSchema().
-                resolutionScope = this.resolveURI(schema('id'), resolutionScope);
-            end
-
-            if schema.isKey('$ref')
-                schema = this.resolveRef(rootSchema, schema, path, resolutionScope);
-            end
-
-            if schema.isKey('allOf')
-                schema = this.mergeSchemas(rootSchema, schema);
-            end
-            
-            if ~schema.isKey('type') || isempty(schema('type'))
-                schema('type') = {};
-                % TODO: This is NOT according the JSON Schema Spec
-                return
-            end
-            
-            type = schema('type');
-            
-            if ischar(type)
-                type = {type};
-                schema('type') = type;
-            end
-                        
-            if schema.isKey('required') && ~iscell(schema('required'))
-                error('JSON:PARSE_SCHEMA', 'Invalid required at %s', path);
-            end
-
-            if schema.isKey('pattern') && ~ischar(schema('pattern'))
-                error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', path);
-            end
-
-            processProperties(schema, 'properties', resolutionScope);
-            processProperties(schema, 'patternProperties', resolutionScope);
-
-            if ismember('array', type) && schema.isKey('items')
-                items = schema('items');
-                if isa(items, 'Map')
-                    schema('items') = this.normalizeSchema_(rootSchema, items, [path '/items'], resolutionScope);
-                elseif iscell(items)
-                    for k=1:length(items)
-                        subPath = [path '/items/' num2str(k)];
-                        items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath, resolutionScope);
-                    end
-                    schema('items') = items;
-                end
-            end
-
-            if any(ismember({'number' 'integer'}, type))
-                %if isfield(schema, 'enum') && iscell(schema.enum)
-                %    if all(cellfun(@isnumeric, schema.enum))
-                %        schema.enum = cell2mat(schema.enum);
-                %    end
-                %end
-            end
-            
-        end
-        
-        function [ mergedSchema ] = mergeSchemas(this, rootSchema, schema, resolutionScope)
+        function [ mergedSchema ] = mergeSchemas(this, rootSchema, schema, pointer, resolutionScope)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
             
@@ -310,7 +158,7 @@ classdef JSON < handle
             allOf = schema('allOf');
             
             for k=1:length(allOf)
-                subSchema = this.normalizeSchema_(rootSchema, allOf{k}, [path '/allOf'], resolutionScope);
+                subSchema = this.normalizeSchema_(rootSchema, allOf{k}, [pointer '/allOf'], resolutionScope);
                 % TODO: Assert properties is member
                 props = subSchema('properties');
                 keys = props.keys();
@@ -329,7 +177,7 @@ classdef JSON < handle
             end
         end
 
-        function pType = inferePrimitiveType(this, value, schema, path)
+        function pType = inferePrimitiveType(this, value, schema, pointer)
 
             type = schema('type');
             pType = [];
@@ -384,23 +232,23 @@ classdef JSON < handle
                 end
 
                 if isempty(pType)
-                    this.addError(path, sprintf('does not match type %s', strjoin(type, ' or ')), value);
+                    this.addError(pointer, sprintf('does not match type %s', strjoin(type, ' or ')), value);
                     return
                 end
             end
         end
 
-        function validate(this, value, pType, schema, path)
+        function validate(this, value, pType, schema, pointer)
 
-            function p = getBadPath(path, indices)
+            function p = getBadPath(pointer, indices)
                 isVec = length(indices) > 1;
                 indices = find(indices);
                 if isempty(indices)
                     p = [];
                 elseif isVec
-                    p = [path num2str(indices)];
+                    p = [pointer num2str(indices)];
                 else
-                    p = path;
+                    p = pointer;
                 end
             end
 
@@ -416,17 +264,17 @@ classdef JSON < handle
                     required = schema('required');
                     for k=1:length(required)
                         if ~ismember(required{k}, s)
-                            this.addError(path, sprintf('is missing required field %s', required{k}), value);
+                            this.addError(pointer, sprintf('is missing required field %s', required{k}), value);
                         end
                     end
                 end
 
                 if schema.isKey('minProperties') && length(s) < schema('minProperties')
-                    this.addError(path, sprintf('has less than %g properties', schema('minProperties')), value);
+                    this.addError(pointer, sprintf('has less than %g properties', schema('minProperties')), value);
                 end
 
                 if schema.isKey('maxProperties') && length(s) > schema('maxProperties')
-                    this.addError(path, sprintf('has more than %g properties', schema('maxProperties')), value);
+                    this.addError(pointer, sprintf('has more than %g properties', schema('maxProperties')), value);
                 end
 
                 if JSON.getPath(schema, '/additionalProperties') == false
@@ -447,40 +295,40 @@ classdef JSON < handle
 
                     sNotFound = s(~ismember(s, sFound));
                     for k=1:length(sNotFound)
-                        this.addError(path, 'contains additional property', sNotFound{k});
+                        this.addError(pointer, 'contains additional property', sNotFound{k});
                     end
                 end
 
                 if schema.isKey('enum')
-                    this.addError(path, 'is not contained in enumeration', value);
+                    this.addError(pointer, 'is not contained in enumeration', value);
                 end
 
             elseif ischar(value)
 
                 if schema.isKey('pattern') && isempty(regexp(value, schema('pattern')))
-                    this.addError(path, sprintf('does not match pattern %s', schema('pattern')), value);
+                    this.addError(pointer, sprintf('does not match pattern %s', schema('pattern')), value);
                 end
 
                 if schema.isKey('minLength') && length(value) < schema('minLength')
-                    this.addError(path, sprintf('has length less than %g', schema('minLength')), value);
+                    this.addError(pointer, sprintf('has length less than %g', schema('minLength')), value);
                 end
 
                 if schema.isKey('maxLength') && length(value) > schema('maxLength')
-                    this.addError(path, sprintf('has length greater than %g', schema('maxLength')), value);
+                    this.addError(pointer, sprintf('has length greater than %g', schema('maxLength')), value);
                 end
                 
                 format = JSON.getPath(schema, '/format');
                 
                 if strcmp(format, 'date')
                     if isempty(regexp(value, '^\d{4}-\d{2}-\d{2}$'))
-                        this.addError(path, 'is not a date', value);
+                        this.addError(pointer, 'is not a date', value);
                     end
                 end
 
                 if schema.isKey('enum')
                     enum = schema('enum');
                     if ~iscellstr(enum) || ~ismember(value, enum)
-                        this.addError(path, 'is not contained in enumeration', value);
+                        this.addError(pointer, 'is not contained in enumeration', value);
                     end
                 end
                 
@@ -491,7 +339,7 @@ classdef JSON < handle
                 end
 
                 if schema.isKey('multipleOf') && rem(value, schema('multipleOf'))
-                    this.addError(path, sprintf('is not a multiple of %g', schema('multipleOf')), value);
+                    this.addError(pointer, sprintf('is not a multiple of %g', schema('multipleOf')), value);
                 end
                 
                 if schema.isKey('minimum')
@@ -500,7 +348,7 @@ classdef JSON < handle
                     else
                         idx = value < schema('minimum');
                     end
-                    badPath = getBadPath(path, idx);
+                    badPath = getBadPath(pointer, idx);
                     if ~isempty(badPath)
                         this.addError(badPath, sprintf('violates minimum %g', schema('minimum')), value);
                     end
@@ -512,7 +360,7 @@ classdef JSON < handle
                     else
                         idx = value > schema('maximum');
                     end
-                    badPath = getBadPath(path, idx);
+                    badPath = getBadPath(pointer, idx);
                     if ~isempty(badPath)
                         this.addError(badPath, sprintf('violates maximum %g', schema('maximum')), value);
                     end
@@ -521,7 +369,7 @@ classdef JSON < handle
                 if schema.isKey('enum')
                     enum = schema('enum');
                     if ~isnumeric(enum) || ~ismember(value, enum)
-                        this.addError(path, 'is not contained in enumeration', value);
+                        this.addError(pointer, 'is not contained in enumeration', value);
                     end
                 end
                 
@@ -529,38 +377,218 @@ classdef JSON < handle
                 
                 if schema.isKey('additionalItems') && ~schema('additionalItems') && ...
                    schema.isKey('items') && iscell(schema('items')) && length(value)>length(schema('items'))
-                    this.addError(path, sprintf('does not allow additional items'), '[array]');
+                    this.addError(pointer, sprintf('does not allow additional items'), '[array]');
                 end
 
                 if schema.isKey('minItems') && length(value) < schema('minItems')
-                    this.addError(path, sprintf('has less than %g items', schema('minItems')), '[array]');
+                    this.addError(pointer, sprintf('has less than %g items', schema('minItems')), '[array]');
                 end
                 
                 if schema.isKey('maxItems') && length(value) > schema('maxItems')
-                    this.addError(path, sprintf('has more than %g items', schema('maxItems')), '[array]');
+                    this.addError(pointer, sprintf('has more than %g items', schema('maxItems')), '[array]');
                 end
 
                 if schema.isKey('enum')
-                    this.addError(path, 'is not contained in enumeration', value);
+                    this.addError(pointer, 'is not contained in enumeration', value);
                 end
             
             elseif strcmp(pType, 'array')
                 if schema.isKey('enum')
-                    this.addError(path, 'is not contained in enumeration', value);
+                    this.addError(pointer, 'is not contained in enumeration', value);
                 end
             elseif strcmp(pType, 'boolean')
                 if schema.isKey('enum')
                     enum = schema('enum');
                     if ~islogical(enum) || ~ismember(value, enum)
-                        this.addError(path, 'is not contained in enumeration', value);
+                        this.addError(pointer, 'is not contained in enumeration', value);
                     end
                 end
             end
 
         end
         
-    end
+    end % methods
     
+    methods (Access=private)
+
+        function schema = loadSchemaByURI(this, uri)
+            fprintf(1, 'Loading schema from uri %s\n', uri);
+
+            try
+                schema = urlread(uri);
+            catch e
+                error('JSON:PARSE_SCHEMA', 'Could not read schema from %s because: %s', uri, e.message);
+            end
+
+            if isempty(strtrim(schema))
+                % libcurl will return empty string if file url points to directory.
+                error('JSON:PARSE_SCHEMA', 'No schema at %s', uri);
+            end
+
+            schema = this.postLoadSchema(schema, uri);
+        end
+
+        function resolvedURI = resolveURI(this, uri, base)
+        %resolveURI resolves the reference against the base URI.
+        % See https://tools.ietf.org/html/rfc3986
+
+            resolvedURI = uri;
+            if ~isempty(base)
+                base = javaObject('java.net.URI', base);
+                resolvedURI = char(base.resolve(uri));
+            end
+
+            jURI = javaObject('java.net.URI', resolvedURI);
+            if ~jURI.isAbsolute()
+                error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolvedURI);
+            end
+
+        end
+
+        function schema = postLoadSchema(this, schema, uri)
+            schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
+
+            if ~schema.isKey('id')
+                % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
+                schema('id') = uri;
+            end
+        end
+
+        function processProperties(this, rootSchema, schema, pointer, propertyType, resolutionScope)
+            if schema.isKey(propertyType) && ~isempty(schema(propertyType))
+                props = schema(propertyType);
+                pNames = props.keys();
+                for k=1:length(pNames)
+                    subPath = [pointer '/' propertyType '/' pNames{k}];
+                    props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath, resolutionScope);
+                end
+                schema(propertyType) = props;
+            end
+        end
+
+        function schema = normalizeSchema_(this, rootSchema, schema, pointer, resolutionScope)
+
+            if ~isa(schema, 'Map')
+                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
+            end
+            
+            if schema.isKey('$ref')
+                schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
+            end
+
+            if schema.isKey('id') && ~isempty(schema('id'))
+                % Change resolution scope.
+                % Note that we do this AFTER processing $ref. 
+                resolutionScope = this.resolveURI(schema('id'), resolutionScope);
+            end
+
+            if schema.isKey('allOf')
+                schema = this.mergeSchemas(rootSchema, schema, pointer, resolutionScope);
+            end
+            
+            if ~schema.isKey('type') || isempty(schema('type'))
+                schema('type') = {};
+                % TODO: This is NOT according the JSON Schema Spec
+                return
+            end
+            
+            type = schema('type');
+            
+            if ischar(type)
+                type = {type};
+                schema('type') = type;
+            end
+                        
+            if schema.isKey('required') && ~iscell(schema('required'))
+                error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
+            end
+
+            if schema.isKey('pattern') && ~ischar(schema('pattern'))
+                error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
+            end
+
+            this.processProperties(rootSchema, schema, pointer, 'properties', resolutionScope);
+            this.processProperties(rootSchema, schema, pointer, 'patternProperties', resolutionScope);
+
+            if ismember('array', type) && schema.isKey('items')
+                items = schema('items');
+                if isa(items, 'Map')
+                    schema('items') = this.normalizeSchema_(rootSchema, items, [pointer '/items'], resolutionScope);
+                elseif iscell(items)
+                    for k=1:length(items)
+                        subPath = [pointer '/items/' num2str(k)];
+                        items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath, resolutionScope);
+                    end
+                    schema('items') = items;
+                end
+            end
+
+            if any(ismember({'number' 'integer'}, type))
+                %if isfield(schema, 'enum') && iscell(schema.enum)
+                %    if all(cellfun(@isnumeric, schema.enum))
+                %        schema.enum = cell2mat(schema.enum);
+                %    end
+                %end
+            end
+            
+        end
+
+        function schema = normalizeSchema(this, schema, pointer)
+            %normalizeSchema recursively descends the schema and resolves allOf references.
+            if nargin < 3
+                pointer = '';
+            end
+            schema = normalizeSchema_(this, schema, schema, pointer, schema('id'));
+        end
+
+        function schema = resolveRef(this, rootSchema, schema, pointer, resolutionScope)
+            %resolveRef swaps in the referenced schema.
+            
+            refs = {['#' pointer]};
+
+            while schema.isKey('$ref')
+                ref = schema('$ref');
+                
+                if ~ischar(ref) || isempty(strtrim(ref))
+                    error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
+                end
+                
+                ref = strtrim(ref);
+                %if ref(1) == '#'
+                %    ref = [JSON.getPath(rootSchema, '/url', '') ref];
+                %end
+                
+                if ismember(ref, refs)
+                    error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
+                end
+                
+                refs{end+1} = ref;
+                
+                parts = strsplit(ref, '#');
+                
+                if ~isempty(parts{1})
+                    url = this.resolveURI(parts{1}, resolutionScope);
+                    if this.schemaCache.isKey(url)
+                        rootSchema = this.schemaCache.isKey(url);
+                    else
+                        rootSchema = this.loadSchemaByURI(url);
+                        this.schemaCache(url) = rootSchema;
+                        schema = rootSchema;
+                    end
+                end
+
+                if length(parts) == 2
+                    schema = JSON.getPath(rootSchema, parts{2});     
+                    if isempty(schema)
+                        error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
+                    end
+                end
+
+            end
+        end
+
+    end % methods (Access=private)
+
     methods (Static)
         
         function value = configParam(key, value)
@@ -702,16 +730,16 @@ classdef JSON < handle
 
         end
 
-        function text = ___readFileToString(path, encoding )
+        function text = ___readFileToString(pointer, encoding )
             if JSON.isoct
-                [fid, msg] = fopen(path, 'r');
+                [fid, msg] = fopen(pointer, 'r');
             else
-                [fid, msg] = fopen(path, 'r', 'l', encoding);
+                [fid, msg] = fopen(pointer, 'r', 'l', encoding);
             end
             
             if fid == -1
                 % TODO: Do not throw here
-                error('Could not open %s: %s', path, msg);
+                error('Could not open %s: %s', pointer, msg);
             end
             
             text = fscanf(fid, '%c');

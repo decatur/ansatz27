@@ -5,10 +5,11 @@ if JSON.isoct
     debug_on_error(true);
 end
 
-testRoundtrip();
-testStringify();
-testParse();
-testValidation();
+tc = TestRoundtrip();     tc.exec();
+tc = TestStringify();     tc.exec();
+tc = TestParse();         tc.exec();
+tc = TestValidation();    tc.exec();
+
 testMisc;
 testDateFormat;
 testContainersMap;

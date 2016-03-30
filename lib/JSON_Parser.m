@@ -73,7 +73,7 @@ classdef JSON_Parser < JSON
             this.posCurrentNewline = 0;
             
             context = struct();
-            context.path = '';
+            context.pointer = '';
             context.schema = this.loadSchema( rootschema );
             
             % String delimiters and escape chars identified to improve speed:
@@ -99,7 +99,7 @@ classdef JSON_Parser < JSON
         
         function child = getChildContext(this, context, key)
             child = struct();
-            child.path = [context.path '/' num2str(key)];
+            child.pointer = [context.pointer '/' num2str(key)];
         end
 
         function val = parse_object(this, context, schema)
@@ -200,7 +200,7 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function vec = json1D2array(this, path)
+        function vec = json1D2array(this, pointer)
             s = this.json(this.pos:end); % '[1, 2, 3]...'
 
             endPos = strchr(s, ']', 1);
@@ -385,17 +385,17 @@ classdef JSON_Parser < JSON
             end
             
             if ~isempty(schema)
-                pType = this.inferePrimitiveType(val, schema, context.path);
+                pType = this.inferePrimitiveType(val, schema, context.pointer);
                 if ~isempty(pType)
                     % TODO: There must always be a pType
-                    this.validate(val, pType, schema, context.path);
+                    this.validate(val, pType, schema, context.pointer);
                 end
                 format = JSON.getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);
                     [val errMsg] = formatter(val);
                     if ~isempty(errMsg)
-                        this.addError(context.path, errMsg, val);
+                        this.addError(context.pointer, errMsg, val);
                     end
                 end
             end

@@ -1,42 +1,49 @@
-function testParse(description)
+classdef TestParse < TestCase
 
-dir = fileparts(mfilename ('fullpath'));
+methods
 
-document = xmlread(fullfile(dir, 'testParse.xml'));
-tests = document.getDocumentElement().getElementsByTagName('test');
-tc = TestCase();
+function exec(description)
 
-for k=1:tests.getLength()
-    test = tests.item(k-1);
-    
-    desc = getElementText(test, 'description');
-    if nargin >= 1 && ~strcmp(desc, description)
-        continue;
-    end
+    dir = fileparts(mfilename ('fullpath'));
 
-    fprintf(1, '%s ... ', desc);
+    document = xmlread(fullfile(dir, 'testParse.xml'));
+    tests = document.getDocumentElement().getElementsByTagName('test');
 
-    code = getElementText(test, 'matlab');
-    schema = getElementText(test, 'schema');
-    json = getElementText(test, 'json');
-
-    if ~isempty(json)
-        if isempty(regexp(code, '^a\s*=', 'once'))
-            a = eval(code);
-        else
-            eval(code);
+    for k=1:tests.getLength()
+        test = tests.item(k-1);
+        
+        desc = getElementText(test, 'description');
+        if nargin >= 1 && ~strcmp(desc, description)
+            continue;
         end
 
-        expectedMatlab = a;
+        fprintf(1, '%s ... ', desc);
 
-        [actualMatlab, errors] = JSON.parse(json, schema);
+        code = getElementText(test, 'matlab');
+        schema = getElementText(test, 'schema');
+        json = getElementText(test, 'json');
 
-        tc.assertEmpty(errors);
-        tc.assertEqual(actualMatlab, expectedMatlab);
+        if ~isempty(json)
+            if isempty(regexp(code, '^a\s*=', 'once'))
+                a = eval(code);
+            else
+                eval(code);
+            end
+
+            expectedMatlab = a;
+
+            [actualMatlab, errors] = JSON.parse(json, schema);
+
+            this.assertEmpty(errors);
+            this.assertEqual(actualMatlab, expectedMatlab);
+        end
+
+        fprintf(1, 'OK\n');
+
     end
 
-    fprintf(1, 'OK\n');
-
 end
+
+methods
 
 end

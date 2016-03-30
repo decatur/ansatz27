@@ -80,7 +80,7 @@ classdef JSON_Stringifier < JSON
             end
 
             context.gap = '';
-            context.path = '';
+            context.pointer = '';
             
             json = this.value2json(value, context, rootschema);
             errors = this.errors;
@@ -101,7 +101,7 @@ classdef JSON_Stringifier < JSON
                 formatter = this.formatters(format);
                 [value errMsg] = formatter(value);
                 if ~isempty(errMsg)
-                    this.addError(context.path, errMsg, value);
+                    this.addError(context.pointer, errMsg, value);
                 end
             end
 
@@ -117,7 +117,7 @@ classdef JSON_Stringifier < JSON
             pType = [];
 
             if ~isempty(type)
-                pType = this.inferePrimitiveType(value, schema, context.path);
+                pType = this.inferePrimitiveType(value, schema, context.pointer);
                 isarray = strcmp(pType, 'array');
                 
                 if ~isempty(json)
@@ -158,7 +158,7 @@ classdef JSON_Stringifier < JSON
             end
 
             if ~isempty(pType)
-                this.validate(value, pType, schema, context.path);
+                this.validate(value, pType, schema, context.pointer);
             end
         end
         
@@ -178,7 +178,7 @@ classdef JSON_Stringifier < JSON
             txt = sprintf('{%s', this.nl);
             mind = context.gap;
             context.gap = [context.gap this.indent];
-            path = context.path;
+            pointer = context.pointer;
             
             if isstruct(value)
                 names = fieldnames(value);
@@ -190,7 +190,7 @@ classdef JSON_Stringifier < JSON
             
             for k=1:length(names)
                 key = names{k};
-                context.path = [path '/' key];
+                context.pointer = [pointer '/' key];
 
                 if isstruct(value)
                     v = value.(key);
@@ -237,7 +237,7 @@ classdef JSON_Stringifier < JSON
                     item = value{k};
                 end
                 
-                itemContext.path = [context.path '/' num2str(k-1)];
+                itemContext.pointer = [context.pointer '/' num2str(k-1)];
                 item_str = this.value2json(item, itemContext, itemSchema);
                 
                 if isempty(item_str)
@@ -298,7 +298,7 @@ classdef JSON_Stringifier < JSON
 
                 itemSchema = this.getItemSchema(items, k-1);
 
-                itemContext.path = [context.path '/' num2str(k-1)];
+                itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(m, itemContext, itemSchema));
                 sep = ',';
@@ -321,7 +321,7 @@ classdef JSON_Stringifier < JSON
 
             for k=1:numel(row)
                 itemSchema = this.getItemSchema(items, k-1);
-                itemContext.path = [context.path '/' num2str(k-1)];
+                itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.value2json(row(k), itemContext, itemSchema));
                 sep = ',';

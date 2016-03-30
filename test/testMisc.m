@@ -1,20 +1,3 @@
-addpath('../lib');
-
-tc = TestCase();
-
-[json, errors] = JSON.stringify({'foo'}, struct('type', 'object'));
-
-[json, errors] = JSON.stringify(pi, struct('type', 'integer'), 0);
-
-[obj, errors] = JSON.parse('[1,2]a');
-tc.assertEqual(errors{1}{2}, 'Unexpected trailing text [1,2]a^^^');
-
-[obj, errors] = JSON.parse('a[1,2]');
-tc.assertEqual(errors{1}{2}, 'Illegal token a^^^[1,2]');
-
-% Check for invalid chars in string "fo\x01o"
-[obj, errors] = JSON.parse(char([34  102  111 1 111 34]));
-tc.assertEqual(errors{1}{2}, ['Invalid char found in range #00-#1F "fo' char(1) '^^^o"']);
 
 %%% Comprehensive Tests
 
@@ -39,7 +22,7 @@ assert(isequaln(m, [1 NaN 3]));
 
 % A JSON Schema is a JSON document, and that document MUST be an object
 [obj, errors] = JSON.parse('1', '2');
-assert(strcmp(errors{1}{2}, 'A JSON Schema MUST be an object'));
+assert(strcmp(errors{1}{2}, 'Could not resolve URI 2'));
 
 m = containers.Map();
 m('a') = 1;
@@ -51,11 +34,18 @@ assert(m.isKey('a'));
 assert(m.isKey('_*'));
 
 
-
 [json, errors] = JSON.parse(sprintf('{"f":12\n,}'));
 assert(strcmp(errors{1}{2}, 'tangling comma before line 2, column 2'));
 
 [json, errors] = JSON.parse('[1, 2,]');
 assert(strcmp(errors{1}{2}, 'tangling comma before line 1, column 7'));
 
+tc = TestCase();
+
+[obj, errors] = JSON.parse('a[1,2]');
+tc.assertEqual(errors{1}{2}, 'Could not resolve URI a[1,2] because: [java] java.net.URISyntaxException: Illegal character in path at index 1: a[1,2]');
+
+% Check for invalid chars in string "fo\x01o"
+[obj, errors] = JSON.parse(char([34  102  111 1 111 34]));
+tc.assertEqual(errors{1}{2}, 'Invalid char found in range #00-#1F at line 1, column 4');
 
