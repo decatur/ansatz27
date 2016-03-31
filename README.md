@@ -66,8 +66,6 @@ obj = struct('foo', 1, 'bar', 2);
 
 # Conformance with JSON Schema Specification
 
-## Supported Features
-
 <table>
     <tr><th>Feature</th><th>Description</th></tr>
     <tr>
@@ -116,7 +114,7 @@ obj = struct('foo', 1, 'bar', 2);
     </tr>
     <tr>
         <td>default</td>
-        <td>See [Defaults](#defaults)</td>
+        <td>See <a href="defaults">Defaults</a>/td>
     </tr>
     <tr>
         <td>format</td>
@@ -132,7 +130,10 @@ obj = struct('foo', 1, 'bar', 2);
     </tr>
     <tr>
         <td>id</td>
-        <td>Scope resolution alteration is fully supported, see [URI Resolution](#uri-resolution)</td>
+        <td>
+            Scope resolution alteration is fully supported, see <a href="uri-resolution">URI Resolution</a>.
+            Note: ansatz27 does not use inline dereferencing.
+        </td>
     </tr>
     <tr>
         <td>uniqueItems</td>
@@ -734,6 +735,9 @@ struct()
 
 [//]: # "Non-MATLAB Keys"
 
+# Error Handling
+
+
 # Security Considerations
 
 TODO: Do these apply
@@ -748,7 +752,8 @@ TODO: Do these apply
 
 # Design Decisions
 
-We do not use functions in private directories. Octave Version 4.0 cannot resolve those from class member functions.
+* We do not use functions in private directories. Octave Version 4.0 cannot resolve those from class member functions.
+* Local functions cannot call private class member functions in Octave.
 
 # Improvements by Priority
 1. Support id keyword

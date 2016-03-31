@@ -10,19 +10,16 @@ classdef JSON < handle
     properties %(Access = private)
         errors
         formatters
-        schemaCache
-        baseURI
     end
     
     methods
 
         function this = JSON()
             this.formatters = containers.Map();
-            this.schemaCache = containers.Map();
         end
 
         function uri = resolveURIagainstLoadPath(this, uri)
-        %resolveURI resolves the reference against the base URI and normalizes.
+        %resolveURIagainstLoadPath resolves the reference against the base URI and normalizes.
         % See https://tools.ietf.org/html/rfc3986
             try
                 r = javaObject('java.net.URI', uri);
@@ -421,7 +418,7 @@ classdef JSON < handle
             end
 
             if isempty(strtrim(schema))
-                % libcurl will return empty string if file url points to directory.
+                % libcurl will return empty string if file uri points to directory.
                 error('JSON:PARSE_SCHEMA', 'No schema at %s', uri);
             end
 
@@ -431,18 +428,11 @@ classdef JSON < handle
         function resolvedURI = resolveURI(this, uri, base)
         %resolveURI resolves the reference against the base URI.
         % See https://tools.ietf.org/html/rfc3986
-
             resolvedURI = uri;
             if ~isempty(base)
                 base = javaObject('java.net.URI', base);
                 resolvedURI = char(base.resolve(uri));
             end
-
-            jURI = javaObject('java.net.URI', resolvedURI);
-            if ~jURI.isAbsolute()
-                error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolvedURI);
-            end
-
         end
 
         function schema = postLoadSchema(this, schema, uri)
@@ -474,12 +464,16 @@ classdef JSON < handle
             
             if schema.isKey('$ref')
                 schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
+                return;
             end
 
             if schema.isKey('id') && ~isempty(schema('id'))
                 % Change resolution scope.
                 % Note that we do this AFTER processing $ref. 
                 resolutionScope = this.resolveURI(schema('id'), resolutionScope);
+                if ~javaObject('java.net.URI', resolutionScope).isAbsolute()
+                    error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
+                end
             end
 
             if schema.isKey('allOf')
@@ -533,52 +527,54 @@ classdef JSON < handle
             
         end
 
-        function schema = normalizeSchema(this, schema, pointer)
+        function schema = normalizeSchema(this, schema)
             %normalizeSchema recursively descends the schema and resolves allOf references.
-            if nargin < 3
-                pointer = '';
-            end
+            pointer = '';
             schema = normalizeSchema_(this, schema, schema, pointer, schema('id'));
         end
 
         function schema = resolveRef(this, rootSchema, schema, pointer, resolutionScope)
             %resolveRef swaps in the referenced schema.
-            
-            refs = {['#' pointer]};
+            refs = {};
 
             while schema.isKey('$ref')
                 ref = schema('$ref');
+                if isempty(findstr(ref, '#'))
+                    ref(end+1) = '#';
+                end
                 
                 if ~ischar(ref) || isempty(strtrim(ref))
                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
                 end
                 
                 ref = strtrim(ref);
-                %if ref(1) == '#'
-                %    ref = [JSON.getPath(rootSchema, '/url', '') ref];
-                %end
+                uri = this.resolveURI(ref, resolutionScope);
                 
-                if ismember(ref, refs)
+                if ismember(uri, refs)
                     error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
                 end
                 
-                refs{end+1} = ref;
+                refs{end+1} = uri;
                 
-                parts = strsplit(ref, '#');
-                
-                if ~isempty(parts{1})
-                    url = this.resolveURI(parts{1}, resolutionScope);
-                    if this.schemaCache.isKey(url)
-                        rootSchema = this.schemaCache.isKey(url);
-                    else
+                parts = strsplit(uri, '#');
+                assert(length(parts) == 2);
+                url = parts{1};
+                pointer = parts{2};
+
+                if ~isempty(url)
+                    rootSchema = JSON.getSchemaFromCache(url);
+                    if isempty(rootSchema)
                         rootSchema = this.loadSchemaByURI(url);
-                        this.schemaCache(url) = rootSchema;
-                        schema = rootSchema;
+                        rootSchema = this.normalizeSchema(rootSchema);
+                        JSON.cacheSchema(url, rootSchema);
                     end
+                    schema = rootSchema;
                 end
 
-                if length(parts) == 2
-                    schema = JSON.getPath(rootSchema, parts{2});     
+                if ~isempty(pointer)
+                    schema = JSON.getPath(rootSchema, pointer);
+                    TODO: Do norm lazily
+                    schema = this.normalizeSchema_(schema, schema, pointer, resolutionScope);  
                     if isempty(schema)
                         error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
                     end
@@ -608,6 +604,29 @@ classdef JSON < handle
             else
                 value = config;
             end
+        end
+
+        function cache = getSchemaCache()
+        %getSchemaCache returns the schema cache and lazily creates it.
+            cache = JSON.configParam('cache');
+            if isempty(cache)
+                cache = JSON.configParam('cache', containers.Map());
+            end
+        end
+
+        function schema = getSchemaFromCache(uri)
+            cache = JSON.getSchemaCache();
+            if cache.isKey(uri)
+                % Cache hit
+                schema = cache(uri);
+            else
+                schema = [];
+            end
+        end
+
+        function cacheSchema(uri, schema)
+            cache = JSON.getSchemaCache();
+            cache(uri) = schema;
         end
 
 %        function value = setBaseURI(baseURI)

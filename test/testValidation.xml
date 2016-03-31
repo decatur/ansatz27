@@ -190,7 +190,7 @@
         <errors>{'' 'is not contained in enumeration' '4711'}</errors>
     </test>
     <test>
-        <description>External Schema</description>
+        <description>External Schema 1</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
@@ -206,7 +206,7 @@
         <errors>{'/bar' 'does not match type string' '2'}</errors>
     </test>
     <test>
-        <description>External Schema</description>
+        <description>External Schema 2</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
