@@ -10,6 +10,7 @@ classdef JSON < handle
     properties %(Access = private)
         errors
         formatters
+        unresolvedRefs
     end
     
     methods
@@ -62,6 +63,8 @@ classdef JSON < handle
 %        end
 
         function schema = loadSchema(this, schema)
+            this.unresolvedRefs = struct([]);
+
             if ischar(schema)
                 schema = strtrim(schema);
                 if isempty(schema)
@@ -71,16 +74,58 @@ classdef JSON < handle
                     uri = this.resolveURIagainstLoadPath(schema);
                     schema = this.loadSchemaByURI(uri);
                 else
-                    schema = this.postLoadSchema(schema, []);
+                    uri = '';
+                    schema = this.postLoadSchema(schema, uri);
                 end
-                schema = this.normalizeSchema(schema);
             elseif isa(schema, 'Map')
                 % Do nothing
             elseif isempty(schema)
                 schema = [];
+                return;
             else
                 error('Invalid type: %s', class(schema));
             end
+
+            
+            schemas = containers.Map();
+            schemas(uri) = schema;
+
+            while length(this.unresolvedRefs) > 0
+                index = length(this.unresolvedRefs);
+                ref = this.unresolvedRefs(index);
+                %this.unresolvedRefs = this.unresolvedRefs(1:end-1);
+                s = sprintf('uri[%s] pointer[%s] ref[%s]\n', ref.uri, ref.pointer, ref.ref);
+                fprintf(1, 'Processing %s', s);
+                parts = strsplit(ref.ref, '#');
+                if ~isempty(parts{1})
+                    schema1 = this.loadSchemaByURI(parts{1});
+                    %schema1 = this.normalizeSchema(schema1);
+                    schemas(parts{1}) = schema1;
+                else
+                    schema1 = schemas(ref.uri);
+                end
+
+                schema1 = JSON.getPath(schema1, parts{2});
+                if isempty(schema1)
+                    error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', s);
+                end
+
+                schemas(ref.uri) = JSON.setPath(schemas(ref.uri), ref.pointer, schema1);
+
+                if schema1.isKey('$ref')
+                    if ismember(ref.ref, this.unresolvedRefs(index).hist)
+                        error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin(this.unresolvedRefs(index).hist, ' -> '));
+                    end
+                    this.unresolvedRefs(index).hist{end+1} = ref.ref;
+                    this.unresolvedRefs(index).ref = schema1('$ref');
+                    display(this.unresolvedRefs(index))
+                else
+                    this.unresolvedRefs = this.unresolvedRefs([1:index-1 index+1:end]);
+                end
+            end
+
+            schema = schemas(uri);
+
         end
         
         function addError(this, pointer, msg, value, type)
@@ -411,6 +456,11 @@ classdef JSON < handle
         function schema = loadSchemaByURI(this, uri)
             fprintf(1, 'Loading schema from uri %s\n', uri);
 
+            schema = JSON.getSchemaFromCache(uri);
+            if ~isempty(schema)
+                return;
+            end
+
             try
                 schema = urlread(uri);
             catch e
@@ -423,6 +473,7 @@ classdef JSON < handle
             end
 
             schema = this.postLoadSchema(schema, uri);
+            JSON.cacheSchema(uri, schema);
         end
 
         function resolvedURI = resolveURI(this, uri, base)
@@ -437,11 +488,14 @@ classdef JSON < handle
 
         function schema = postLoadSchema(this, schema, uri)
             schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
+            schema('uri') = uri;
 
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
                 schema('id') = uri;
             end
+
+            schema = this.normalizeSchema(schema);
         end
 
         function processProperties(this, rootSchema, schema, pointer, propertyType, resolutionScope)
@@ -463,8 +517,20 @@ classdef JSON < handle
             end
             
             if schema.isKey('$ref')
-                schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
-                return;
+                %schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
+                ref = schema('$ref');
+                ref = this.resolveURI(ref, resolutionScope);
+
+                if isempty(strfind(ref, '#'))
+                    ref = [ref '#']
+                end
+
+                schema('$ref') = ref;
+
+                ref = struct('uri', rootSchema('uri'), 'pointer', pointer, 'ref', ref); 
+                ref.hist = {};
+                display(ref);
+                this.unresolvedRefs(end+1) = ref;
             end
 
             if schema.isKey('id') && ~isempty(schema('id'))
@@ -504,8 +570,8 @@ classdef JSON < handle
             this.processProperties(rootSchema, schema, pointer, 'properties', resolutionScope);
             this.processProperties(rootSchema, schema, pointer, 'patternProperties', resolutionScope);
 
-            if ismember('array', type) && schema.isKey('items')
-                items = schema('items');
+            if ismember('array', type) && schema.isKey('items') % TODO: Remove first test
+                items = schema('items'); % Remember: Cell array has copy semantic
                 if isa(items, 'Map')
                     schema('items') = this.normalizeSchema_(rootSchema, items, [pointer '/items'], resolutionScope);
                 elseif iscell(items)
@@ -513,7 +579,16 @@ classdef JSON < handle
                         subPath = [pointer '/items/' num2str(k)];
                         items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath, resolutionScope);
                     end
-                    schema('items') = items;
+                    schema('items') = items; % Remember: Cell array has copy semantic
+                end
+            end
+
+            if schema.isKey('definitions')
+                definitions = schema('definitions');
+                names = definitions.keys();
+                for k=1:length(names)
+                    subPath = [pointer '/definitions/' names{k}];
+                    definitions(names{k}) = this.normalizeSchema_(rootSchema, definitions(names{k}), subPath, resolutionScope);
                 end
             end
 
@@ -573,7 +648,6 @@ classdef JSON < handle
 
                 if ~isempty(pointer)
                     schema = JSON.getPath(rootSchema, pointer);
-                    TODO: Do norm lazily
                     schema = this.normalizeSchema_(schema, schema, pointer, resolutionScope);  
                     if isempty(schema)
                         error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
@@ -685,6 +759,17 @@ classdef JSON < handle
             errors = stringifier.errors;
         end
         
+        function obj = setPath(obj, pointer, value)
+            if isempty(pointer)
+                obj = value;
+            else
+                tokens = strsplit(pointer, '/');
+                headPointer = strjoin(tokens(1:end-1), '/');
+                subObj = JSON.getPath(obj, headPointer);
+                subObj(tokens{end}) = value;
+            end
+        end
+
         function obj = getPath(obj, pointer, default)
             %GETPATH Returns the value referenced by the pointer.
             % The pointer must be a JSON pointer, so each reference token must be
