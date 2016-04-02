@@ -63,7 +63,8 @@ classdef JSON < handle
 %        end
 
         function schema = loadSchema(this, schema)
-            this.unresolvedRefs = struct([]);
+            localSchemaCache = containers.Map();
+            this.unresolvedRefs = struct([]);   % These are populated by normalizeSchema_()
 
             if ischar(schema)
                 schema = strtrim(schema);
@@ -72,13 +73,16 @@ classdef JSON < handle
                     return;
                 elseif isempty(regexp(schema, '^\s*\{')) % A URI cannot start with an opening curly, but a schema will
                     uri = this.resolveURIagainstLoadPath(schema);
-                    schema = this.loadSchemaByURI(uri);
+                    schema = this.loadSchemaByURI(uri, localSchemaCache);
                 else
                     uri = '';
                     schema = this.postLoadSchema(schema, uri);
+                    localSchemaCache(uri) = schema;
                 end
             elseif isa(schema, 'Map')
                 % Do nothing
+                uri = '';
+                schema(uri) = uri;
             elseif isempty(schema)
                 schema = [];
                 return;
@@ -86,23 +90,23 @@ classdef JSON < handle
                 error('Invalid type: %s', class(schema));
             end
 
-            
-            schemas = containers.Map();
-            schemas(uri) = schema;
+            this.resolveSchema(localSchemaCache);
+            schema = localSchemaCache(uri);
+        end
 
+        function resolveSchema(this, localSchemaCache)
+            
             while length(this.unresolvedRefs) > 0
                 index = length(this.unresolvedRefs);
                 ref = this.unresolvedRefs(index);
-                %this.unresolvedRefs = this.unresolvedRefs(1:end-1);
                 s = sprintf('uri[%s] pointer[%s] ref[%s]\n', ref.uri, ref.pointer, ref.ref);
                 fprintf(1, 'Processing %s', s);
                 parts = strsplit(ref.ref, '#');
                 if ~isempty(parts{1})
-                    schema1 = this.loadSchemaByURI(parts{1});
-                    %schema1 = this.normalizeSchema(schema1);
-                    schemas(parts{1}) = schema1;
+                    schema1 = this.loadSchemaByURI(parts{1}, localSchemaCache);
+                    localSchemaCache(parts{1}) = schema1;
                 else
-                    schema1 = schemas(ref.uri);
+                    schema1 = localSchemaCache(ref.uri);
                 end
 
                 schema1 = JSON.getPath(schema1, parts{2});
@@ -110,7 +114,7 @@ classdef JSON < handle
                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', s);
                 end
 
-                schemas(ref.uri) = JSON.setPath(schemas(ref.uri), ref.pointer, schema1);
+                localSchemaCache(ref.uri) = JSON.setPath(localSchemaCache(ref.uri), ref.pointer, schema1);
 
                 if schema1.isKey('$ref')
                     if ismember(ref.ref, this.unresolvedRefs(index).hist)
@@ -124,8 +128,20 @@ classdef JSON < handle
                 end
             end
 
-            schema = schemas(uri);
+            % No errors so far. We can now make local schema cache persistent.
+            uris = localSchemaCache.keys();
+            for k=1:length(uris)
+                uri = uris{k};
+                schema = localSchemaCache(uri);
+                if schema.isKey('allOf')
+                    %TODO: At any level
+                    this.mergeSchemas(schema);
+                end
 
+                if ~isempty(uri)
+                    JSON.cacheSchema(uri, schema);
+                end
+            end
         end
         
         function addError(this, pointer, msg, value, type)
@@ -187,7 +203,7 @@ classdef JSON < handle
             end
         end
         
-        function [ mergedSchema ] = mergeSchemas(this, rootSchema, schema, pointer, resolutionScope)
+        function mergedSchema = mergeSchemas(this, schema)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
             
@@ -200,7 +216,7 @@ classdef JSON < handle
             allOf = schema('allOf');
             
             for k=1:length(allOf)
-                subSchema = this.normalizeSchema_(rootSchema, allOf{k}, [pointer '/allOf'], resolutionScope);
+                subSchema = allOf{k};
                 % TODO: Assert properties is member
                 props = subSchema('properties');
                 keys = props.keys();
@@ -453,10 +469,10 @@ classdef JSON < handle
     
     methods (Access=private)
 
-        function schema = loadSchemaByURI(this, uri)
+        function schema = loadSchemaByURI(this, uri, localSchemaCache)
             fprintf(1, 'Loading schema from uri %s\n', uri);
 
-            schema = JSON.getSchemaFromCache(uri);
+            schema = JSON.getSchemaFromCache(uri, localSchemaCache);
             if ~isempty(schema)
                 return;
             end
@@ -473,7 +489,7 @@ classdef JSON < handle
             end
 
             schema = this.postLoadSchema(schema, uri);
-            JSON.cacheSchema(uri, schema);
+            localSchemaCache(uri) = schema;
         end
 
         function resolvedURI = resolveURI(this, uri, base)
@@ -543,7 +559,12 @@ classdef JSON < handle
             end
 
             if schema.isKey('allOf')
-                schema = this.mergeSchemas(rootSchema, schema, pointer, resolutionScope);
+                allOf = schema('allOf');
+                for k=1:length(allOf)
+                    subPath = [pointer '/allOf/' num2str(k-1)];
+                    allOf{k} = this.normalizeSchema_(rootSchema, allOf{k}, subPath, resolutionScope);
+                end
+                schema('allOf') = allOf;
             end
             
             if ~schema.isKey('type') || isempty(schema('type'))
@@ -688,7 +709,12 @@ classdef JSON < handle
             end
         end
 
-        function schema = getSchemaFromCache(uri)
+        function schema = getSchemaFromCache(uri, localSchemaCache)
+            if localSchemaCache.isKey(uri)
+                schema = localSchemaCache(uri);
+                return;
+            end
+
             cache = JSON.getSchemaCache();
             if cache.isKey(uri)
                 % Cache hit
@@ -760,18 +786,52 @@ classdef JSON < handle
         end
         
         function obj = setPath(obj, pointer, value)
+        %SETPATH sets the value referenced by the pointer.
+        % Example
+        %   m = containers.Map()
+        %   c = m('foo') = containers.Map();
+        %   c('bar') = {1 2 3};
+        %   JSON.setPath(m, '/foo/bar/1', 42)   -> replaces 2 by 42
+
             if isempty(pointer)
                 obj = value;
             else
                 tokens = strsplit(pointer, '/');
-                headPointer = strjoin(tokens(1:end-1), '/');
-                subObj = JSON.getPath(obj, headPointer);
-                subObj(tokens{end}) = value;
+                [oldValue, chain] = JSON.getPath(obj, pointer);
+                
+                c = chain{end};
+                if iscell(c)
+                    k = length(chain);
+                    idx = struct('type', '{}');
+                    idx.subs = {};
+                    while iscell(c) && k >= 1
+                        index = str2double(tokens{k+1});
+                        if ischar(index) || isnan(index)
+                            error('cell array must be indexed by a positive integer, was %s', tokens{k+1});
+                        end
+                        idx.subs = [(index+1) idx.subs];
+                        k = k-1;
+                        if k==0
+                            break
+                        else
+                            c = chain{k};
+                        end
+                    end
+
+                    if k==0
+                        obj = subsasgn(c, idx, value);
+                    else
+                        c(tokens{k+1}) = subsasgn(c(tokens{k+1}), idx, value);
+                    end
+                else
+                    assert(isa(c, 'Map'));
+                    c(tokens{end}) = value;
+                end
             end
         end
 
-        function obj = getPath(obj, pointer, default)
-            %GETPATH Returns the value referenced by the pointer.
+        function [obj, chain] = getPath(obj, pointer, default)
+            %GETPATH returns the value referenced by the pointer.
             % The pointer must be a JSON pointer, so each reference token must be
             % prefixed by / and numerical tokens referencing an array are zero-based.
             % Returns default or empty if the pointer does not resolve.
@@ -786,6 +846,8 @@ classdef JSON < handle
             %    JSON.getPath(obj, '/bar/1')            % -> 'bar'
             %    JSON.getPath(obj, '/foo~1bar')         % -> 42
             %    JSON.getPath(obj, '/foobar', 4711)     % -> 4711
+
+            chain = {};
 
             if isempty(pointer)
                 if isempty(obj)
@@ -802,6 +864,7 @@ classdef JSON < handle
             tokens = strsplit(pointer, '/');
 
             for k = 2:length(tokens)
+                chain{end+1} = obj;
                 token = tokens{k};
                 % '~' needs to be encoded as '~0' and '/' needs to be encoded as '~1'
                 token = strrep(strrep(token, '~0', '~'), '~1', '/');
