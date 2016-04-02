@@ -64,7 +64,7 @@ classdef JSON < handle
 
         function schema = loadSchema(this, schema)
             localSchemaCache = containers.Map();
-            this.unresolvedRefs = struct([]);   % These are populated by normalizeSchema_()
+            this.unresolvedRefs = struct([]);   % These are populated by normalizeSchema()
 
             if ischar(schema)
                 schema = strtrim(schema);
@@ -511,122 +511,134 @@ classdef JSON < handle
                 schema('id') = uri;
             end
 
-            schema = this.normalizeSchema(schema);
+            this.normalizeSchema(schema, '', schema('id'));
         end
 
-        function processProperties(this, rootSchema, schema, pointer, propertyType, resolutionScope)
-            if schema.isKey(propertyType) && ~isempty(schema(propertyType))
-                props = schema(propertyType);
-                pNames = props.keys();
-                for k=1:length(pNames)
-                    subPath = [pointer '/' propertyType '/' pNames{k}];
-                    props(pNames{k}) = this.normalizeSchema_(rootSchema, props(pNames{k}), subPath, resolutionScope);
-                end
-                schema(propertyType) = props;
-            end
-        end
+        function normalizeSchema(this, rootSchema, pointer, resolutionScope)
+        %normalizeSchema breadth first traverses the given schema and validates all subschemas.
 
-        function schema = normalizeSchema_(this, rootSchema, schema, pointer, resolutionScope)
-
-            if ~isa(schema, 'Map')
-                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
-            end
-            
-            if schema.isKey('$ref')
-                %schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
-                ref = schema('$ref');
-                ref = this.resolveURI(ref, resolutionScope);
-
-                if isempty(strfind(ref, '#'))
-                    ref = [ref '#']
-                end
-
-                schema('$ref') = ref;
-
-                ref = struct('uri', rootSchema('uri'), 'pointer', pointer, 'ref', ref); 
-                ref.hist = {};
-                display(ref);
-                this.unresolvedRefs(end+1) = ref;
+            function addSchema(schema, pointer, resolutionScope)
+                schemaInfos{end+1} = struct('schema', schema, 'pointer', pointer, 'resolutionScope', resolutionScope);
             end
 
-            if schema.isKey('id') && ~isempty(schema('id'))
-                % Change resolution scope.
-                % Note that we do this AFTER processing $ref. 
-                resolutionScope = this.resolveURI(schema('id'), resolutionScope);
-                if ~javaObject('java.net.URI', resolutionScope).isAbsolute()
-                    error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
-                end
-            end
-
-            if schema.isKey('allOf')
-                allOf = schema('allOf');
-                for k=1:length(allOf)
-                    subPath = [pointer '/allOf/' num2str(k-1)];
-                    allOf{k} = this.normalizeSchema_(rootSchema, allOf{k}, subPath, resolutionScope);
-                end
-                schema('allOf') = allOf;
-            end
-            
-            if ~schema.isKey('type') || isempty(schema('type'))
-                schema('type') = {};
-                % TODO: This is NOT according the JSON Schema Spec
-                return
-            end
-            
-            type = schema('type');
-            
-            if ischar(type)
-                type = {type};
-                schema('type') = type;
-            end
-                        
-            if schema.isKey('required') && ~iscell(schema('required'))
-                error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
-            end
-
-            if schema.isKey('pattern') && ~ischar(schema('pattern'))
-                error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
-            end
-
-            this.processProperties(rootSchema, schema, pointer, 'properties', resolutionScope);
-            this.processProperties(rootSchema, schema, pointer, 'patternProperties', resolutionScope);
-
-            if ismember('array', type) && schema.isKey('items') % TODO: Remove first test
-                items = schema('items'); % Remember: Cell array has copy semantic
-                if isa(items, 'Map')
-                    schema('items') = this.normalizeSchema_(rootSchema, items, [pointer '/items'], resolutionScope);
-                elseif iscell(items)
-                    for k=1:length(items)
-                        subPath = [pointer '/items/' num2str(k)];
-                        items{k} = this.normalizeSchema_(rootSchema, items{k}, subPath, resolutionScope);
+            function processProperties(propertyType, schema, pointer, resolutionScope)
+                if schema.isKey(propertyType) && ~isempty(schema(propertyType))
+                    props = schema(propertyType);
+                    pNames = props.keys();
+                    for k=1:length(pNames)
+                        subPath = [pointer '/' propertyType '/' pNames{k}];
+                        addSchema(props(pNames{k}), subPath, resolutionScope);
                     end
-                    schema('items') = items; % Remember: Cell array has copy semantic
                 end
             end
 
-            if schema.isKey('definitions')
-                definitions = schema('definitions');
-                names = definitions.keys();
-                for k=1:length(names)
-                    subPath = [pointer '/definitions/' names{k}];
-                    definitions(names{k}) = this.normalizeSchema_(rootSchema, definitions(names{k}), subPath, resolutionScope);
-                end
-            end
+            schemaInfos = {};
 
-            if any(ismember({'number' 'integer'}, type))
-                %if isfield(schema, 'enum') && iscell(schema.enum)
-                %    if all(cellfun(@isnumeric, schema.enum))
-                %        schema.enum = cell2mat(schema.enum);
-                %    end
-                %end
-            end
+            addSchema(rootSchema, pointer, resolutionScope);
+
+            while ~isempty(schemaInfos)
+                info = schemaInfos{end};
+                schemaInfos = schemaInfos(1:end-1);
+                schema = info.schema;
+                resolutionScope = info.resolutionScope;
+                pointer = info.pointer;
+
+                %display(info);
+
+                if ~isa(schema, 'Map')
+                    error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
+                end
+                
+                if schema.isKey('$ref')
+                    %schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
+                    ref = schema('$ref');
+                    if ~ischar(ref)
+                        % TODO: use addError and make that throw
+                        error('JSON:PARSE_SCHEMA', '$ref must be a string at %s', pointer);
+                    end
+                    ref = this.resolveURI(ref, resolutionScope);
+
+                    if isempty(strfind(ref, '#'))
+                        ref = [ref '#']
+                    end
+
+                    schema('$ref') = ref;
+
+                    ref = struct('uri', rootSchema('uri'), 'pointer', pointer, 'ref', ref); 
+                    ref.hist = {};
+                    display(ref);
+                    this.unresolvedRefs(end+1) = ref;
+                end
+
+                if schema.isKey('id') && ~isempty(schema('id'))
+                    % Change resolution scope.
+                    % Note that we do this AFTER processing $ref. 
+                    resolutionScope = this.resolveURI(schema('id'), resolutionScope);
+                    if ~javaObject('java.net.URI', resolutionScope).isAbsolute()
+                        error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
+                    end
+                end
+
+                if schema.isKey('allOf')
+                    allOf = schema('allOf');
+                    for k=1:length(allOf)
+                        subPath = [pointer '/allOf/' num2str(k-1)];
+                        addSchema(allOf{k}, subPath, resolutionScope);
+                    end
+                end
+                
+                if ~schema.isKey('type') || isempty(schema('type'))
+                    schema('type') = {};
+                end
+                
+                type = schema('type');
+                
+                if ischar(type)
+                    type = {type};
+                    schema('type') = type;
+                end
+                            
+                if schema.isKey('required') && ~iscell(schema('required'))
+                    error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
+                end
+
+                if schema.isKey('pattern') && ~ischar(schema('pattern'))
+                    error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
+                end
+
+                processProperties('properties', schema, pointer, resolutionScope);
+                processProperties('patternProperties', schema, pointer, resolutionScope);
+
+                if ismember('array', type) && schema.isKey('items') % TODO: Remove first test
+                    items = schema('items'); % Remember: Cell array has copy semantic
+                    if isa(items, 'Map')
+                        addSchema(items, [pointer '/items'], resolutionScope);
+                    elseif iscell(items)
+                        for k=1:length(items)
+                            subPath = [pointer '/items/' num2str(k)];
+                            addSchema(items{k}, subPath, resolutionScope);
+                        end
+                    end
+                end
+
+                if schema.isKey('definitions')
+                    definitions = schema('definitions');
+                    names = definitions.keys();
+                    for k=1:length(names)
+                        subPath = [pointer '/definitions/' names{k}];
+                        addSchema(definitions(names{k}), subPath, resolutionScope);
+                    end
+                end
+
+                if any(ismember({'number' 'integer'}, type))
+                    %if isfield(schema, 'enum') && iscell(schema.enum)
+                    %    if all(cellfun(@isnumeric, schema.enum))
+                    %        schema.enum = cell2mat(schema.enum);
+                    %    end
+                    %end
+                end
+            end % while
             
-        end
-
-        function schema = normalizeSchema(this, schema)
-            %normalizeSchema recursively descends the schema and resolves allOf references.
-            pointer = '';
-            schema = normalizeSchema_(this, schema, schema, pointer, schema('id'));
         end
 
         function schema = resolveRef(this, rootSchema, schema, pointer, resolutionScope)
@@ -821,7 +833,10 @@ classdef JSON < handle
                     if k==0
                         obj = subsasgn(c, idx, value);
                     else
-                        c(tokens{k+1}) = subsasgn(c(tokens{k+1}), idx, value);
+                        % Octave Bug(?): Without builtin, and if value is of class Map,
+                        % then subsasgn() calls Map.subsasgn(), even if the lhs c(tokens{k+1})
+                        % is not a Map (confirmed with a cell array).
+                        c(tokens{k+1}) = builtin ('subsasgn', c(tokens{k+1}), idx, value);
                     end
                 else
                     assert(isa(c, 'Map'));

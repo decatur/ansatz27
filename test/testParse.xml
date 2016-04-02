@@ -30,7 +30,7 @@ json = JSON.stringify(obj);
     <test>
         <description>Error Handling</description>
         <matlab>
-            [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'file:schema.json');
+            [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'schema.json');
             if ~isempty(errors)
                 % Report errors and stop processing
             end

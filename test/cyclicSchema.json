@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+        "id": { "type": "string" },
+        "bar": { "$ref": "cyclicSchema.json#/definitions/barType" }
+    },
+    "additionalProperties": false,
+    "definitions": {
+        "barType": { "$ref": "#/properties/bar" }
+    }
+}

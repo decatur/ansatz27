@@ -287,7 +287,7 @@
         <errors>{'/1' 'contains additional property' 'foo'}</errors>
     </test>
     <test>
-        <description>Invalid Reference</description>
+        <description>Invalid Reference 1</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
@@ -307,10 +307,10 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Invalid $ref at #/properties/bar -> #/definitions/BAR' ''}</errors>
+        <errors>{[] 'Invalid $ref at uri[] pointer[/properties/bar] ref[#/definitions/BAR]' ''}</errors>
     </test>
     <test>
-        <description>Invalid Reference</description>
+        <description>Invalid Reference 2</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
@@ -327,10 +327,10 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Invalid $ref at #/properties/bar' ''}</errors>
+        <errors>{[] '$ref must be a string at /properties/bar' ''}</errors>
     </test>
     <test>
-        <description>Cyclic Schema References</description>
+        <description>Cyclic Schema References 1</description>
         <matlab>struct('id', '4711', 'bar', 2)</matlab>
         <schema>
             {
@@ -351,7 +351,18 @@
                 "bar": 2
             }
         </json>
-        <errors>{[] 'Cyclic references #/properties/bar -> #/definitions/barType -> #/properties/bar' ''}</errors>
+        <errors>{[] 'Cyclic references #/definitions/barType -> #/properties/bar' ''}</errors>
+    </test>
+    <test>
+        <description>Cyclic Schema References 2</description>
+        <matlab>struct()</matlab>
+        <schema>
+            {
+                "$ref": "BASE_URI/cyclicSchema.json#/definitions/barType"
+            }
+        </schema>
+        <json>{}</json>
+        <errors>{[] 'Cyclic references file:/home/wolle/ansatz27/test/cyclicSchema.json#/definitions/barType -> file:/home/wolle/ansatz27/test/cyclicSchema.json#/properties/bar' ''}</errors>
     </test>
     <test>
         <description>Format validation on stringify</description>

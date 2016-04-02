@@ -72,7 +72,8 @@ classdef Map < handle
                 ss.(name) = rhs;
                 this.s = ss;
             else
-                error('Invalid subscript assignment')
+                keyboard
+                error('Invalid subscript assignment: %s', idx(1).type);
             end
         end
 
