@@ -1,12 +1,6 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
-```
-      ↱ MATLAB  ⬎
-      ↑          ↓
-      ↑← Schema →↓
-      ↑          ↓
-      ⬑  JSON   ↲
-```
+[](docs/roundtrip.png)
 
 ansatz27 lets you
 * read and write JSON streams with a predictable behavior,
@@ -145,7 +139,7 @@ obj = struct('foo', 1, 'bar', 2);
     </tr>
     <tr>
         <td>allOf</td>
-        <td>Supported. Use it as a poor man's schema inheritance</td>
+        <td>Supported only in top level schema. Use it as a poor man's schema inheritance</td>
     </tr>
     <tr>
         <td>anyOf</td>
@@ -667,19 +661,26 @@ Validation errors are returned by these methods, see [Usage](#usage).
 It is best practise to *always* check for errors and to discard the input if errors have occured:
 
 [//]: # "Error Handling"
-*MATLAB*
-```MATLAB
 
-[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'file:schema.json');
+## Expected Errors
+All errors related to input data are reported in the second return value of `JSON.parse()` and `JSON.stringify()`.
+These include
+* parse errors in the JSON data or JSON schema
+* schema invalid against the specification 
+* JSON data invalid against the schema
+
+*Note*: The persistent schema cache is only written after schemas are successfully resolved. Therefore the cache will only hold valid schemas.
+
+Always check the `errors` output like so
+```MATLAB
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'schema.json');
 if ~isempty(errors)
     % Report errors and stop processing
 end
-        
 ```
-
 [//]: # "Error Handling"
 
-For each validation error one item in the errors cell array is generated:
+For each validation error one item in the `errors` cell array is generated:
 
 [//]: # "Format Validation on Parse"
 *Schema*
@@ -716,6 +717,12 @@ For each validation error one item in the errors cell array is generated:
 ```
 
 [//]: # "Format Validation on Parse"
+
+## Unhandled Errors
+Both `JSON.parse()` and `JSON.stringify()` may throw an error. This is the case when
+the method is called with an invalid argument type such as `JSON.parse(struct())`.
+
+In all other cases an unhandled error is *always* a bug in ansatz27. Please report it!
 
 # Advanced Usage
 

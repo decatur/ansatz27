@@ -5,6 +5,7 @@ classdef JSON < handle
     
     properties (Constant)
         isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
+        logLevels = {'WARNING', 'INFO'};
     end
     
     properties %(Access = private)
@@ -73,13 +74,13 @@ classdef JSON < handle
                     return;
                 elseif isempty(regexp(schema, '^\s*\{')) % A URI cannot start with an opening curly, but a schema will
                     uri = this.resolveURIagainstLoadPath(schema);
-                    schema = this.loadSchemaByURI(uri, localSchemaCache);
+                    this.loadSchemaByURI(uri, localSchemaCache);
                 else
                     uri = '';
                     schema = this.postLoadSchema(schema, uri);
                     localSchemaCache(uri) = schema;
                 end
-            elseif isa(schema, 'Map')
+            elseif JSON.isaMap(schema)
                 % Do nothing
                 uri = '';
                 schema(uri) = uri;
@@ -96,11 +97,11 @@ classdef JSON < handle
 
         function resolveSchema(this, localSchemaCache)
             
-            while length(this.unresolvedRefs) > 0
+            while ~isempty(this.unresolvedRefs)
                 index = length(this.unresolvedRefs);
                 ref = this.unresolvedRefs(index);
-                s = sprintf('uri[%s] pointer[%s] ref[%s]\n', ref.uri, ref.pointer, ref.ref);
-                fprintf(1, 'Processing %s', s);
+                s = sprintf('uri[%s] pointer[%s] ref[%s]', ref.uri, ref.pointer, ref.ref);
+                JSON.log('DEBUG', 'Processing %s', s);
                 parts = strsplit(ref.ref, '#');
                 if ~isempty(parts{1})
                     schema1 = this.loadSchemaByURI(parts{1}, localSchemaCache);
@@ -122,7 +123,6 @@ classdef JSON < handle
                     end
                     this.unresolvedRefs(index).hist{end+1} = ref.ref;
                     this.unresolvedRefs(index).ref = schema1('$ref');
-                    display(this.unresolvedRefs(index))
                 else
                     this.unresolvedRefs = this.unresolvedRefs([1:index-1 index+1:end]);
                 end
@@ -149,7 +149,7 @@ classdef JSON < handle
                 type = 'JSON:SCHEMA_VALIDATION';
             end
             
-            if isstruct(value) || isa(value, 'Map')
+            if isstruct(value) || JSON.isaMap(value)
                 value = '{object}';
             elseif iscell(value)
                 value = '[array]';
@@ -196,7 +196,7 @@ classdef JSON < handle
                 return;
             end
             
-            if isa(items, 'Map')
+            if JSON.isaMap(items)
                 childSchema = items;
             elseif iscell(items) && key < length(items)
                 childSchema = items{key+1};
@@ -251,7 +251,7 @@ classdef JSON < handle
                     if ismember('string', type)
                         pType = 'string';
                     end
-                elseif isstruct(value) || isa(value, 'Map')
+                elseif isstruct(value) || JSON.isaMap(value)
                     if n==1 && ismember('object', type)
                         pType = 'object';
                     elseif ismember('array', type)
@@ -336,7 +336,8 @@ classdef JSON < handle
                 end
 
                 if JSON.getPath(schema, '/additionalProperties') == false
-                    p = JSON.getPath(schema, '/properties', containers.Map()).keys();
+                    p = JSON.getPath(schema, '/properties', containers.Map());
+                    p = p.keys();
                     s = s(~ismember(s, p));
                     pP = JSON.getPath(schema, '/patternProperties', containers.Map());
                     pp = pP.keys();
@@ -393,7 +394,7 @@ classdef JSON < handle
             elseif ismember(pType, {'integer' 'number'})
                 
                 if strcmp(pType, 'integer') && rem(value, 1)
-                    this.addError(badPath, 'is not an integer', value);
+                    this.addError(pointer, 'is not an integer', value);
                 end
 
                 if schema.isKey('multipleOf') && rem(value, schema('multipleOf'))
@@ -470,7 +471,7 @@ classdef JSON < handle
     methods (Access=private)
 
         function schema = loadSchemaByURI(this, uri, localSchemaCache)
-            fprintf(1, 'Loading schema from uri %s\n', uri);
+            JSON.log('DEBUG', 'Loading schema from uri %s', uri);
 
             schema = JSON.getSchemaFromCache(uri, localSchemaCache);
             if ~isempty(schema)
@@ -515,7 +516,7 @@ classdef JSON < handle
         end
 
         function normalizeSchema(this, rootSchema, pointer, resolutionScope)
-        %normalizeSchema breadth first traverses the given schema and validates all subschemas.
+        %normalizeSchema traverses the given schema iteratively (depth first) and validates all subschemas.
 
             function addSchema(schema, pointer, resolutionScope)
                 schemaInfos{end+1} = struct('schema', schema, 'pointer', pointer, 'resolutionScope', resolutionScope);
@@ -543,9 +544,7 @@ classdef JSON < handle
                 resolutionScope = info.resolutionScope;
                 pointer = info.pointer;
 
-                %display(info);
-
-                if ~isa(schema, 'Map')
+                if ~JSON.isaMap(schema)
                     error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
                 end
                 
@@ -559,22 +558,28 @@ classdef JSON < handle
                     ref = this.resolveURI(ref, resolutionScope);
 
                     if isempty(strfind(ref, '#'))
-                        ref = [ref '#']
+                        ref = [ref '#'];
                     end
 
                     schema('$ref') = ref;
 
-                    ref = struct('uri', rootSchema('uri'), 'pointer', pointer, 'ref', ref); 
-                    ref.hist = {};
-                    display(ref);
-                    this.unresolvedRefs(end+1) = ref;
+                    % TODO: Can we do this better in MATLAB? With Octave this works:
+                    %   ref = struct('uri', rootSchema('uri'), 'pointer', pointer, 'ref', ref);
+                    %   ref.hist = {};
+                    %   this.unresolvedRefs(end+1) = ref;
+                    this.unresolvedRefs(end+1).uri = rootSchema('uri');
+                    this.unresolvedRefs(end).pointer = pointer;
+                    this.unresolvedRefs(end).ref = ref; 
+                    this.unresolvedRefs(end).hist = {};
+                    JSON.log('DEBUG', 'Add new reference uri[%s] pointer[%s] ref[%s]', rootSchema('uri'), pointer, ref);
                 end
 
                 if schema.isKey('id') && ~isempty(schema('id'))
                     % Change resolution scope.
                     % Note that we do this AFTER processing $ref. 
                     resolutionScope = this.resolveURI(schema('id'), resolutionScope);
-                    if ~javaObject('java.net.URI', resolutionScope).isAbsolute()
+                    resScopURI = javaObject('java.net.URI', resolutionScope);
+                    if ~resScopURI.isAbsolute()
                         error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
                     end
                 end
@@ -611,7 +616,7 @@ classdef JSON < handle
 
                 if ismember('array', type) && schema.isKey('items') % TODO: Remove first test
                     items = schema('items'); % Remember: Cell array has copy semantic
-                    if isa(items, 'Map')
+                    if JSON.isaMap(items)
                         addSchema(items, [pointer '/items'], resolutionScope);
                     elseif iscell(items)
                         for k=1:length(items)
@@ -641,59 +646,73 @@ classdef JSON < handle
             
         end
 
-        function schema = resolveRef(this, rootSchema, schema, pointer, resolutionScope)
-            %resolveRef swaps in the referenced schema.
-            refs = {};
-
-            while schema.isKey('$ref')
-                ref = schema('$ref');
-                if isempty(findstr(ref, '#'))
-                    ref(end+1) = '#';
-                end
-                
-                if ~ischar(ref) || isempty(strtrim(ref))
-                    error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
-                end
-                
-                ref = strtrim(ref);
-                uri = this.resolveURI(ref, resolutionScope);
-                
-                if ismember(uri, refs)
-                    error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
-                end
-                
-                refs{end+1} = uri;
-                
-                parts = strsplit(uri, '#');
-                assert(length(parts) == 2);
-                url = parts{1};
-                pointer = parts{2};
-
-                if ~isempty(url)
-                    rootSchema = JSON.getSchemaFromCache(url);
-                    if isempty(rootSchema)
-                        rootSchema = this.loadSchemaByURI(url);
-                        rootSchema = this.normalizeSchema(rootSchema);
-                        JSON.cacheSchema(url, rootSchema);
-                    end
-                    schema = rootSchema;
-                end
-
-                if ~isempty(pointer)
-                    schema = JSON.getPath(rootSchema, pointer);
-                    schema = this.normalizeSchema_(schema, schema, pointer, resolutionScope);  
-                    if isempty(schema)
-                        error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
-                    end
-                end
-
-            end
-        end
+%         function schema = resolveRef(this, rootSchema, schema, pointer, resolutionScope)
+%             %resolveRef swaps in the referenced schema.
+%             refs = {};
+% 
+%             while schema.isKey('$ref')
+%                 ref = schema('$ref');
+%                 if isempty(findstr(ref, '#'))
+%                     ref(end+1) = '#';
+%                 end
+%                 
+%                 if ~ischar(ref) || isempty(strtrim(ref))
+%                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
+%                 end
+%                 
+%                 ref = strtrim(ref);
+%                 uri = this.resolveURI(ref, resolutionScope);
+%                 
+%                 if ismember(uri, refs)
+%                     error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
+%                 end
+%                 
+%                 refs{end+1} = uri;
+%                 
+%                 parts = strsplit(uri, '#');
+%                 assert(length(parts) == 2);
+%                 url = parts{1};
+%                 pointer = parts{2};
+% 
+%                 if ~isempty(url)
+%                     rootSchema = JSON.getSchemaFromCache(url);
+%                     if isempty(rootSchema)
+%                         rootSchema = this.loadSchemaByURI(url);
+%                         rootSchema = this.normalizeSchema(rootSchema);
+%                         JSON.cacheSchema(url, rootSchema);
+%                     end
+%                     schema = rootSchema;
+%                 end
+% 
+%                 if ~isempty(pointer)
+%                     schema = JSON.getPath(rootSchema, pointer);
+%                     schema = this.normalizeSchema_(schema, schema, pointer, resolutionScope);  
+%                     if isempty(schema)
+%                         error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
+%                     end
+%                 end
+% 
+%             end
+%         end
 
     end % methods (Access=private)
 
     methods (Static)
         
+        function b = isaMap(obj)
+            if JSON.isoct
+                b = isa(obj, 'Map');
+            else
+                b = isa(obj, 'containers.Map');
+            end
+        end
+
+        function b = log(level, fmt, varargin)
+            if ismember(level, JSON.logLevels)
+                fprintf(1, '%s: %s\n', level, fmt, varargin{:});
+            end
+        end
+
         function value = configParam(key, value)
             persistent config
             if isempty(config)
@@ -763,7 +782,7 @@ classdef JSON < handle
             try
                 value = parser.parse_(varargin{:});
             catch e
-                if 1 == regexp(e.identifier, '^JSON:', 'once')
+                if ~isempty(regexp(e.identifier, '^JSON:', 'once'))
                     value = [];
                     parser.addError([], e.message, [], e.identifier);
                 else
@@ -783,7 +802,7 @@ classdef JSON < handle
             try
                 json = stringifier.stringify_(varargin{:});
             catch e
-                if 1 == regexp(e.identifier, '^JSON:', 'once')
+                if ~isempty(regexp(e.identifier, '^JSON:', 'once'))
                     json = [];
                     stringifier.addError([], e.message, [], e.identifier);
                 else
@@ -801,7 +820,8 @@ classdef JSON < handle
         %SETPATH sets the value referenced by the pointer.
         % Example
         %   m = containers.Map()
-        %   c = m('foo') = containers.Map();
+        %   m('foo') = containers.Map();
+        %   c = m('foo');
         %   c('bar') = {1 2 3};
         %   JSON.setPath(m, '/foo/bar/1', 42)   -> replaces 2 by 42
 
@@ -839,7 +859,7 @@ classdef JSON < handle
                         c(tokens{k+1}) = builtin ('subsasgn', c(tokens{k+1}), idx, value);
                     end
                 else
-                    assert(isa(c, 'Map'));
+                    assert(JSON.isaMap(c));
                     c(tokens{end}) = value;
                 end
             end
@@ -884,12 +904,12 @@ classdef JSON < handle
                 % '~' needs to be encoded as '~0' and '/' needs to be encoded as '~1'
                 token = strrep(strrep(token, '~0', '~'), '~1', '/');
                 
-                if isa(obj, 'Map') && obj.isKey(token)
+                if JSON.isaMap(obj) && obj.isKey(token)
                     obj = obj(token);
                     continue;
                 end
 
-                if iscell(obj) && 1 == regexp(token, '^\d+$', 'once')
+                if iscell(obj) && ~isempty(regexp(token, '^\d+$', 'once'))
                     l = str2double(token);
                     if l < length(obj) % This will also handle l is not a number
                         obj = obj{l+1};
@@ -912,21 +932,21 @@ classdef JSON < handle
 
         end
 
-        function text = ___readFileToString(pointer, encoding )
-            if JSON.isoct
-                [fid, msg] = fopen(pointer, 'r');
-            else
-                [fid, msg] = fopen(pointer, 'r', 'l', encoding);
-            end
-            
-            if fid == -1
-                % TODO: Do not throw here
-                error('Could not open %s: %s', pointer, msg);
-            end
-            
-            text = fscanf(fid, '%c');
-            fclose(fid);
-        end
+%         function text = ___readFileToString(pointer, encoding )
+%             if JSON.isoct
+%                 [fid, msg] = fopen(pointer, 'r');
+%             else
+%                 [fid, msg] = fopen(pointer, 'r', 'l', encoding);
+%             end
+%             
+%             if fid == -1
+%                 % TODO: Do not throw here
+%                 error('Could not open %s: %s', pointer, msg);
+%             end
+%             
+%             text = fscanf(fid, '%c');
+%             fclose(fid);
+%         end
         
         function [s, err] = datenum2string(n)
             if ~isnumeric(n) || rem(n, 1)~=0

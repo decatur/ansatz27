@@ -362,7 +362,7 @@
             }
         </schema>
         <json>{}</json>
-        <errors>{[] 'Cyclic references file:/home/wolle/ansatz27/test/cyclicSchema.json#/definitions/barType -> file:/home/wolle/ansatz27/test/cyclicSchema.json#/properties/bar' ''}</errors>
+        <errors>{[] 'Cyclic references BASE_URI/cyclicSchema.json#/definitions/barType -> BASE_URI/cyclicSchema.json#/properties/bar' ''}</errors>
     </test>
     <test>
         <description>Format validation on stringify</description>

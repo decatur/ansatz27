@@ -14,7 +14,6 @@ classdef TestCase < handle
         function this = TestCase()
         end
 
-
         function assertEqual(this, actual, expected)
             msg = 'TestCase failed';
             if isempty(expected)

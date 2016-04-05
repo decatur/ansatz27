@@ -2,8 +2,8 @@ classdef TestBase < TestCase
 
 properties
     fileName
-    tests
     absdir
+    baseURI
 end
 
 methods
@@ -12,6 +12,12 @@ function this = TestBase(fileName)
     this.fileName = fileName;
     this.absdir = fileparts(which(fileName));
     this.absdir = strrep(this.absdir, '\', '/');
+    if this.absdir(1) ~= '/'
+        prefix = '/';
+    else
+        prefix = '';
+    end
+    this.baseURI =  ['file:' prefix this.absdir];
 end
 
 function exec(this, description)
@@ -44,15 +50,23 @@ function text = getElementText(this, parentNode, tagName)
     else
         text = char(nodeList.item(0).getTextContent());
         %text = regexprep(text, '^[^\n]*\n', '');
-        text = regexprep(text, '\s*$', '');
-        [a indentLength] = regexp(text, '^\n\s*', 'once');
-        text = regexprep(text, sprintf('\n\\s{%i}', indentLength-1), '\n');
+        %text = regexprep(text, '\s*$', '');
+        %[~, indentLength] = regexp(text, '^\n\s*', 'once');
+        %text = regexprep(text, sprintf('\n\\s{%i}', indentLength-1), '\n');
         %text = regexprep(text, '    ', '  ');
-        text = regexprep(text, '^\n', '');
+        %text = regexprep(text, '^\n', '');
 
-        if strcmp(tagName, 'schema')
-            text = strrep(text, 'BASE_URI', ['file:' this.absdir]);
+        text = strrep(text, 'BASE_URI', this.baseURI);
+
+        if strcmp(tagName, 'matlab')
+            if isempty(regexp(text, '^\s*a\s*=', 'once'))
+                text = eval(text);
+            else
+                eval(text);
+                text = a;
+            end
         end
+
     end
 end
 

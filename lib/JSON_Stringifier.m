@@ -99,7 +99,7 @@ classdef JSON_Stringifier < JSON
             format = JSON.getPath(schema, '/format');
             if this.formatters.isKey(format)
                 formatter = this.formatters(format);
-                [value errMsg] = formatter(value);
+                [value, errMsg] = formatter(value);
                 if ~isempty(errMsg)
                     this.addError(context.pointer, errMsg, value);
                 end
@@ -109,7 +109,7 @@ classdef JSON_Stringifier < JSON
             if isempty(schema)
                 type = {};
             else
-                assert(isa(schema, 'Map'));
+                assert(JSON.isaMap(schema));
                 type = schema('type');
             end
 
@@ -131,7 +131,7 @@ classdef JSON_Stringifier < JSON
                 json = this.string2json(value);
             elseif iscell(value)
                 json = this.objArray2json(value, context, schema);
-            elseif isstruct(value) || isa(value, 'Map')
+            elseif isstruct(value) || JSON.isaMap(value)
                 if isarray
                     json = this.objArray2json(value, context, schema);
                 else
@@ -163,7 +163,7 @@ classdef JSON_Stringifier < JSON
         end
         
         function fmt = numberFormat(this, schema)
-            if isa(schema, 'Map') && schema.isKey('fixedPrecision') && isnumeric(schema('fixedPrecision'))
+            if JSON.isaMap(schema) && schema.isKey('fixedPrecision') && isnumeric(schema('fixedPrecision'))
                 % Note: '%.nf' means n number of digits to the right of the decimal point
                 fmt = sprintf('%%.%if', fix(schema('fixedPrecision')));
             else
@@ -173,7 +173,7 @@ classdef JSON_Stringifier < JSON
         end
         
         function txt = object2json(this, value, context, schema)
-            assert(isstruct(value) || isa(value, 'Map'));
+            assert(isstruct(value) || JSON.isaMap(value));
             
             txt = sprintf('{%s', this.nl);
             mind = context.gap;

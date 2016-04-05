@@ -8,21 +8,14 @@ classdef TestValidation < TestBase
 
         function execSingle(this, test)
 
-            code = this.getElementText(test, 'matlab');
+            matlab = this.getElementText(test, 'matlab');
             schema = this.getElementText(test, 'schema');
             jsonExpected = this.getElementText(test, 'json');
             errorText = this.getElementText(test, 'errors');
             expectedErrors = eval(['{' strrep(errorText, sprintf('\n'), ' ') '}']);
             
-            if ~isempty(code)
-                fprintf(1, '\t\tstringify ... ');
-                if isempty(regexp(code, '^a\s*=', 'once'))
-                    a = eval(code);
-                else
-                    eval(code);
-                end 
-
-                [jsonActual, actualErrors] = JSON.stringify(a, schema, 0);
+            if ~isempty(matlab)
+                [jsonActual, actualErrors] = JSON.stringify(matlab, schema, 0);
                 for l=1:length(actualErrors)
                     actualErrors{l} = actualErrors{l}(1:end-1);
                 end

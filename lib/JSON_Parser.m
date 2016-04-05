@@ -39,7 +39,6 @@ classdef JSON_Parser < JSON
             end
 
             this.errors = {};
-            value = [];
 
             if nargin < 3
                 rootschema = [];
@@ -124,7 +123,7 @@ classdef JSON_Parser < JSON
                     v = this.parse_value(subContext);
                     
                     if isstruct(val)
-                        if 1 == regexp(key, '^[a-z][a-z0-9_]*$', 'ignorecase')
+                        if ~isempty(regexp(key, '^[a-z][a-z0-9_]*$', 'ignorecase'))
                             val.(key) = v;
                         end
                     else
@@ -200,24 +199,24 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function vec = json1D2array(this, pointer)
-            s = this.json(this.pos:end); % '[1, 2, 3]...'
-
-            endPos = strchr(s, ']', 1);
-            s = strtrim(s(2:endPos-1));
-            s = strrep(s, 'null', 'NaN');
-
-            [vec, COUNT, ERRMSG, POS] = sscanf(s, '%g,');
-
-            if POS ~= length(s)+1
-                vec = [];
-                return 
-            end
-
-            this.pos = this.pos + endPos;
-            this.skip_whitespace();
-            vec = vec';
-        end
+%         function vec = json1D2array(this, pointer)
+%             s = this.json(this.pos:end); % '[1, 2, 3]...'
+% 
+%             endPos = strchr(s, ']', 1);
+%             s = strtrim(s(2:endPos-1));
+%             s = strrep(s, 'null', 'NaN');
+% 
+%             [vec, COUNT, ERRMSG, POS] = sscanf(s, '%g,');
+% 
+%             if POS ~= length(s)+1
+%                 vec = [];
+%                 return 
+%             end
+% 
+%             this.pos = this.pos + endPos;
+%             this.skip_whitespace();
+%             vec = vec';
+%         end
         
         function parse_char(this, c)
             this.skip_whitespace();
@@ -323,7 +322,7 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function num = parse_number(this, context)
+        function num = parse_number(this)
             [num, count, ~, nextIndex] = sscanf(this.json(this.pos: end), '%f', 1);
             
             if count ~= 1
@@ -359,7 +358,7 @@ classdef JSON_Parser < JSON
                         val = JSON_Parser.mergeDefaults(val, schema);
                     end
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
-                    val = this.parse_number(context);
+                    val = this.parse_number();
                 case 't'
                     if this.pos+3 <= this.len && strcmp(this.json(this.pos:this.pos+3), 'true')
                         val = true;
@@ -393,7 +392,7 @@ classdef JSON_Parser < JSON
                 format = JSON.getPath(schema, '/format');
                 if this.formatters.isKey(format)
                     formatter = this.formatters(format);
-                    [val errMsg] = formatter(val);
+                    [val, errMsg] = formatter(val);
                     if ~isempty(errMsg)
                         this.addError(context.pointer, errMsg, val);
                     end
@@ -402,8 +401,8 @@ classdef JSON_Parser < JSON
         end
         
         function error_pos(this, msg)
-            msg = sprintf('%s line %i, column %i', msg, this.lineCount, this.pos-this.posCurrentNewline);
-            error('JSON:PARSE_JSON', msg);
+            error('JSON:PARSE_JSON', '%s line %i, column %i', ...
+                msg, this.lineCount, this.pos-this.posCurrentNewline);
         end
         
     end
@@ -424,7 +423,7 @@ classdef JSON_Parser < JSON
 
             while iscell(cc)
                 dims = [dims length(cc)];
-                if length(cc) > 0
+                if ~isempty(cc)
                     cc = cc{1};
                 else
                     break;
@@ -435,11 +434,10 @@ classdef JSON_Parser < JSON
                 dims = [1 dims];
             end
 
-            m = inf(dims(:));
+            m = inf(dims(:)');
 
             hasLogical = false;
             hasNumeric = false;
-            cc = c;
             stack = {c};
             ind = {1};
 
@@ -482,9 +480,9 @@ classdef JSON_Parser < JSON
             if any(isinf(m(:)))
                m = c;
             elseif hasNumeric && hasLogical
-                m=c 
+                m = c;
             elseif hasLogical
-                l = true(dims(:));
+                l = true(dims(:)');
                 l(~m) = false;
                 m = l;
             end
@@ -492,7 +490,7 @@ classdef JSON_Parser < JSON
         end
 
         function mergedObject = mergeDefaults(object, schema)
-            assert(isstruct(object) || isa(object, 'Map'));
+            assert(isstruct(object) || JSON.isaMap(object));
 
             if isstruct(object)
                 s = fieldnames(object);
@@ -503,7 +501,7 @@ classdef JSON_Parser < JSON
             mergedObject = object;
 
             props = JSON.getPath(schema, '/properties');
-            if ~isa(props, 'Map')
+            if ~JSON.isaMap(props)
                 return
             end
 

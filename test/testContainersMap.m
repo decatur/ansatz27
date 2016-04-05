@@ -10,10 +10,11 @@ assert(JSON.getPath(obj, '/') == 14)
 assert(JSON.getPath(obj, '/foobar', 4711) == 4711)
 
 obj = containers.Map();
-c = obj('foo') = containers.Map();
+obj('foo') = containers.Map();
+c = obj('foo');
 c('bar') = {1 2 3};
 JSON.setPath(obj, '/foo/bar/1', 42);
-assert(JSON.getPath(obj, '/foo/bar/1'), 42);
+assert(JSON.getPath(obj, '/foo/bar/1') == 42);
 
 obj = JSON.setPath({1 2 3 4}, '/1', 42);
 assert(isequal(obj, {1 42 3 4}));
