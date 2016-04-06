@@ -1,6 +1,6 @@
 A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
 
-[](docs/roundtrip.png)
+![Roundtrip MATLAB to JSON](/docs/roundtrip.png?raw=true)
 
 ansatz27 lets you
 * read and write JSON streams with a predictable behavior,
@@ -40,7 +40,6 @@ JSON Schema is itself defined in JSON and can be parsed into a MATLAB object.
 # Usage
 
 [//]: # "Usage"
-*MATLAB*
 ```MATLAB
 
 addpath('lib', 'test');
@@ -108,7 +107,7 @@ obj = struct('foo', 1, 'bar', 2);
     </tr>
     <tr>
         <td>default</td>
-        <td>See <a href="defaults">Defaults</a>/td>
+        <td>See <a href="#defaults">Defaults</a></td>
     </tr>
     <tr>
         <td>format</td>
@@ -125,7 +124,7 @@ obj = struct('foo', 1, 'bar', 2);
     <tr>
         <td>id</td>
         <td>
-            Scope resolution alteration is fully supported, see <a href="uri-resolution">URI Resolution</a>.
+            Scope resolution alteration is fully supported, see <a href="#uri-resolution">URI Resolution</a>.
             Note: ansatz27 does not use inline dereferencing.
         </td>
     </tr>
@@ -708,6 +707,7 @@ For each validation error one item in the `errors` cell array is generated:
             }
         
 ```
+*Errors*
 ```MATLAB
 
             {'/b' 'is not a date' '2016-01-01T12:00:00Z'}
@@ -764,7 +764,7 @@ TODO: Do these apply
 
 # Improvements by Priority
 1. Support id keyword
-1 Support http(s) via urlread(). Note that Octave uses libcurl, which supports, among others, the HTTP, FTP and FILE 
+1. Support http(s) via urlread(). Note that Octave uses libcurl, which supports, among others, the HTTP, FTP and FILE 
 1. Check enum values for uniquness
 1. Support mixed type enum
 1. Better parse error for {"foo":1,}
