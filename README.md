@@ -9,7 +9,7 @@ ansatz27 lets you
 
 There is no one-to-one correspondence between JSON and MATLAB data types.
 Even the number `1` is a 2-dimensional matrix in MATLAB, and could translate to a JSON type of `number`, `array of number` or `array of array of number`.
-ansatz27 uses [JSON Schema](http://json-schema.org) to coerce JSON and MATLAB data types consistiently and to validate the data.
+ansatz27 uses [JSON Schema](http://json-schema.org) to coerce JSON and MATLAB data types consistently and to validate the data.
 
 # Requirements
 GNU Octave version minimum 4.0 or MATLAB about version 2006 (verified for 2013b).
@@ -142,60 +142,60 @@ json = JSON.stringify(obj);
 *MATLAB*
 ```MATLAB
 
-            a = struct('id', '4711');
-            a.portfolio.index = 3;
-            a.portfolio.value = 4.32;
-            a.deals = struct( 'name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42} );
-            a.dealValues = [13.13 42.42];
-        
+a = struct('id', '4711');
+a.portfolio.index = 3;
+a.portfolio.value = 4.32;
+a.deals = struct( 'name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42} );
+a.dealValues = [13.13 42.42];
+
 ```
 *JSON*
 ```JSON
 
-            {
-                "id": "4711",
-                "portfolio": {
-                    "index": 3,
-                    "value": 4.32
-                },
-                "deals": [
-                    { "name": "DEAL-A", "value": 13.13 },
-                    { "name": "DEAL-B", "value": 42.42 }
-                ],
-                "dealValues": [ 13.13, 42.42 ]
-            }
-        
+{
+    "id": "4711",
+    "portfolio": {
+        "index": 3,
+        "value": 4.32
+    },
+    "deals": [
+        { "name": "DEAL-A", "value": 13.13 },
+        { "name": "DEAL-B", "value": 42.42 }
+    ],
+    "dealValues": [ 13.13, 42.42 ]
+}
+
 ```
 *Schema*
 ```JSON
 
-            {
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "portfolio": {
+            "type": "object",
+            "properties": {
+                "index": { "type": "integer", "minimum": 1 },
+                "value": { "type": "number" }
+            }
+        },
+        "deals": {
+            "type": "array",
+            "items": {
                 "type": "object",
+                "additionalProperties": false,
                 "properties": {
-                    "id": {
-                        "type": "string"
-                    },
-                    "portfolio": {
-                        "type": "object",
-                        "properties": {
-                            "index": { "type": "integer", "minimum": 1 },
-                            "value": { "type": "number" }
-                        }
-                    },
-                    "deals": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                                "name":  { "type": "string", "pattern": "^DEAL-\\w+$" },
-                                "value": { "type": "number", "minimum": 0 }
-                            }
-                        }
-                    }
+                    "name":  { "type": "string", "pattern": "^DEAL-\\w+$" },
+                    "value": { "type": "number", "minimum": 0 }
                 }
             }
-        
+        }
+    }
+}
+
 ```
 [//]: # "Comprehensive Roundtrip Example"
 
@@ -305,26 +305,26 @@ struct('foo', {1 2}, 'bar', {3 4})
 *Schema*
 ```JSON
 
-            {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "foo": {},
-                        "bar": {}
-                    }
-                }
-            }
-        
+{
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "foo": {},
+            "bar": {}
+        }
+    }
+}
+
 ```
 *JSON*
 ```JSON
 
-            [
-                {"foo":1,"bar":3},
-                {"foo":2,"bar":4}
-            ]
-        
+[
+    {"foo":1,"bar":3},
+    {"foo":2,"bar":4}
+]
+
 ```
 [//]: # "Roundtrip Structured Array"
 
@@ -342,16 +342,16 @@ A JSON array is coerced to a numeric matrix if
 *Schema*
 ```JSON
 
-            {
-                "type": "array",
-                "items": {
-                    "type": "array",
-                    "items": {
-                        "type": ["number", "null"]
-                    }
-                }
-            }
-        
+{
+    "type": "array",
+    "items": {
+        "type": "array",
+        "items": {
+            "type": ["number", "null"]
+        }
+    }
+}
+
 ```
 *JSON*
 ```JSON
@@ -363,19 +363,19 @@ A JSON array is coerced to a numeric matrix if
 *MATLAB*
 ```MATLAB
 
-            a = NaN(2,2,2);
-            a(1,:,:) = [1 2; 3 4];
-            a(2,:,:) = [5 6; 7 8];
-        
+a = NaN(2,2,2);
+a(1,:,:) = [1 2; 3 4];
+a(2,:,:) = [5 6; 7 8];
+
 ```
 *JSON*
 ```JSON
 
-    [
-        [ [1,2], [3,4] ],
-        [ [5,6], [7,8] ]
-    ]
-        
+[
+    [ [1,2], [3,4] ],
+    [ [5,6], [7,8] ]
+]
+
 ```
 [//]: # "Roundtrip 3D Matrix"
 
@@ -387,38 +387,38 @@ The two predefined formatters `date` and `date-time` coerce string dates to nume
 *MATLAB*
 ```MATLAB
 
-            struct( ...
-                'myDate', 1+datenum('2016-01-02'), ...
-                'myDateTime', 1.5+datenum('2016-01-02') ...
-            )
-        
+struct( ...
+    'myDate', 1+datenum('2016-01-02'), ...
+    'myDateTime', 1.5+datenum('2016-01-02') ...
+)
+
 ```
 *Schema*
 ```JSON
 
-            {
-                "type": "object",
-                "properties": {
-                    "myDate": { 
-                        "type": "string",
-                        "format": "date"
-                    },
-                    "myDateTime": { 
-                        "type": "string",
-                        "format": "date-time"
-                    }
-                }
-            }
-        
+{
+    "type": "object",
+    "properties": {
+        "myDate": { 
+            "type": "string",
+            "format": "date"
+        },
+        "myDateTime": { 
+            "type": "string",
+            "format": "date-time"
+        }
+    }
+}
+
 ```
 *JSON*
 ```JSON
 
-            {
-                "myDate":"2016-01-03",
-                "myDateTime":"2016-01-03T12:00:00+01:00"
-            }
-        
+{
+    "myDate":"2016-01-03",
+    "myDateTime":"2016-01-03T12:00:00+01:00"
+}
+
 ```
 [//]: # "Roundtrip Date Formater"
 
@@ -436,23 +436,23 @@ struct('foo', {1 2}, 'bar', {3 4})
 *JSON*
 ```JSON
 
-            [ { "foo": 1 }, { "foo": 2, "bar": 4 } ]
-        
+[ { "foo": 1 }, { "foo": 2, "bar": 4 } ]
+
 ```
 *Schema*
 ```JSON
 
-            {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "foo": {},
-                        "bar": { "type": "number", "default": 3 }
-                    }
-                }
-            }
-        
+{
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "foo": {},
+            "bar": { "type": "number", "default": 3 }
+        }
+    }
+}
+
 ```
 [//]: # "Structured Array with Defaults"
 
@@ -463,36 +463,36 @@ struct('foo', {1 2}, 'bar', {3 4})
 *MATLAB*
 ```MATLAB
 
-            [
-                [736330 736360 13.13]
-                [736361 736389 42.42]
-            ]
-        
+[
+    [736330 736360 13.13]
+    [736361 736389 42.42]
+]
+
 ```
 *Schema*
 ```JSON
 
-            {
-                "type": "array",
-                "items": {
-                    "type": "array",
-                    "items": [
-                        {"type": "string", "format": "date"},
-                        {"type": "string", "format": "date"},
-                        {"type": ["number", "null"] }
-                    ]
-                }
-            }
-        
+{
+    "type": "array",
+    "items": {
+        "type": "array",
+        "items": [
+            {"type": "string", "format": "date"},
+            {"type": "string", "format": "date"},
+            {"type": ["number", "null"] }
+        ]
+    }
+}
+
 ```
 *JSON*
 ```JSON
 
-            [
-                ["2016-01-01", "2016-01-31", 13.13],
-                ["2016-02-01", "2016-02-29", 42.42]
-            ]
-        
+[
+    ["2016-01-01", "2016-01-31", 13.13],
+    ["2016-02-01", "2016-02-29", 42.42]
+]
+
 ```
 [//]: # "List of From-Fill-Value Tripples"
 
@@ -501,53 +501,53 @@ struct('foo', {1 2}, 'bar', {3 4})
 *MATLAB*
 ```MATLAB
 
-                struct( ...
-                    'shipping_address', ...
-                        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
-                    'billing_address', ...
-                    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
-        
+struct( ...
+    'shipping_address', ...
+        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
+    'billing_address', ...
+    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
+
 ```
 *Schema*
 ```JSON
 
-            {
-                "$schema": "http://json-schema.org/draft-04/schema#",
-                "definitions": {
-                    "address": {
-                        "type": "object",
-                        "properties": {
-                            "street_address": { "type": "string" },
-                            "city":           { "type": "string" },
-                            "state":          { "type": "string" }
-                        },
-                        "required": ["street_address", "city", "state"]
-                    }
-                },
-                "type": "object",
-                "properties": {
-                    "billing_address":  { "$ref": "#/definitions/address" },
-                    "shipping_address": { "$ref": "#/definitions/address" }
-                }
-            }
-        
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "definitions": {
+        "address": {
+            "type": "object",
+            "properties": {
+                "street_address": { "type": "string" },
+                "city":           { "type": "string" },
+                "state":          { "type": "string" }
+            },
+            "required": ["street_address", "city", "state"]
+        }
+    },
+    "type": "object",
+    "properties": {
+        "billing_address":  { "$ref": "#/definitions/address" },
+        "shipping_address": { "$ref": "#/definitions/address" }
+    }
+}
+
 ```
 *JSON*
 ```JSON
 
-            {
-                "shipping_address": {
-                    "street_address": "1600 Pennsylvania Avenue NW",
-                    "city":           "Washington",
-                    "state":          "DC"
-                },
-                "billing_address": {
-                    "street_address": "1st Street SE",
-                    "city":           "Washington",
-                    "state":          "DC"
-                }
-            }
-        
+{
+    "shipping_address": {
+        "street_address": "1600 Pennsylvania Avenue NW",
+        "city":           "Washington",
+        "state":          "DC"
+    },
+    "billing_address": {
+        "street_address": "1st Street SE",
+        "city":           "Washington",
+        "state":          "DC"
+    }
+}
+
 ```
 [//]: # "Reuse with Schema References"
 
@@ -557,45 +557,45 @@ struct('foo', {1 2}, 'bar', {3 4})
 *MATLAB*
 ```MATLAB
 
-            struct( ...
-                'id', '4711', ...
-                'foo', 2, ...
-                'bar', 'DEF_VAL')
-        
+struct( ...
+    'id', '4711', ...
+    'foo', 2, ...
+    'bar', 'DEF_VAL')
+
 ```
 *Schema*
 ```JSON
 
-            {
-                "allOf": [
-                    {
-                        "$ref": "BASE_URI/schema2.json"
-                    },
-                    {
-                        "type": "object",
-                        "required": ["id"],
-                        "properties": {
-                            "id": {
-                                "type": "string"
-                            },
-                            "foo": {
-                                "type": "number"
-                            }
-                        }
-                    }
-                ]
+{
+    "allOf": [
+        {
+            "$ref": "BASE_URI/schema2.json"
+        },
+        {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "foo": {
+                    "type": "number"
+                }
             }
-        
+        }
+    ]
+}
+
 ```
 *JSON*
 ```JSON
 
-            {
-                "id":"4711",
-                "foo":2,
-                "bar":"DEF_VAL"
-            }
-        
+{
+    "id":"4711",
+    "foo":2,
+    "bar":"DEF_VAL"
+}
+
 ```
 [//]: # "Schema Inheritance with allOf"
 
@@ -608,38 +608,38 @@ In practice you should consider not to use dictionaries, use arrays and some ext
 *MATLAB*
 ```MATLAB
 
-            a = containers.Map();
-            a('DEAL-A')  = struct('start', 736409, 'value', 1);
-            a('DEAL-XY') = struct('start', 736410, 'value', 2);
-            a('DEAL-Z')  = struct('start', 736411, 'value', 3);
-        
+a = containers.Map();
+a('DEAL-A')  = struct('start', 736409, 'value', 1);
+a('DEAL-XY') = struct('start', 736410, 'value', 2);
+a('DEAL-Z')  = struct('start', 736411, 'value', 3);
+
 ```
 *Schema*
 ```JSON
 
-            {
-                "type": "object",
-                "format": "Map",
-                "patternProperties": {
-                    "^DEAL-[A-Z]+$": { 
-                        "type": "object",
-                        "properties": {
-                            "start": { "type": "string", "format": "date" }
-                        }
-                    }
-                }
+{
+    "type": "object",
+    "format": "Map",
+    "patternProperties": {
+        "^DEAL-[A-Z]+$": { 
+            "type": "object",
+            "properties": {
+                "start": { "type": "string", "format": "date" }
             }
-        
+        }
+    }
+}
+
 ```
 *JSON*
 ```JSON
 
-            {
-                "DEAL-A" : { "start": "2016-03-20", "value": 1 },
-                "DEAL-XY": { "start": "2016-03-21", "value": 2 },
-                "DEAL-Z" : { "start": "2016-03-22", "value": 3 }
-            }
-        
+{
+    "DEAL-A" : { "start": "2016-03-20", "value": 1 },
+    "DEAL-XY": { "start": "2016-03-21", "value": 2 },
+    "DEAL-Z" : { "start": "2016-03-22", "value": 3 }
+}
+
 ```
 [//]: # "Dictionary"
 
@@ -673,35 +673,35 @@ For each validation error one item in the `errors` cell array is generated:
 *Schema*
 ```JSON
 
-            {
-                "type": "object",
-                "properties": {
-                    "a": { "type": "string", "format": "date" },
-                    "b": { "type": "string", "format": "date" },
-                    "c": { "type": "string", "format": "date-time" },
-                    "d": { "type": "string", "format": "date-time" }
-                }
-            }
-        
+{
+    "type": "object",
+    "properties": {
+        "a": { "type": "string", "format": "date" },
+        "b": { "type": "string", "format": "date" },
+        "c": { "type": "string", "format": "date-time" },
+        "d": { "type": "string", "format": "date-time" }
+    }
+}
+
 ```
 *JSON*
 ```JSON
 
-            {
-                "a": "2016-01-01",
-                "b": "2016-01-01T12:00:00Z",
-                "c": "2016-01-01T12:00:00Z",
-                "d": "2016-01-01T12:00:00Y"
-            }
-        
+{
+    "a": "2016-01-01",
+    "b": "2016-01-01T12:00:00Z",
+    "c": "2016-01-01T12:00:00Z",
+    "d": "2016-01-01T12:00:00Y"
+}
+
 ```
 *Errors*
 ```MATLAB
 
-            {'/b' 'is not a date' '2016-01-01T12:00:00Z'}
-            {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-            {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
-        
+{'/b' 'is not a date' '2016-01-01T12:00:00Z'}
+{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
+
 ```
 [//]: # "Format Validation on Parse"
 
