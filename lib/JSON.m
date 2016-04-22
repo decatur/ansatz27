@@ -88,7 +88,7 @@ classdef JSON < handle
                 schema = [];
                 return;
             else
-                error('Invalid type: %s', class(schema));
+                error('Invalid type for schema: %s', class(schema));
             end
 
             this.resolveSchema(localSchemaCache);
@@ -505,17 +505,16 @@ classdef JSON < handle
 
         function schema = postLoadSchema(this, schema, uri)
             schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
-            schema('uri') = uri;
 
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
                 schema('id') = uri;
             end
 
-            this.normalizeSchema(schema, '', schema('id'));
+            this.normalizeSchema(schema, uri, '', schema('id'));
         end
 
-        function normalizeSchema(this, rootSchema, pointer, resolutionScope)
+        function normalizeSchema(this, rootSchema, uri, pointer, resolutionScope)
         %normalizeSchema traverses the given schema iteratively (depth first) and validates all subschemas.
 
             function addSchema(schema, pointer, resolutionScope)
@@ -564,14 +563,14 @@ classdef JSON < handle
                     schema('$ref') = ref;
 
                     % TODO: Can we do this better in MATLAB? With Octave this works:
-                    %   ref = struct('uri', rootSchema('uri'), 'pointer', pointer, 'ref', ref);
+                    %   ref = struct('uri', uri, 'pointer', pointer, 'ref', ref);
                     %   ref.hist = {};
                     %   this.unresolvedRefs(end+1) = ref;
-                    this.unresolvedRefs(end+1).uri = rootSchema('uri');
+                    this.unresolvedRefs(end+1).uri = uri;
                     this.unresolvedRefs(end).pointer = pointer;
                     this.unresolvedRefs(end).ref = ref; 
                     this.unresolvedRefs(end).hist = {};
-                    JSON.log('DEBUG', 'Add new reference uri[%s] pointer[%s] ref[%s]', rootSchema('uri'), pointer, ref);
+                    JSON.log('DEBUG', 'Add new reference uri[%s] pointer[%s] ref[%s]', uri, pointer, ref);
                 end
 
                 if schema.isKey('id') && ~isempty(schema('id'))

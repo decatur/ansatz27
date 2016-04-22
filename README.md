@@ -21,41 +21,23 @@ There are no dependencies.
 
 You can validated JSON by JSON Schema online with [jsonschemalint](http://jsonschemalint.com/draft4)
 
-
-# JSON Schema and Type Coersion
-
-For all use cases of ansatz27, schemas are optional. However, their use is strongly encouraged.
-
-Without schemas, roundtripping may break structure, for example
-
-|     JSON   ->  |     MATLAB   ->  |   JSON       |
-|----------------|------------------|--------------|
-| { "foo": [1] } | struct('foo', 1) | { "foo": 1 } |
-
-
-
-
-JSON Schema is itself defined in JSON and can be parsed into a MATLAB object.
-
 # Usage
 
-[//]: # "Usage"
+[//]: # "test/testUsage.m"
 ```MATLAB
-
 addpath('lib', 'test');
 
-schema = struct('type', 'object');
+jsonOrFilepath = 'document.json';
+[obj, errors] = JSON.parse(jsonOrFilepath, 'schema.json');
 
-[obj, errors] = JSON.parse('file:document.json', 'file:schema.json');
-[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', schema);
+obj = containers.Map();
+obj('foo') = struct('bar', 13);
+obj('bar') = {'foo' 'bar'};
 
-obj = struct('foo', 1, 'bar', 2);
-[json, errors] = JSON.stringify(obj, 'file:schema.json');
-[json, errors] = JSON.stringify(obj, schema);
-        
+json = JSON.stringify(obj);
+[json, errors] = JSON.stringify(obj, 'schema.json');
 ```
-
-[//]: # "Usage"
+[//]: # "test/testUsage.m"
 
 # Conformance with JSON Schema Specification
 
@@ -215,8 +197,53 @@ obj = struct('foo', 1, 'bar', 2);
             }
         
 ```
-
 [//]: # "Comprehensive Roundtrip Example"
+
+# Type Coersion
+
+## Type Coersion on Parse
+
+|     JSON          |     Schema                    |      MATLAB               |
+|-------------------|-------------------------------|---------------------------|
+| number/integer    | none\|type=number\|integer    | 1x1 numeric matrix        |
+| string            | format=date(-time)            | 1x1 numeric matrix datnum |
+| string            | other formats                 | char array                |
+| boolean           | none\|type=boolean            | 1x1 boolean matrix        |
+| object            | format=struct (default)       | struct                    |
+| object            | format=Map                    | containers.Map            |
+| array             | format=structured-array and item type=object | structured-array |
+| array             | array is uniform (hypercube) and all leafs are numeric | numeric matrix |
+| array             | otherwise                     | cell array                |
+| null              | none\|type=null               | 1x1 NaN                   |
+
+Note: The coersion to struct will simply drop all properties with invalid field names.
+The coersion to Map will retain all properties. 
+
+[//]: # "Non-MATLAB Keys"
+*JSON*
+```JSON
+{ "Hello": "World", "$ref": 2 }
+```
+*MATLAB*
+```MATLAB
+struct('Hello', 'World')
+```
+[//]: # "Non-MATLAB Keys"
+
+## Type Coersion on Stringify
+
+|     MATLAB            |     Schema                            |   JSON            |
+|-----------------------|---------------------------------------|-------------------|
+| 1x1 numeric matrix    | none\|type=number\|integer            | number/integer    |
+| 1x1 numeric matrix    | type=string and format=date(-time)    | string            |
+| numeric matrix        | none\|type=array                      | array             |
+| char array            | none\|string                          | string            |
+| 1x1 boolean matrix    | none\|type=boolean                    | boolean           |
+| boolean matrix        | none\|type=array                      | array             |
+| struct                | none\|type=object                     | object            |
+| containers.Map        | none\|type=object                     | object            |
+| NaN                   | none\|type=null                       | null              |
+
 
 # URI Resolution
 
@@ -245,35 +272,6 @@ the resolved URI is `file:/home/decatur/ansatz27/test/schema.json`.
 After resolution the resource is loaded with the Octave/MATLAB `urlread()` function.
 
 In a standalone MATLAB application, be sure to include all schemas relative to your application into the CTF archive with [mcc](http://www.mathworks.com/access/helpdesk/help/toolbox/compiler/mcc.html)'s -a (add) flag.
-
-# Utilities
-
-# JSON.getPath
-
-Retrieve a value inside an object given its [JSON Pointer](See https://tools.ietf.org/html/rfc6901).
-The object may be one of `struct`, `cell array` or `containers.Map`.
-
-```MATLAB
-obj = getPath(obj, pointer, default)
-%GETPATH Returns the value under the pointer.
-% The pointer must be a JSON pointer, so each reference token must be
-% prefixed by / and numerical tokens referencing an array are zero-based.
-% Returns default or empty if the pointer does not resolve.
-```
-
-Example
-
-```MATLAB
-obj = containers.Map();
-obj('foo') = struct('bar', 13);
-obj('bar') = {'foo' 'bar'};
-obj('foo/bar') = 42;                % Not recommended!
-
-JSON.getPath(obj, '/foo/bar')       % -> 13
-JSON.getPath(obj, '/bar/1')         % -> 'bar'
-JSON.getPath(obj, 'foo~1bar')       % -> 42
-JSON.getPath(obj, 'foobar', 4711)   % -> 4711
-```
 
 # Formatter
 
@@ -328,7 +326,6 @@ struct('foo', {1 2}, 'bar', {3 4})
             ]
         
 ```
-
 [//]: # "Roundtrip Structured Array"
 
 ## Numeric Matrix Coercion
@@ -360,7 +357,6 @@ A JSON array is coerced to a numeric matrix if
 ```JSON
 [[1,2,null],[4,-5,6]]
 ```
-
 [//]: # "Roundtrip Numeric Matrix"
 
 [//]: # "Roundtrip 3D Matrix"
@@ -381,7 +377,6 @@ A JSON array is coerced to a numeric matrix if
     ]
         
 ```
-
 [//]: # "Roundtrip 3D Matrix"
 
 # Date Coercion
@@ -425,7 +420,6 @@ The two predefined formatters `date` and `date-time` coerce string dates to nume
             }
         
 ```
-
 [//]: # "Roundtrip Date Formater"
 
 # Defaults
@@ -460,7 +454,6 @@ struct('foo', {1 2}, 'bar', {3 4})
             }
         
 ```
-
 [//]: # "Structured Array with Defaults"
 
 # Typical Use Cases
@@ -501,7 +494,6 @@ struct('foo', {1 2}, 'bar', {3 4})
             ]
         
 ```
-
 [//]: # "List of From-Fill-Value Tripples"
 
 ## Reuse with Schema References
@@ -557,7 +549,6 @@ struct('foo', {1 2}, 'bar', {3 4})
             }
         
 ```
-
 [//]: # "Reuse with Schema References"
 
 ## Schema Inheritance with allOf
@@ -578,7 +569,7 @@ struct('foo', {1 2}, 'bar', {3 4})
             {
                 "allOf": [
                     {
-                        "$ref": "schema2.json"
+                        "$ref": "BASE_URI/schema2.json"
                     },
                     {
                         "type": "object",
@@ -606,7 +597,6 @@ struct('foo', {1 2}, 'bar', {3 4})
             }
         
 ```
-
 [//]: # "Schema Inheritance with allOf"
 
 ## Dictionary
@@ -618,10 +608,10 @@ In practice you should consider not to use dictionaries, use arrays and some ext
 *MATLAB*
 ```MATLAB
 
-            a = struct();
-            a.DEAL_A = struct('start', 736409);
-            a.DEAL_XY = struct('start', 736410);
-            a.DEAL_Z = struct('start', 736411);
+            a = containers.Map();
+            a('DEAL-A')  = struct('start', 736409, 'value', 1);
+            a('DEAL-XY') = struct('start', 736410, 'value', 2);
+            a('DEAL-Z')  = struct('start', 736411, 'value', 3);
         
 ```
 *Schema*
@@ -629,8 +619,9 @@ In practice you should consider not to use dictionaries, use arrays and some ext
 
             {
                 "type": "object",
+                "format": "Map",
                 "patternProperties": {
-                    "^DEAL_[A-Z]+$": { 
+                    "^DEAL-[A-Z]+$": { 
                         "type": "object",
                         "properties": {
                             "start": { "type": "string", "format": "date" }
@@ -644,22 +635,18 @@ In practice you should consider not to use dictionaries, use arrays and some ext
 ```JSON
 
             {
-                "DEAL_A": { "start": "2016-03-20" },
-                "DEAL_XY": { "start": "2016-03-21" },
-                "DEAL_Z": { "start": "2016-03-22" }
+                "DEAL-A" : { "start": "2016-03-20", "value": 1 },
+                "DEAL-XY": { "start": "2016-03-21", "value": 2 },
+                "DEAL-Z" : { "start": "2016-03-22", "value": 3 }
             }
         
 ```
-
 [//]: # "Dictionary"
 
 # Validation by Schema
 
 Appart from type coercion, schemas are used to validate the input to `parse` or `stringify`.
 Validation errors are returned by these methods, see [Usage](#usage).
-It is best practise to *always* check for errors and to discard the input if errors have occured:
-
-[//]: # "Error Handling"
 
 ## Expected Errors
 All errors related to input data are reported in the second return value of `JSON.parse()` and `JSON.stringify()`.
@@ -670,14 +657,15 @@ These include
 
 *Note*: The persistent schema cache is only written after schemas are successfully resolved. Therefore the cache will only hold valid schemas.
 
-Always check the `errors` output like so
+It is best practise to *always* check for errors and to discard the input if errors have occured:
+[//]: # "test/testErrorHandling.m"
 ```MATLAB
 [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'schema.json');
 if ~isempty(errors)
     % Report errors and stop processing
 end
 ```
-[//]: # "Error Handling"
+[//]: # "test/testErrorHandling.m"
 
 For each validation error one item in the `errors` cell array is generated:
 
@@ -715,7 +703,6 @@ For each validation error one item in the `errors` cell array is generated:
             {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
         
 ```
-
 [//]: # "Format Validation on Parse"
 
 ## Unhandled Errors
@@ -724,37 +711,49 @@ the method is called with an invalid argument type such as `JSON.parse(struct())
 
 In all other cases an unhandled error is *always* a bug in ansatz27. Please report it!
 
-# Advanced Usage
 
-## Non-MATLAB Keys in Objects
+# Utilities
 
-Object keys which are not valid MATLAB variable names are dropped, for example
+## JSON.getPath
 
-[//]: # "Non-MATLAB Keys"
-*JSON*
-```JSON
-{ "H@ll@": 1, "$ref": 2 }
-```
-*MATLAB*
+Retrieve a value inside an object given its [JSON Pointer](See https://tools.ietf.org/html/rfc6901).
+The object may be one of `struct`, `cell array` or `containers.Map`.
+
 ```MATLAB
-struct()
+obj = getPath(obj, pointer, default)
+%GETPATH Returns the value under the pointer.
+% The pointer must be a JSON pointer, so each reference token must be
+% prefixed by / and numerical tokens referencing an array are zero-based.
+% Returns default or empty if the pointer does not resolve.
 ```
 
-[//]: # "Non-MATLAB Keys"
+Example
 
-# Error Handling
+```MATLAB
+obj = containers.Map();
+obj('foo') = struct('bar', 13);
+obj('bar') = {'foo' 'bar'};
+obj('foo/bar') = 42;                % Not recommended!
 
+JSON.getPath(obj, '/foo/bar')       % -> 13
+JSON.getPath(obj, '/bar/1')         % -> 'bar'
+JSON.getPath(obj, 'foo~1bar')       % -> 42
+JSON.getPath(obj, 'foobar', 4711)   % -> 4711
+```
 
 # Security Considerations
 
-TODO: Do these apply
-* DoS like [billion laughs](https://en.wikipedia.org/wiki/Billion_laughs)
-* External entity expansion
-* External schema resolution
+The parse time of a JSON-document is proportional to its size. There is the possibility
+of a DoS with a mild amplification factor.
+
+You must trust the schema creator.
+A schema can reference another external schema. This is then fetched by `urlread()` if network settings allow it.
+The fetched document could contain malicious code, which (although not executed by ansatz27) may reside somewhere in storage.
+Additionally, one can create an effient DoS with many, possibly huge, external schemas.
 
 # Building
 
-1. Execute `tests.m` and fix all errors
+1. Execute `tests.m` and fix all errors.
 2. Execute `build.py` will replace all code fragments in `README.md`.
 
 # Design Decisions
@@ -763,13 +762,12 @@ TODO: Do these apply
 * Local functions cannot call private class member functions in Octave.
 
 # Improvements by Priority
-1. Support id keyword
-1. Support http(s) via urlread(). Note that Octave uses libcurl, which supports, among others, the HTTP, FTP and FILE 
+1. Resolve TODOs
 1. Check enum values for uniquness
 1. Support mixed type enum
-1. Better parse error for {"foo":1,}
 1. Describe Best Practises
 1. Usage with webread() introduced in R2014b, via weboptions('ContentReader', @handler)
 1. ThingSpeak?
 1. Validate keyword multipleOf (integer>0)
 1. Validate exclusiveMinimum/Maximum (min/max must exist)
+1. Use datetime() to coerce date and date-time strings to

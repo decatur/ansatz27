@@ -106,11 +106,10 @@ classdef JSON_Parser < JSON
 
             objectFormat = JSON.getPath(schema, '/format', this.options.objectFormat);
 
-            if strcmp(objectFormat, 'struct')
-                val = struct();
-            else
-                assert(strcmp(objectFormat, 'Map'));
+            if strcmp(objectFormat, 'Map')
                 val = containers.Map();
+            else % default
+                val = struct();
             end
             
             if this.next_char() ~= '}'

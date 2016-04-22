@@ -13,3 +13,7 @@ TestValidation().exec();
 testMisc;
 testDateFormat;
 testContainersMap;
+
+testUsage;
+testErrorHandling;
+testFormaters;
