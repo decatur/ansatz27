@@ -1,3 +1,8 @@
+# Builds the README.md
+# Looks for areas between two markers of the form 
+#   [//]: # "filename(#hash)?"
+# and replaces the text of those areas by the referenced text.
+
 import codecs
 import xml.etree.ElementTree as ET
 import logging
@@ -9,9 +14,6 @@ logging.basicConfig(level=20) # info
 f = codecs.open("README.md", "r", "utf-8")
 readme = f.read()
 f.close()
-
-#def getElementByDescription( root, description ):
-#    return root.find( ".//*[description='%s']" % description )
 
 def mergeText( readme, sep, text ):
     c = readme.split('[//]: # "%s"' % sep)
@@ -66,12 +68,12 @@ xmlRoots['testRoundtrip.xml'] = ET.parse('test/testRoundtrip.xml').getroot()
 xmlRoots['testParse.xml'] = ET.parse('test/testParse.xml').getroot()
 xmlRoots['testValidation.xml'] = ET.parse('test/testValidation.xml').getroot()
 
-seps = re.findall('\[//\]: # ".*"', readme)
-# print(seps)
+# Find all markers and deduplicated
+markers = re.findall('\[//\]: # ".*"', readme)[0::2]
+# print(markers)
 
-for idx, sep in enumerate(seps):
-    if idx%2 == 0:
-        readme = process(readme, sep)
+for marker in markers:
+    readme = process(readme, marker)
 
 f = codecs.open("README1.md", "w", "utf-8")
 f.write(readme)

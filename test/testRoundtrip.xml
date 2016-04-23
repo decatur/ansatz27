@@ -53,6 +53,43 @@
         </schema>
     </test>
     <test>
+        <description>anyOf</description>
+        <matlab>
+            struct('id', '4711', 'foo', 2, 'bar', 'DEF_VAL')
+        </matlab>
+        <schema>
+            {
+                "anyOf": [
+                    {
+                        "type": "number"
+                    },
+                    {
+                        "type": "object",
+                        "required": ["id"],
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "foo": {
+                                "type": "array",
+                                "items": {
+                                    "type": "number"
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        </schema>
+        <json>
+            {
+                "id": "4711",
+                "foo": [2],
+                "bar": "DEF_VAL"
+            }
+        </json>
+    </test>
+    <test>
         <description>Schema Inheritance with allOf</description>
         <matlab>
             struct( ...

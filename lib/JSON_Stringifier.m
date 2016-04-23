@@ -82,7 +82,7 @@ classdef JSON_Stringifier < JSON
             context.gap = '';
             context.pointer = '';
             
-            json = this.value2json(value, context, rootschema);
+            json = this.stringifyValue(value, context, rootschema);
             errors = this.errors;
             assert(~isempty(rootschema) || isempty(errors));
         end
@@ -91,7 +91,43 @@ classdef JSON_Stringifier < JSON
     
     methods (Access=private)
         
-        function json = value2json(this, value, context, schema)
+        function json = stringifyValue(this, value, context, schema)
+
+            if isempty(schema) || ~schema.isKey('manyKeyword') || isequal(schema('manyKeyword'), 'allOf')
+                json = this.stringifyValue_(value, context, schema);
+            else
+                json = this.stringifyMany(value, context, schema);
+            end
+        end
+
+        function coercedJson = stringifyMany(this, value, context, schema)
+
+            manyKeyword = schema('manyKeyword');
+            schemaArray = schema(manyKeyword);
+
+            state = struct();
+            state.errorLength = length(this.errors);
+            coercedJson = [];
+
+            for k=1:length(schemaArray)
+                json = this.stringifyValue_(value, context, schemaArray{k});
+                if length(this.errors) == state.errorLength
+                    % First validation schema wins.
+                    if isempty(coercedJson)
+                        coercedJson = json;
+                    end
+
+                    if isequal(manyKeyword, 'anyOf')
+                        break;
+                    end
+                elseif k < length(schemaArray)
+                    % Reset state
+                    this.errors = this.errors(1:state.errorLength);
+                end
+            end
+        end
+
+        function json = stringifyValue_(this, value, context, schema)
             if isnumeric(value)
                 value = this.normalize2nan(value);
             end
@@ -198,7 +234,7 @@ classdef JSON_Stringifier < JSON
                     v = value(key);
                 end
 
-                item_str = this.value2json(v, context, this.getPropertySchema(schema, key));
+                item_str = this.stringifyValue(v, context, this.getPropertySchema(schema, key));
                 if isempty(item_str) || strcmp(item_str, 'null') % TODO: Can it be empty?
                     continue;
                 end
@@ -238,7 +274,7 @@ classdef JSON_Stringifier < JSON
                 end
                 
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
-                item_str = this.value2json(item, itemContext, itemSchema);
+                item_str = this.stringifyValue(item, itemContext, itemSchema);
                 
                 if isempty(item_str)
                     item_str = 'null';
@@ -269,7 +305,7 @@ classdef JSON_Stringifier < JSON
         end
         
         function txt = tensor2json(this, tensor, context, schema)
-            % Loop over the first dimension of a tensor and call value2json on tensor(k, :, ...)
+            % Loop over the first dimension of a tensor and call stringifyValue on tensor(k, :, ...)
             s = size(tensor);
             assert(s(1) > 0);
             
@@ -300,7 +336,7 @@ classdef JSON_Stringifier < JSON
 
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
-                txt = sprintf('%s%s%s', txt, sep, this.value2json(m, itemContext, itemSchema));
+                txt = sprintf('%s%s%s', txt, sep, this.stringifyValue(m, itemContext, itemSchema));
                 sep = ',';
             end
 
@@ -323,7 +359,7 @@ classdef JSON_Stringifier < JSON
                 itemSchema = this.getItemSchema(items, k-1);
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
-                txt = sprintf('%s%s%s', txt, sep, this.value2json(row(k), itemContext, itemSchema));
+                txt = sprintf('%s%s%s', txt, sep, this.stringifyValue(row(k), itemContext, itemSchema));
                 sep = ',';
             end
 

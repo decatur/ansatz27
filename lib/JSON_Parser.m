@@ -80,13 +80,13 @@ classdef JSON_Parser < JSON
             this.index_esc = 1;
             this.len_esc = length(this.esc);
             
-            this.skip_whitespace();
-            value = this.parse_value(context);
-            this.skip_whitespace();
+            this.skipWhitespace();
+            value = this.parseValue(context);
+            this.skipWhitespace();
 
             if this.pos ~= this.len+1
                 % Not all text was consumed.
-                this.error_pos('Unexpected trailing text at');
+                this.parseError('Unexpected trailing text at');
             end
 
             errors = this.errors;
@@ -101,8 +101,8 @@ classdef JSON_Parser < JSON
             child.pointer = [context.pointer '/' num2str(key)];
         end
 
-        function val = parse_object(this, context, schema)
-            this.parse_char('{');
+        function val = parseObject(this, context, schema)
+            this.parseChar('{');
 
             objectFormat = JSON.getPath(schema, '/format', this.options.objectFormat);
 
@@ -112,14 +112,14 @@ classdef JSON_Parser < JSON
                 val = struct();
             end
             
-            if this.next_char() ~= '}'
+            if this.nextChar() ~= '}'
                 while 1
                     key = this.parseStr();
-                    this.parse_char(':');
+                    this.parseChar(':');
                     subContext = this.getChildContext(context, key);
                     subContext.schema = this.getPropertySchema(schema, key);
 
-                    v = this.parse_value(subContext);
+                    v = this.parseValue(subContext);
                     
                     if isstruct(val)
                         if ~isempty(regexp(key, '^[a-z][a-z0-9_]*$', 'ignorecase'))
@@ -129,28 +129,23 @@ classdef JSON_Parser < JSON
                         val(key) = v;
                     end
 
-                    if this.next_char() == '}'
+                    if this.nextChar() == '}'
                         break;
                     end
-                    this.parse_char(',');
+                    this.parseChar(',');
                     if this.json(this.pos) ~= '"'
                         % Common error, we better handle it here than with parseStr() above
-                        this.error_pos('tangling comma before');
+                        this.parseError('tangling comma before');
                     end
                 end
             end
-            this.parse_char('}');
+            this.parseChar('}');
             
         end
         
-        function val = parse_array(this, context) % JSON array is written in row-major order
-            this.parse_char('[');
+        function val = parseArray(this, context, schema) % JSON array is written in row-major order
+            this.parseChar('[');
             index = 0;
-
-            schema = [];
-            if isfield(context, 'schema')
-                schema = context.schema;
-            end
 
             items = JSON.getPath(schema, '/items');
             itemType = JSON.getPath(items, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
@@ -161,14 +156,14 @@ classdef JSON_Parser < JSON
                 val = {};
             end
             
-            if this.next_char() ~= ']'
+            if this.nextChar() ~= ']'
                 while 1
                     subContext = this.getChildContext(context, index);
                     subContext.schema = this.getItemSchema(items, index);
 
                     subContext.isArray = true;
                     index = index + 1;
-                    v = this.parse_value(subContext);
+                    v = this.parseValue(subContext);
                     if isstruct(val)
                         % Note: Simply assigning val(index) = v will break if v and val have different fields!
                         names = fieldnames(v);
@@ -179,18 +174,18 @@ classdef JSON_Parser < JSON
                         val{index} = v;
                     end
 
-                    if this.next_char() == ']'
+                    if this.nextChar() == ']'
                         break;
                     end
-                    this.parse_char(',');
+                    this.parseChar(',');
                     if this.json(this.pos) == ']'
                         % Common error, we better handle it here than with parseStr() above
-                        this.error_pos('tangling comma before');
+                        this.parseError('tangling comma before');
                     end
                 end
             end
             
-            this.parse_char(']');
+            this.parseChar(']');
 
             if iscell(val) && ~isfield(context, 'isArray')
                 % End-of-line of a nested cell array. Try to convert to matrix.
@@ -213,22 +208,22 @@ classdef JSON_Parser < JSON
 %             end
 % 
 %             this.pos = this.pos + endPos;
-%             this.skip_whitespace();
+%             this.skipWhitespace();
 %             vec = vec';
 %         end
         
-        function parse_char(this, c)
-            this.skip_whitespace();
+        function parseChar(this, c)
+            this.skipWhitespace();
             if this.pos > this.len || this.json(this.pos) ~= c
-                this.error_pos(sprintf('Expected character %s at', c));
+                this.parseError(sprintf('Expected character %s at', c));
             else
                 this.pos = this.pos + 1;
-                this.skip_whitespace();
+                this.skipWhitespace();
             end
         end
         
-        function c = next_char(this)
-            this.skip_whitespace();
+        function c = nextChar(this)
+            this.skipWhitespace();
             if this.pos > this.len
                 c = [];
             else
@@ -236,7 +231,7 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function skip_whitespace(this)
+        function skipWhitespace(this)
             % TODO: rfc4627 only allows space, horizontal tab, line feed and carriage
             % return. isspace() also includes vertical tab, line feed and other
             % Unicode white space. So better use regexp with [\x20\x09\x0A\x0D].
@@ -251,7 +246,7 @@ classdef JSON_Parser < JSON
         
         function str = parseStr(this)
             if this.json(this.pos) ~= '"'
-                this.error_pos('expected character " at');
+                this.parseError('expected character " at');
             end
 
             startPos = this.pos;            
@@ -281,7 +276,7 @@ classdef JSON_Parser < JSON
                         break;
                     case '\'
                         if this.pos+1 > this.len
-                            this.error_pos('End of text reached right after escape character at');
+                            this.parseError('End of text reached right after escape character at');
                         end
                         this.pos = this.pos + 1;
                         switch this.json(this.pos)
@@ -293,7 +288,7 @@ classdef JSON_Parser < JSON
                                 this.pos = this.pos + 1;
                             case 'u'
                                 if this.pos+4 > this.len
-                                    this.error_pos('End of text reached in escaped unicode character at');
+                                    this.parseError('End of text reached in escaped unicode character at');
                                 end
                                 
                                 if JSON.isoct
@@ -313,25 +308,25 @@ classdef JSON_Parser < JSON
             startIndices = regexp(str, '[\x0-\x1f]');
             if startIndices
                 this.pos = startPos + startIndices(1);
-                this.error_pos('Invalid char found in range #00-#1F at');
+                this.parseError('Invalid char found in range #00-#1F at');
             end
 
             if ~closed
-                this.error_pos('Expected closing quote at end of text at');
+                this.parseError('Expected closing quote at end of text at');
             end
         end
         
-        function num = parse_number(this)
+        function num = parseNumber(this)
             [num, count, ~, nextIndex] = sscanf(this.json(this.pos: end), '%f', 1);
             
             if count ~= 1
-                this.error_pos('Error reading number after');
+                this.parseError('Error reading number after');
             end
             
             this.pos = this.pos + nextIndex - 1;
         end
         
-        function b = parse_null(this)
+        function b = parseNull(this)
             if this.pos+3 <= this.len && strcmp(this.json(this.pos:this.pos+3), 'null')
                 b = true;
                 this.pos = this.pos + 4;
@@ -340,46 +335,93 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function val = parse_value(this, context)
-            schema = [];
-            if isfield(context, 'schema')
-                schema = context.schema;
+        function val = parseValue(this, context)
+            schema = JSON.getPath(context, '/schema');
+
+            if isempty(schema) || ~schema.isKey('manyKeyword') || isequal(schema('manyKeyword'), 'allOf')
+                val = this.parseValue_(context, schema);
+            else
+                val = this.parseMany(context, schema);
             end
+        end
+
+        function val = parseMany(this, context, schema)
+            
+            function other = copyState(state)
+                if isstruct(state)
+                    other = this;
+                else
+                    assert(isa(state, 'JSON_Parser'))
+                    other = struct();
+                end
+                other.pos = state.pos;
+                other.lineCount = state.lineCount;
+                other.posCurrentNewline = state.posCurrentNewline;
+                other.index_esc = state.index_esc;
+            end
+
+            manyKeyword = schema('manyKeyword');
+            schemaArray = schema(manyKeyword);
+
+            state = copyState(this);
+            state.errorLength = length(this.errors);
+            coersedVal = [];
+
+            for k=1:length(schemaArray)
+                val = this.parseValue_(context, schemaArray{k});
+                if length(this.errors) == state.errorLength
+                    % First validation schema wins.
+                    if isempty(coersedVal)
+                        coersedVal = val;
+                    end
+
+                    if isequal(manyKeyword, 'anyOf')
+                        break;
+                    end
+                elseif k < length(schemaArray)
+                    % Reset state
+                    this.errors = this.errors(1:state.errorLength);
+                    copyState(state);
+                end
+            end
+        end
+
+        function val = parseValue_(this, context, schema)
 
             switch(this.json(this.pos))
                 case '"'
                     val = this.parseStr();
                 case '['
-                    val = this.parse_array(context);
+                    val = this.parseArray(context, schema);
                 case '{'
-                    val = this.parse_object(context, schema);
+                    val = this.parseObject(context, schema);
                     if ~isempty(schema)
                         val = JSON_Parser.mergeDefaults(val, schema);
                     end
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
-                    val = this.parse_number();
+                    val = this.parseNumber();
                 case 't'
                     if this.pos+3 <= this.len && strcmp(this.json(this.pos:this.pos+3), 'true')
                         val = true;
                         this.pos = this.pos + 4;
                     else
-                        this.error_pos('Token true expected after');
+                        this.parseError('Token true expected after');
                     end
                 case 'f'
                     if this.pos+4 <= this.len && strcmp(this.json(this.pos:this.pos+4), 'false')
                         val = false;
                         this.pos = this.pos + 5;
                     else
-                        this.error_pos('Token false expected after');
+                        this.parseError('Token false expected after');
                     end
                 case 'n'
-                    if this.parse_null()
+                    if this.parseNull()
                         val = NaN;
                     else
-                        this.error_pos('Token null expected before');
+                        this.parseError('Token null expected before');
                     end
                 otherwise
-                    this.error_pos('Illegal token at');
+                    this.parseError('Illegal token at');
             end
             
             if ~isempty(schema)
@@ -399,7 +441,7 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function error_pos(this, msg)
+        function parseError(this, msg)
             error('JSON:PARSE_JSON', '%s line %i, column %i', ...
                 msg, this.lineCount, this.pos-this.posCurrentNewline);
         end

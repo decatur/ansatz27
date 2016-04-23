@@ -23,7 +23,7 @@ You can validated JSON by JSON Schema online with [jsonschemalint](http://jsonsc
 
 # Usage
 
-[//]: # "test/testUsage.m"
+[//]: # "testUsage.m"
 ```MATLAB
 addpath('lib', 'test');
 
@@ -37,7 +37,7 @@ obj('bar') = {'foo' 'bar'};
 json = JSON.stringify(obj);
 [json, errors] = JSON.stringify(obj, 'schema.json');
 ```
-[//]: # "test/testUsage.m"
+[//]: # "testUsage.m"
 
 # Conformance with JSON Schema Specification
 
@@ -120,15 +120,24 @@ json = JSON.stringify(obj);
     </tr>
     <tr>
         <td>allOf</td>
-        <td>Supported only in top level schema. Use it as a poor man's schema inheritance</td>
+        <td>
+            Deprecated. Supported only in top level schema. Use it as a poor man's schema inheritance.
+            Best practise is to flatten the hierarchy by listing all properties and to use schema references.  
+        </td>
     </tr>
     <tr>
         <td>anyOf</td>
-        <td>Not supported</td>
+        <td>
+            Fully supported. Coersion is according the first validating schema.
+            A back-tracking algorithm on the schema array is used, so performance may be poor.
+        </td>
     </tr>
     <tr>
         <td>oneOf</td>
-        <td>Not supported</td>
+        <td>
+            Fully supported. Coersion is according the single validating schema.
+            Best practise is to use `anyOf` as it performs better.
+        </td>
     </tr>
     <tr>
         <td>not</td>
@@ -138,7 +147,7 @@ json = JSON.stringify(obj);
 
 # Comprehensive Example
 
-[//]: # "Comprehensive Roundtrip Example"
+[//]: # "testRoundtrip.xml#Comprehensive Roundtrip Example"
 *MATLAB*
 ```MATLAB
 
@@ -197,7 +206,7 @@ a.dealValues = [13.13 42.42];
 }
 
 ```
-[//]: # "Comprehensive Roundtrip Example"
+[//]: # "testRoundtrip.xml#Comprehensive Roundtrip Example"
 
 # Type Coersion
 
@@ -205,44 +214,44 @@ a.dealValues = [13.13 42.42];
 
 |     JSON          |     Schema                    |      MATLAB               |
 |-------------------|-------------------------------|---------------------------|
-| number/integer    | none\|type=number\|integer    | 1x1 numeric matrix        |
+| number/integer    | none \| type=number\|integer    | 1x1 numeric matrix        |
 | string            | format=date(-time)            | 1x1 numeric matrix datnum |
 | string            | other formats                 | char array                |
-| boolean           | none\|type=boolean            | 1x1 boolean matrix        |
+| boolean           | none \| type=boolean            | 1x1 boolean matrix        |
 | object            | format=struct (default)       | struct                    |
 | object            | format=Map                    | containers.Map            |
 | array             | format=structured-array and item type=object | structured-array |
 | array             | array is uniform (hypercube) and all leafs are numeric | numeric matrix |
 | array             | otherwise                     | cell array                |
-| null              | none\|type=null               | 1x1 NaN                   |
+| null              | none \| type=null               | 1x1 NaN                   |
 
 Note: The coersion to struct will simply drop all properties with invalid field names.
 The coersion to Map will retain all properties. 
 
-[//]: # "Non-MATLAB Keys"
+[//]: # "testParse.xml#Non-MATLAB Keys"
 *JSON*
 ```JSON
 { "Hello": "World", "$ref": 2 }
 ```
-*MATLAB*
+*MATLAB*#
 ```MATLAB
 struct('Hello', 'World')
 ```
-[//]: # "Non-MATLAB Keys"
+[//]: # "testParse.xml#Non-MATLAB Keys"
 
 ## Type Coersion on Stringify
 
 |     MATLAB            |     Schema                            |   JSON            |
 |-----------------------|---------------------------------------|-------------------|
-| 1x1 numeric matrix    | none\|type=number\|integer            | number/integer    |
+| 1x1 numeric matrix    | none \| type=number\|integer          | number/integer    |
 | 1x1 numeric matrix    | type=string and format=date(-time)    | string            |
-| numeric matrix        | none\|type=array                      | array             |
-| char array            | none\|string                          | string            |
-| 1x1 boolean matrix    | none\|type=boolean                    | boolean           |
-| boolean matrix        | none\|type=array                      | array             |
-| struct                | none\|type=object                     | object            |
-| containers.Map        | none\|type=object                     | object            |
-| NaN                   | none\|type=null                       | null              |
+| numeric matrix        | none \| type=array                    | array             |
+| char array            | none \| string                        | string            |
+| 1x1 boolean matrix    | none \| type=boolean                  | boolean           |
+| boolean matrix        | none \| type=array                    | array             |
+| struct                | none \| type=object                   | object            |
+| containers.Map        | none \| type=object                   | object            |
+| NaN                   | none \| type=null                     | null              |
 
 
 # URI Resolution
@@ -297,7 +306,7 @@ A JSON array is coerced to a structured array if
 3. and `/items/type` is `'object'`
 4. and the *default* value of `/format` is `'structured-array'`
 
-[//]: # "Roundtrip Structured Array"
+[//]: # "testRoundtrip.xml#Roundtrip Structured Array"
 *MATLAB*
 ```MATLAB
 struct('foo', {1 2}, 'bar', {3 4})
@@ -326,7 +335,7 @@ struct('foo', {1 2}, 'bar', {3 4})
 ]
 
 ```
-[//]: # "Roundtrip Structured Array"
+[//]: # "testRoundtrip.xml#Roundtrip Structured Array"
 
 ## Numeric Matrix Coercion
 
@@ -334,7 +343,7 @@ A JSON array is coerced to a numeric matrix if
 1. at each level the sub-arrays have the same length,
 2. and if *all* items at the lowest level are numbers or null.
 
-[//]: # "Roundtrip Numeric Matrix"
+[//]: # "testRoundtrip.xml#Roundtrip Numeric Matrix"
 *MATLAB*
 ```MATLAB
 [ [1 2 NaN]; [4 -5 6] ]
@@ -357,9 +366,9 @@ A JSON array is coerced to a numeric matrix if
 ```JSON
 [[1,2,null],[4,-5,6]]
 ```
-[//]: # "Roundtrip Numeric Matrix"
+[//]: # "testRoundtrip.xml#Roundtrip Numeric Matrix"
 
-[//]: # "Roundtrip 3D Matrix"
+[//]: # "testRoundtrip.xml#Roundtrip 3D Matrix"
 *MATLAB*
 ```MATLAB
 
@@ -377,13 +386,13 @@ a(2,:,:) = [5 6; 7 8];
 ]
 
 ```
-[//]: # "Roundtrip 3D Matrix"
+[//]: # "testRoundtrip.xml#Roundtrip 3D Matrix"
 
 # Date Coercion
 
 The two predefined formatters `date` and `date-time` coerce string dates to numeric values.
 
-[//]: # "Roundtrip Date Formater"
+[//]: # "testRoundtrip.xml#Roundtrip Date Formater"
 *MATLAB*
 ```MATLAB
 
@@ -420,7 +429,7 @@ struct( ...
 }
 
 ```
-[//]: # "Roundtrip Date Formater"
+[//]: # "testRoundtrip.xml#Roundtrip Date Formater"
 
 # Defaults
 
@@ -428,7 +437,7 @@ A schema may specify a default value. On stringify, defaults are ignored. In par
 
 On parse, default values are set for unspecified object properties.
 
-[//]: # "Structured Array with Defaults"
+[//]: # "testParse.xml#Structured Array with Defaults"
 *MATLAB*
 ```MATLAB
 struct('foo', {1 2}, 'bar', {3 4})
@@ -454,12 +463,12 @@ struct('foo', {1 2}, 'bar', {3 4})
 }
 
 ```
-[//]: # "Structured Array with Defaults"
+[//]: # "testParse.xml#Structured Array with Defaults"
 
 # Typical Use Cases
 
 ## List of From-Fill-Value Tripples
-[//]: # "List of From-Fill-Value Tripples"
+[//]: # "testRoundtrip.xml#List of From-Fill-Value Tripples"
 *MATLAB*
 ```MATLAB
 
@@ -494,10 +503,10 @@ struct('foo', {1 2}, 'bar', {3 4})
 ]
 
 ```
-[//]: # "List of From-Fill-Value Tripples"
+[//]: # "testRoundtrip.xml#List of From-Fill-Value Tripples"
 
 ## Reuse with Schema References
-[//]: # "Reuse with Schema References"
+[//]: # "testRoundtrip.xml#Reuse with Schema References"
 *MATLAB*
 ```MATLAB
 
@@ -549,11 +558,11 @@ struct( ...
 }
 
 ```
-[//]: # "Reuse with Schema References"
+[//]: # "testRoundtrip.xml#Reuse with Schema References"
 
 ## Schema Inheritance with allOf
 
-[//]: # "Schema Inheritance with allOf"
+[//]: # "testRoundtrip.xml#Schema Inheritance with allOf"
 *MATLAB*
 ```MATLAB
 
@@ -597,14 +606,14 @@ struct( ...
 }
 
 ```
-[//]: # "Schema Inheritance with allOf"
+[//]: # "testRoundtrip.xml#Schema Inheritance with allOf"
 
 ## Dictionary
 
 Sometimes an object is used for arbitrary key-value mapping, also called a dictonary or a map.
 In practice you should consider not to use dictionaries, use arrays and some extra lookup logic instead.
 
-[//]: # "Dictionary"
+[//]: # "testRoundtrip.xml#Dictionary"
 *MATLAB*
 ```MATLAB
 
@@ -641,7 +650,7 @@ a('DEAL-Z')  = struct('start', 736411, 'value', 3);
 }
 
 ```
-[//]: # "Dictionary"
+[//]: # "testRoundtrip.xml#Dictionary"
 
 # Validation by Schema
 
@@ -658,18 +667,18 @@ These include
 *Note*: The persistent schema cache is only written after schemas are successfully resolved. Therefore the cache will only hold valid schemas.
 
 It is best practise to *always* check for errors and to discard the input if errors have occured:
-[//]: # "test/testErrorHandling.m"
+[//]: # "testErrorHandling.m"
 ```MATLAB
 [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'schema.json');
 if ~isempty(errors)
     % Report errors and stop processing
 end
 ```
-[//]: # "test/testErrorHandling.m"
+[//]: # "testErrorHandling.m"
 
 For each validation error one item in the `errors` cell array is generated:
 
-[//]: # "Format Validation on Parse"
+[//]: # "testValidation.xml#Format Validation on Parse"
 *Schema*
 ```JSON
 
@@ -703,7 +712,7 @@ For each validation error one item in the `errors` cell array is generated:
 {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
 
 ```
-[//]: # "Format Validation on Parse"
+[//]: # "testValidation.xml#Format Validation on Parse"
 
 ## Unhandled Errors
 Both `JSON.parse()` and `JSON.stringify()` may throw an error. This is the case when
@@ -762,12 +771,13 @@ Additionally, one can create an effient DoS with many, possibly huge, external s
 * Local functions cannot call private class member functions in Octave.
 
 # Improvements by Priority
-1. Resolve TODOs
-1. Check enum values for uniquness
-1. Support mixed type enum
-1. Describe Best Practises
-1. Usage with webread() introduced in R2014b, via weboptions('ContentReader', @handler)
-1. ThingSpeak?
-1. Validate keyword multipleOf (integer>0)
-1. Validate exclusiveMinimum/Maximum (min/max must exist)
-1. Use datetime() to coerce date and date-time strings to
+
+- [ ] Resolve TODOs
+- [ ] Check enum values for uniquness
+- [ ] Support mixed type enum
+- [ ] Describe Best Practises
+- [ ] Usage with webread() introduced in R2014b, via weboptions('ContentReader', @handler)
+- [ ] ThingSpeak?
+- [ ] Validate keyword multipleOf (integer>0)
+- [ ] Validate exclusiveMinimum/Maximum (min/max must exist)
+- [ ] Use datetime() to coerce date and date-time strings to

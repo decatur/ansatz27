@@ -583,11 +583,27 @@ classdef JSON < handle
                     end
                 end
 
-                if schema.isKey('allOf')
-                    allOf = schema('allOf');
-                    for k=1:length(allOf)
-                        subPath = [pointer '/allOf/' num2str(k-1)];
-                        addSchema(allOf{k}, subPath, resolutionScope);
+                manyKeywords = {'allOf', 'anyOf', 'oneOf'};
+                manyCount = 0;
+
+                % Find how many manyKeywords are present and save the last.
+                for k=1:length(manyKeywords)
+                    manyKeyword = manyKeywords{k};
+
+                    if schema.isKey(manyKeyword)
+                        manyCount = manyCount + 1;
+                        schema('manyKeyword') = manyKeyword;
+                    end
+                end
+
+                if manyCount > 1
+                    error('JSON:PARSE_SCHEMA', 'Only one of %s allowed', strjoin(manyKeywords, ', '));
+                elseif schema.isKey('manyKeyword')
+                    manyKeyword = schema('manyKeyword');
+                    manySchema = schema(manyKeyword);
+                    for k=1:length(manySchema)
+                        subPath = [pointer '/' manyKeyword '/' num2str(k-1)];
+                        addSchema(manySchema{k}, subPath, resolutionScope);
                     end
                 end
                 
