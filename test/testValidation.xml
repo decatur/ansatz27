@@ -366,7 +366,7 @@
     </test>
     <test>
         <description>Format validation on stringify</description>
-        <matlab>struct('a', 736330, 'b', 736330.5, 'c', 736330.5, 'd', 'i')</matlab>
+        <matlab>struct('a', datetime('2016-01-01'), 'b', 1234, 'c', datetime('2016-01-01T13+0100', 'InputFormat', 'yyyy-MM-dd''T''HHZ', 'TimeZone', 'UTC'), 'd', 'foo')</matlab>
         <schema>
             {
                 "type": "object",
@@ -379,9 +379,9 @@
             }
         </schema>
         <errors>
-            {'/b' 'must be an integer' '736330.5'}
-            {'/b' 'does not match type string' '736330.5'}
-            {'/d' 'must be a number' 'i'}
+            {'/b' 'is not a valid date' '1234'}
+            {'/b' 'does not match type string' '1234'}
+            {'/d' 'is not a valid date' 'foo'}
         </errors>
     </test>
     <test>
@@ -406,7 +406,7 @@
             }
         </json>
         <errors>
-            {'/b' 'is not a date' '2016-01-01T12:00:00Z'}
+            {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
             {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
             {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
         </errors>

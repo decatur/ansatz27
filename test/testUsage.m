@@ -1,4 +1,3 @@
-addpath('lib', 'test');
 
 jsonOrFilepath = 'document.json';
 [obj, errors] = JSON.parse(jsonOrFilepath, 'schema.json');

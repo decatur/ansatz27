@@ -1,4 +1,4 @@
-% COPYRIGHT Wolfgang Kuehn 2016 under the MIT License (MIT).
+% COPYRIGHT Wolfgang Kuehn 2015-2016 under the MIT License (MIT).
 % Origin is https://github.com/decatur/ansatz27.
 
 classdef JSON < handle
@@ -15,23 +15,22 @@ classdef JSON < handle
     end
     
     methods
-
+        
         function this = JSON()
             this.formatters = containers.Map();
         end
-
+        
         function uri = resolveURIagainstLoadPath(this, uri)
-        %resolveURIagainstLoadPath resolves the reference against the base URI and normalizes.
-        % See https://tools.ietf.org/html/rfc3986
+            %resolveURIagainstLoadPath resolves the reference against the base URI and normalizes.
+            % See https://tools.ietf.org/html/rfc3986
             try
                 r = javaObject('java.net.URI', uri);
             catch e
                 error('JSON:URI', 'Could not resolve URI %s because: %s', uri, e.message);
             end
-
+            
             if isempty(r.getScheme())
                 % Relative reference
-                base = javaObject('java.net.URI', 'file:/');
                 location = which(uri);
                 if isempty(location)
                     error('JSON:URI', 'Could not resolve URI %s', uri);
@@ -39,40 +38,40 @@ classdef JSON < handle
                 uri = ['file:/' strrep(location, '\', '/')];
             end
         end
-
-%        function uri = __resolveURI(this, uri)
-%        %resolveURI resolves the URI from the load path.
-%        % Also does a mild normalization
-%        % See https://tools.ietf.org/html/rfc3986
-%
-%            names = regexp(uri, '^(?<scope>[a-z]+:)(?<authority>//[^/]+)?(?<path>.*)$', 'names', 'once', 'ignorecase');
-%            names.scope = lower(names.scope);           % Normalize scope port
-%            names.authority = lower(names.authority);   % Normalize authority port
-%            if strcmp(names.scope, 'file:') && names.path ~= '/'
-%                s = which(names.path);
-%                if ~isempty(s)
-%                    names.path = which(s);
-%                end
-%            elseif strcmp(names.scope, 'http:') && ~isempty(names.authority)
-%                % Normalize default port
-%                names.authority = regexprep(names.authority, ':80$', '');
-%            elseif strcmp(names.scope, 'https:') && ~isempty(names.authority)
-%                % Normalize default port
-%                names.authority = regexprep(names.authority, ':443$', '');
-%            end
-%            uri = [names.scope names.authority names.path];
-%        end
-
+        
+        %        function uri = __resolveURI(this, uri)
+        %        %resolveURI resolves the URI from the load path.
+        %        % Also does a mild normalization
+        %        % See https://tools.ietf.org/html/rfc3986
+        %
+        %            names = regexp(uri, '^(?<scope>[a-z]+:)(?<authority>//[^/]+)?(?<path>.*)$', 'names', 'once', 'ignorecase');
+        %            names.scope = lower(names.scope);           % Normalize scope port
+        %            names.authority = lower(names.authority);   % Normalize authority port
+        %            if strcmp(names.scope, 'file:') && names.path ~= '/'
+        %                s = which(names.path);
+        %                if ~isempty(s)
+        %                    names.path = which(s);
+        %                end
+        %            elseif strcmp(names.scope, 'http:') && ~isempty(names.authority)
+        %                % Normalize default port
+        %                names.authority = regexprep(names.authority, ':80$', '');
+        %            elseif strcmp(names.scope, 'https:') && ~isempty(names.authority)
+        %                % Normalize default port
+        %                names.authority = regexprep(names.authority, ':443$', '');
+        %            end
+        %            uri = [names.scope names.authority names.path];
+        %        end
+        
         function schema = loadSchema(this, schema)
             localSchemaCache = containers.Map();
             this.unresolvedRefs = struct([]);   % These are populated by normalizeSchema()
-
+            
             if ischar(schema)
                 schema = strtrim(schema);
                 if isempty(schema)
                     schema = [];
                     return;
-                elseif isempty(regexp(schema, '^\s*\{')) % A URI cannot start with an opening curly, but a schema will
+                elseif isempty(regexp(schema, '^\s*\{', 'ONCE')) % A URI cannot start with an opening curly, but a schema will
                     uri = this.resolveURIagainstLoadPath(schema);
                     this.loadSchemaByURI(uri, localSchemaCache);
                 else
@@ -80,21 +79,17 @@ classdef JSON < handle
                     schema = this.postLoadSchema(schema, uri);
                     localSchemaCache(uri) = schema;
                 end
-            elseif JSON.isaMap(schema)
-                % Do nothing
-                uri = '';
-                schema(uri) = uri;
             elseif isempty(schema)
                 schema = [];
                 return;
             else
                 error('Invalid type for schema: %s', class(schema));
             end
-
+            
             this.resolveSchema(localSchemaCache);
-            schema = localSchemaCache(uri);
+            schema = JSON.getSchemaFromCache(uri, localSchemaCache);
         end
-
+        
         function resolveSchema(this, localSchemaCache)
             
             while ~isempty(this.unresolvedRefs)
@@ -109,14 +104,14 @@ classdef JSON < handle
                 else
                     schema1 = localSchemaCache(ref.uri);
                 end
-
+                
                 schema1 = JSON.getPath(schema1, parts{2});
                 if isempty(schema1)
                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', s);
                 end
-
+                
                 localSchemaCache(ref.uri) = JSON.setPath(localSchemaCache(ref.uri), ref.pointer, schema1);
-
+                
                 if schema1.isKey('$ref')
                     if ismember(ref.ref, this.unresolvedRefs(index).hist)
                         error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin(this.unresolvedRefs(index).hist, ' -> '));
@@ -127,7 +122,7 @@ classdef JSON < handle
                     this.unresolvedRefs = this.unresolvedRefs([1:index-1 index+1:end]);
                 end
             end
-
+            
             % No errors so far. We can now make local schema cache persistent.
             uris = localSchemaCache.keys();
             for k=1:length(uris)
@@ -137,7 +132,7 @@ classdef JSON < handle
                     %TODO: At any level
                     this.mergeSchemas(schema);
                 end
-
+                
                 if ~isempty(uri)
                     JSON.cacheSchema(uri, schema);
                 end
@@ -174,20 +169,20 @@ classdef JSON < handle
             if ~isempty(childSchema)
                 return;
             end
-
+            
             if schema.isKey('patternProperties')
                 patternProperties = schema('patternProperties');
                 patterns = patternProperties.keys();
                 for k=1:length(patterns)
-                    if ~isempty(regexp(key, patterns{k}))
+                    if ~isempty(regexp(key, patterns{k}, 'ONCE'))
                         childSchema = patternProperties(patterns{k});
                         break;
                     end
                 end
             end
-
+            
         end
-
+        
         function childSchema = getItemSchema(this, items, key)
             assert(isnumeric(key) && ~rem(key, 1));
             childSchema = [];
@@ -234,19 +229,19 @@ classdef JSON < handle
                 end
             end
         end
-
+        
         function pType = inferePrimitiveType(this, value, schema, pointer)
-
+            
             type = schema('type');
             pType = [];
-
+            
             if isempty(type); return; end;
-
+            
             if isempty(value)
                 pType = type{1};
             else
                 n = numel(value);
-
+                
                 if ischar(value)
                     if ismember('string', type)
                         pType = 'string';
@@ -263,21 +258,21 @@ classdef JSON < handle
                     end
                 elseif isnumeric(value)
                     if n == 1
-                        if isnan(value) 
+                        if isnan(value)
                             if ismember('null', type)
                                 pType = 'null';
                             end
                         elseif rem(value, 1) == 0 % integer value
                             if ismember('integer', type)
                                 pType = 'integer';
-                            elseif ismember('number', type) 
+                            elseif ismember('number', type)
                                 pType = 'number';
                             end
                         elseif ismember('number', type)
                             pType = 'number';
                         end
                     end
-
+                    
                     if isempty(pType) && ismember('array', type)
                         pType = 'array';
                     end
@@ -288,16 +283,16 @@ classdef JSON < handle
                         pType = 'array';
                     end
                 end
-
+                
                 if isempty(pType)
                     this.addError(pointer, sprintf('does not match type %s', strjoin(type, ' or ')), value);
                     return
                 end
             end
         end
-
+        
         function validate(this, value, pType, schema, pointer)
-
+            
             function p = getBadPath(pointer, indices)
                 isVec = length(indices) > 1;
                 indices = find(indices);
@@ -309,15 +304,15 @@ classdef JSON < handle
                     p = pointer;
                 end
             end
-
+            
             if strcmp(pType, 'object')
-
+                
                 if isstruct(value)
                     s = fieldnames(value);
                 else
                     s = value.keys();
                 end
-
+                
                 if schema.isKey('required')
                     required = schema('required');
                     for k=1:length(required)
@@ -326,15 +321,15 @@ classdef JSON < handle
                         end
                     end
                 end
-
+                
                 if schema.isKey('minProperties') && length(s) < schema('minProperties')
                     this.addError(pointer, sprintf('has less than %g properties', schema('minProperties')), value);
                 end
-
+                
                 if schema.isKey('maxProperties') && length(s) > schema('maxProperties')
                     this.addError(pointer, sprintf('has more than %g properties', schema('maxProperties')), value);
                 end
-
+                
                 if JSON.getPath(schema, '/additionalProperties') == false
                     p = JSON.getPath(schema, '/properties', containers.Map());
                     p = p.keys();
@@ -345,33 +340,33 @@ classdef JSON < handle
                     for l=1:length(pp)
                         pattern = pp{l};
                         for k=1:length(s)
-                            if ~isempty(regexp(s{k}, pattern))
+                            if ~isempty(regexp(s{k}, pattern, 'ONCE'))
                                 sFound{end+1} = s{k};
                                 break;
                             end
                         end
                     end
-
+                    
                     sNotFound = s(~ismember(s, sFound));
                     for k=1:length(sNotFound)
                         this.addError(pointer, 'contains additional property', sNotFound{k});
                     end
                 end
-
+                
                 if schema.isKey('enum')
                     this.addError(pointer, 'is not contained in enumeration', value);
                 end
-
+                
             elseif ischar(value)
-
-                if schema.isKey('pattern') && isempty(regexp(value, schema('pattern')))
+                
+                if schema.isKey('pattern') && isempty(regexp(value, schema('pattern'), 'ONCE'))
                     this.addError(pointer, sprintf('does not match pattern %s', schema('pattern')), value);
                 end
-
+                
                 if schema.isKey('minLength') && length(value) < schema('minLength')
                     this.addError(pointer, sprintf('has length less than %g', schema('minLength')), value);
                 end
-
+                
                 if schema.isKey('maxLength') && length(value) > schema('maxLength')
                     this.addError(pointer, sprintf('has length greater than %g', schema('maxLength')), value);
                 end
@@ -379,11 +374,11 @@ classdef JSON < handle
                 format = JSON.getPath(schema, '/format');
                 
                 if strcmp(format, 'date')
-                    if isempty(regexp(value, '^\d{4}-\d{2}-\d{2}$'))
-                        this.addError(pointer, 'is not a date', value);
+                    if isempty(regexp(value, '^\d{4}-\d{2}-\d{2}$', 'ONCE'))
+                        this.addError(pointer, 'is not a valid date', value);
                     end
                 end
-
+                
                 if schema.isKey('enum')
                     enum = schema('enum');
                     if ~iscellstr(enum) || ~ismember(value, enum)
@@ -396,7 +391,7 @@ classdef JSON < handle
                 if strcmp(pType, 'integer') && rem(value, 1)
                     this.addError(pointer, 'is not an integer', value);
                 end
-
+                
                 if schema.isKey('multipleOf') && rem(value, schema('multipleOf'))
                     this.addError(pointer, sprintf('is not a multiple of %g', schema('multipleOf')), value);
                 end
@@ -424,7 +419,7 @@ classdef JSON < handle
                         this.addError(badPath, sprintf('violates maximum %g', schema('maximum')), value);
                     end
                 end
-
+                
                 if schema.isKey('enum')
                     enum = schema('enum');
                     if ~isnumeric(enum) || ~ismember(value, enum)
@@ -435,10 +430,10 @@ classdef JSON < handle
             elseif strcmp(pType, 'array')
                 
                 if schema.isKey('additionalItems') && ~schema('additionalItems') && ...
-                   schema.isKey('items') && iscell(schema('items')) && length(value)>length(schema('items'))
+                        schema.isKey('items') && iscell(schema('items')) && length(value)>length(schema('items'))
                     this.addError(pointer, sprintf('does not allow additional items'), '[array]');
                 end
-
+                
                 if schema.isKey('minItems') && length(value) < schema('minItems')
                     this.addError(pointer, sprintf('has less than %g items', schema('minItems')), '[array]');
                 end
@@ -446,11 +441,11 @@ classdef JSON < handle
                 if schema.isKey('maxItems') && length(value) > schema('maxItems')
                     this.addError(pointer, sprintf('has more than %g items', schema('maxItems')), '[array]');
                 end
-
+                
                 if schema.isKey('enum')
                     this.addError(pointer, 'is not contained in enumeration', value);
                 end
-            
+                
             elseif strcmp(pType, 'array')
                 if schema.isKey('enum')
                     this.addError(pointer, 'is not contained in enumeration', value);
@@ -463,86 +458,86 @@ classdef JSON < handle
                     end
                 end
             end
-
+            
         end
         
     end % methods
     
     methods (Access=private)
-
+        
         function schema = loadSchemaByURI(this, uri, localSchemaCache)
             JSON.log('DEBUG', 'Loading schema from uri %s', uri);
-
+            
             schema = JSON.getSchemaFromCache(uri, localSchemaCache);
             if ~isempty(schema)
                 return;
             end
-
+            
             try
                 schema = urlread(uri);
             catch e
                 error('JSON:PARSE_SCHEMA', 'Could not read schema from %s because: %s', uri, e.message);
             end
-
+            
             if isempty(strtrim(schema))
                 % libcurl will return empty string if file uri points to directory.
                 error('JSON:PARSE_SCHEMA', 'No schema at %s', uri);
             end
-
+            
             schema = this.postLoadSchema(schema, uri);
             localSchemaCache(uri) = schema;
         end
-
+        
         function resolvedURI = resolveURI(this, uri, base)
-        %resolveURI resolves the reference against the base URI.
-        % See https://tools.ietf.org/html/rfc3986
+            %resolveURI resolves the reference against the base URI.
+            % See https://tools.ietf.org/html/rfc3986
             resolvedURI = uri;
             if ~isempty(base)
                 base = javaObject('java.net.URI', base);
                 resolvedURI = char(base.resolve(uri));
             end
         end
-
+        
         function schema = postLoadSchema(this, schema, uri)
             schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
-
+            
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
                 schema('id') = uri;
             end
-
+            
             this.normalizeSchema(schema, uri, '', schema('id'));
         end
-
+        
         function normalizeSchema(this, rootSchema, uri, pointer, resolutionScope)
-        %normalizeSchema traverses the given schema iteratively (depth first) and validates all subschemas.
-
+            %normalizeSchema traverses the given schema iteratively (depth first) and validates all subschemas.
+            
             function addSchema(schema, pointer, resolutionScope)
                 schemaInfos{end+1} = struct('schema', schema, 'pointer', pointer, 'resolutionScope', resolutionScope);
             end
-
+            
             function processProperties(propertyType, schema, pointer, resolutionScope)
                 if schema.isKey(propertyType) && ~isempty(schema(propertyType))
                     props = schema(propertyType);
                     pNames = props.keys();
-                    for k=1:length(pNames)
-                        subPath = [pointer '/' propertyType '/' pNames{k}];
-                        addSchema(props(pNames{k}), subPath, resolutionScope);
+                    for l=1:length(pNames)
+                        subPath = [pointer '/' propertyType '/' pNames{l}];
+                        addSchema(props(pNames{l}), subPath, resolutionScope);
                     end
                 end
             end
-
+            
             schemaInfos = {};
-
+            
             addSchema(rootSchema, pointer, resolutionScope);
-
+            
             while ~isempty(schemaInfos)
                 info = schemaInfos{end};
                 schemaInfos = schemaInfos(1:end-1);
                 schema = info.schema;
                 resolutionScope = info.resolutionScope;
                 pointer = info.pointer;
-
+                
                 if ~JSON.isaMap(schema)
                     error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
                 end
@@ -555,47 +550,47 @@ classdef JSON < handle
                         error('JSON:PARSE_SCHEMA', '$ref must be a string at %s', pointer);
                     end
                     ref = this.resolveURI(ref, resolutionScope);
-
+                    
                     if isempty(strfind(ref, '#'))
                         ref = [ref '#'];
                     end
-
+                    
                     schema('$ref') = ref;
-
+                    
                     % TODO: Can we do this better in MATLAB? With Octave this works:
                     %   ref = struct('uri', uri, 'pointer', pointer, 'ref', ref);
                     %   ref.hist = {};
                     %   this.unresolvedRefs(end+1) = ref;
                     this.unresolvedRefs(end+1).uri = uri;
                     this.unresolvedRefs(end).pointer = pointer;
-                    this.unresolvedRefs(end).ref = ref; 
+                    this.unresolvedRefs(end).ref = ref;
                     this.unresolvedRefs(end).hist = {};
                     JSON.log('DEBUG', 'Add new reference uri[%s] pointer[%s] ref[%s]', uri, pointer, ref);
                 end
-
+                
                 if schema.isKey('id') && ~isempty(schema('id'))
                     % Change resolution scope.
-                    % Note that we do this AFTER processing $ref. 
+                    % Note that we do this AFTER processing $ref.
                     resolutionScope = this.resolveURI(schema('id'), resolutionScope);
                     resScopURI = javaObject('java.net.URI', resolutionScope);
                     if ~resScopURI.isAbsolute()
                         error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
                     end
                 end
-
+                
                 manyKeywords = {'allOf', 'anyOf', 'oneOf'};
                 manyCount = 0;
-
+                
                 % Find how many manyKeywords are present and save the last.
                 for k=1:length(manyKeywords)
                     manyKeyword = manyKeywords{k};
-
+                    
                     if schema.isKey(manyKeyword)
                         manyCount = manyCount + 1;
                         schema('manyKeyword') = manyKeyword;
                     end
                 end
-
+                
                 if manyCount > 1
                     error('JSON:PARSE_SCHEMA', 'Only one of %s allowed', strjoin(manyKeywords, ', '));
                 elseif schema.isKey('manyKeyword')
@@ -617,18 +612,18 @@ classdef JSON < handle
                     type = {type};
                     schema('type') = type;
                 end
-                            
+                
                 if schema.isKey('required') && ~iscell(schema('required'))
                     error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
                 end
-
+                
                 if schema.isKey('pattern') && ~ischar(schema('pattern'))
                     error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
                 end
-
+                
                 processProperties('properties', schema, pointer, resolutionScope);
                 processProperties('patternProperties', schema, pointer, resolutionScope);
-
+                
                 if ismember('array', type) && schema.isKey('items') % TODO: Remove first test
                     items = schema('items'); % Remember: Cell array has copy semantic
                     if JSON.isaMap(items)
@@ -640,7 +635,7 @@ classdef JSON < handle
                         end
                     end
                 end
-
+                
                 if schema.isKey('definitions')
                     definitions = schema('definitions');
                     names = definitions.keys();
@@ -649,7 +644,7 @@ classdef JSON < handle
                         addSchema(definitions(names{k}), subPath, resolutionScope);
                     end
                 end
-
+                
                 if any(ismember({'number' 'integer'}, type))
                     %if isfield(schema, 'enum') && iscell(schema.enum)
                     %    if all(cellfun(@isnumeric, schema.enum))
@@ -660,58 +655,9 @@ classdef JSON < handle
             end % while
             
         end
-
-%         function schema = resolveRef(this, rootSchema, schema, pointer, resolutionScope)
-%             %resolveRef swaps in the referenced schema.
-%             refs = {};
-% 
-%             while schema.isKey('$ref')
-%                 ref = schema('$ref');
-%                 if isempty(findstr(ref, '#'))
-%                     ref(end+1) = '#';
-%                 end
-%                 
-%                 if ~ischar(ref) || isempty(strtrim(ref))
-%                     error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
-%                 end
-%                 
-%                 ref = strtrim(ref);
-%                 uri = this.resolveURI(ref, resolutionScope);
-%                 
-%                 if ismember(uri, refs)
-%                     error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin([refs ref], ' -> '));
-%                 end
-%                 
-%                 refs{end+1} = uri;
-%                 
-%                 parts = strsplit(uri, '#');
-%                 assert(length(parts) == 2);
-%                 url = parts{1};
-%                 pointer = parts{2};
-% 
-%                 if ~isempty(url)
-%                     rootSchema = JSON.getSchemaFromCache(url);
-%                     if isempty(rootSchema)
-%                         rootSchema = this.loadSchemaByURI(url);
-%                         rootSchema = this.normalizeSchema(rootSchema);
-%                         JSON.cacheSchema(url, rootSchema);
-%                     end
-%                     schema = rootSchema;
-%                 end
-% 
-%                 if ~isempty(pointer)
-%                     schema = JSON.getPath(rootSchema, pointer);
-%                     schema = this.normalizeSchema_(schema, schema, pointer, resolutionScope);  
-%                     if isempty(schema)
-%                         error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', strjoin(refs, ' -> '));
-%                     end
-%                 end
-% 
-%             end
-%         end
-
+        
     end % methods (Access=private)
-
+    
     methods (Static)
         
         function b = isaMap(obj)
@@ -721,46 +667,50 @@ classdef JSON < handle
                 b = isa(obj, 'containers.Map');
             end
         end
-
-        function b = log(level, fmt, varargin)
+        
+        function log(level, fmt, varargin)
             if ismember(level, JSON.logLevels)
                 fprintf(1, '%s: %s\n', level, fmt, varargin{:});
             end
         end
-
-        function value = configParam(key, value)
+        
+        function value = configParam(varargin)
             persistent config
             if isempty(config)
-                config = struct();
+                config = containers.Map();
             end
-
+            
+            value = JSON.configParam_(config, varargin{:});
+        end
+        
+        function value = configParam_(config, key, value)
             if nargin == 1
-                if isfield(config, key)
-                    value = config.(key);
+                value = config;
+            elseif nargin == 2
+                if config.isKey(key)
+                    value = config(key);
                 else
                     value = [];
                 end
-            elseif nargin == 2
-                config.(key) = value;
-            else
-                value = config;
+            elseif nargin >= 3
+                config(key) = value;
             end
         end
-
+        
         function cache = getSchemaCache()
-        %getSchemaCache returns the schema cache and lazily creates it.
+            %getSchemaCache returns the schema cache and lazily creates it.
             cache = JSON.configParam('cache');
             if isempty(cache)
                 cache = JSON.configParam('cache', containers.Map());
             end
         end
-
+        
         function schema = getSchemaFromCache(uri, localSchemaCache)
             if localSchemaCache.isKey(uri)
                 schema = localSchemaCache(uri);
                 return;
             end
-
+            
             cache = JSON.getSchemaCache();
             if cache.isKey(uri)
                 % Cache hit
@@ -769,82 +719,52 @@ classdef JSON < handle
                 schema = [];
             end
         end
-
+        
         function cacheSchema(uri, schema)
             cache = JSON.getSchemaCache();
             cache(uri) = schema;
         end
-
-%        function value = setBaseURI(baseURI)
-%            value = JSON.configParam('baseURI', strrep(baseURI, '\', '/'));
-%        end
-
-%        function value = getBaseURI()
-%            value = JSON.configParam('baseURI');
-%            if isempty(value)
-%                if exist('ctfroot', 'builtin') ~= 0
-%                    baseURI = ['file:' ctfroot];
-%                else
-%                    baseURI = ['file:' pwd()];
-%                end
-%                value = JSON.setBaseURI(baseURI);
-%            end
-%        end
-
+        
+        %        function value = setBaseURI(baseURI)
+        %            value = JSON.configParam('baseURI', strrep(baseURI, '\', '/'));
+        %        end
+        
+        %        function value = getBaseURI()
+        %            value = JSON.configParam('baseURI');
+        %            if isempty(value)
+        %                if exist('ctfroot', 'builtin') ~= 0
+        %                    baseURI = ['file:' ctfroot];
+        %                else
+        %                    baseURI = ['file:' pwd()];
+        %                end
+        %                value = JSON.setBaseURI(baseURI);
+        %            end
+        %        end
+        
         function [value, errors] = parse(varargin)
             parser = JSON_Parser();
-            
-            try
-                value = parser.parse_(varargin{:});
-            catch e
-                if ~isempty(regexp(e.identifier, '^JSON:', 'once'))
-                    value = [];
-                    parser.addError([], e.message, [], e.identifier);
-                else
-                    for k=1:numel(e.stack)
-                        e.stack(k)
-                    end
-                    rethrow(e);
-                end
-            end
-            
-            errors = parser.errors;
+            [value, errors] = parse(parser, varargin{:});
         end
         
         function [json, errors] = stringify(varargin)
             stringifier = JSON_Stringifier();
-            
-            try
-                json = stringifier.stringify_(varargin{:});
-            catch e
-                if ~isempty(regexp(e.identifier, '^JSON:', 'once'))
-                    json = [];
-                    stringifier.addError([], e.message, [], e.identifier);
-                else
-                    for k=1:numel(e.stack)
-                        e.stack(k)
-                    end
-                    rethrow(e);
-                end
-            end
-            
-            errors = stringifier.errors;
+            [json, errors] = stringifier.stringify(varargin{:});
         end
         
         function obj = setPath(obj, pointer, value)
-        %SETPATH sets the value referenced by the pointer.
-        % Example
-        %   m = containers.Map()
-        %   m('foo') = containers.Map();
-        %   c = m('foo');
-        %   c('bar') = {1 2 3};
-        %   JSON.setPath(m, '/foo/bar/1', 42)   -> replaces 2 by 42
-
+            %SETPATH sets the value referenced by the pointer.
+            % Example
+            %   m = containers.Map()
+            %   m('foo') = containers.Map();
+            %   c = m('foo');
+            %   c('bar') = {1 2 3};
+            %   JSON.setPath(m, '/foo/bar/1', 42)   -> replaces 2 by 42
+            
             if isempty(pointer)
                 obj = value;
             else
                 tokens = strsplit(pointer, '/');
-                [oldValue, chain] = JSON.getPath(obj, pointer);
+                [~, chain] = JSON.getPath(obj, pointer);
                 
                 c = chain{end};
                 if iscell(c)
@@ -864,7 +784,7 @@ classdef JSON < handle
                             c = chain{k};
                         end
                     end
-
+                    
                     if k==0
                         obj = subsasgn(c, idx, value);
                     else
@@ -879,7 +799,7 @@ classdef JSON < handle
                 end
             end
         end
-
+        
         function [obj, chain] = getPath(obj, pointer, default)
             %GETPATH returns the value referenced by the pointer.
             % The pointer must be a JSON pointer, so each reference token must be
@@ -891,28 +811,28 @@ classdef JSON < handle
             %    obj = containers.Map();
             %    obj('foo') = struct('bar', 13);
             %    obj('bar') = {'foo' 'bar'};
-            %    obj('foo/bar') = 42;                   % Not recommended! 
+            %    obj('foo/bar') = 42;                   % Not recommended!
             %    JSON.getPath(obj, '/foo/bar')          % -> 13
             %    JSON.getPath(obj, '/bar/1')            % -> 'bar'
             %    JSON.getPath(obj, '/foo~1bar')         % -> 42
             %    JSON.getPath(obj, '/foobar', 4711)     % -> 4711
-
+            
             chain = {};
-
+            
             if isempty(pointer)
                 if isempty(obj)
                     obj = default;
                 end
                 return;
             end
-
+            
             if pointer(1) ~= '/'
                 % TODO: Do not throw here
                 error('Invalid pointer syntax for %s', pointer);
             end
-
+            
             tokens = strsplit(pointer, '/');
-
+            
             for k = 2:length(tokens)
                 chain{end+1} = obj;
                 token = tokens{k};
@@ -923,7 +843,7 @@ classdef JSON < handle
                     obj = obj(token);
                     continue;
                 end
-
+                
                 if iscell(obj) && ~isempty(regexp(token, '^\d+$', 'once'))
                     l = str2double(token);
                     if l < length(obj) % This will also handle l is not a number
@@ -931,12 +851,12 @@ classdef JSON < handle
                         continue;
                     end
                 end
-
+                
                 if isstruct(obj) && isfield(obj, token)
                     obj = obj.(token);
                     continue;
                 end
-
+                
                 if nargin >= 3
                     obj = default;
                 else
@@ -944,76 +864,37 @@ classdef JSON < handle
                 end
                 break;
             end
-
-        end
-
-%         function text = ___readFileToString(pointer, encoding )
-%             if JSON.isoct
-%                 [fid, msg] = fopen(pointer, 'r');
-%             else
-%                 [fid, msg] = fopen(pointer, 'r', 'l', encoding);
-%             end
-%             
-%             if fid == -1
-%                 % TODO: Do not throw here
-%                 error('Could not open %s: %s', pointer, msg);
-%             end
-%             
-%             text = fscanf(fid, '%c');
-%             fclose(fid);
-%         end
-        
-        function [s, err] = datenum2string(n)
-            if ~isnumeric(n) || rem(n, 1)~=0
-                s = n;
-                err = 'must be an integer';
-                return;
-            else
-                err = [];
-                s = datestr(n, 'yyyy-mm-dd');
-            end
-        end
-        
-        function [s, err] = datetimenum2string(n)
-            if ~isnumeric(n)
-                s = n;
-                err = 'must be a number';
-                return;
-            end
-            d = javaObject('java.util.Date', round((n - 719529)*1000*60*60*24));
-            d = javaObject('java.util.Date', d.getTime() + d.getTimezoneOffset()*60*1000);
-            df = javaObject('java.text.SimpleDateFormat', 'yyyy-MM-dd''T''HH:mm:ssXXX');
-            s = char(df.format(d));
-            err = [];
-        end
-        
-        function [d, err] = datestring2num(s)
-            % Parse date into a numerical date according MATLABs datenum().
-            % The argument is returned if it is not a valid date.
-            %
-            % Example: '2016-01-26'
             
-            m = regexp(s, '^(\d{4})-(\d{2})-(\d{2})$', 'tokens', 'once');
-            
-            if isempty(m)
-                d = s;
-                err = 'is not a valid date';
-                return
-            else
-                d = datenum(str2double(m{1}),str2double(m{2}),str2double(m{3}));
-                err = [];
-            end
         end
         
-        function [d, err] = datetimestring2num(s)
-            % Parse ISO8601 date-time into a numerical date according MATLABs datenum() with respect to the default timezone.
-            % Minutes and seconds are optional. Timezone offset is Z (meaning +00:00) or of the form +-02:00 or +-0200.
-            % An error is returned if the argument is not a valid date-time.
+        %         function text = ___readFileToString(pointer, encoding )
+        %             if JSON.isoct
+        %                 [fid, msg] = fopen(pointer, 'r');
+        %             else
+        %                 [fid, msg] = fopen(pointer, 'r', 'l', encoding);
+        %             end
+        %
+        %             if fid == -1
+        %                 % TODO: Do not throw here
+        %                 error('Could not open %s: %s', pointer, msg);
+        %             end
+        %
+        %             text = fscanf(fid, '%c');
+        %             fclose(fid);
+        %         end
+        
+        function [d, err] = datetimestring2datetime(s)
+            %datetimestring2datetime parses an ISO8601 date-time into a datetime object.
+            % Allowed formats are
+            %   yyyy-MM-ddTHH:mm:ssXX
+            %   yyyy-MM-ddTHH:mmXX
+            %   yyyy-MM-ddTHHXX
+            % where XX is of the form Z or +0100 or +01:00
             %
             % Example:
-            %     JSON.datetimestring2num('2016-02-02T00:00:00+01:00')
-            %     -> 736362 % Note: Only if default time zone is GMT!
-            tokens = regexp(s, '^(.*T\d{2})(:\d{2})?(:\d{2})?(.*)$', 'tokens', 'once');
+            %     JSON.datestring2datetime('2016-02-02T00:00Z')
+            
+            tokens = regexp(s, '^(\d{4}-\d{2}-\d{2}T\d{2})(:\d{2})?(:\d{2})?(Z|(\+|\-)\d{2}:?\d{2})$', 'tokens', 'once');
             
             if isempty(tokens)
                 d = s;
@@ -1021,30 +902,70 @@ classdef JSON < handle
                 return;
             end
             
-            if length(tokens{end}) == 5
-                tzf = 'Z'; % RFC 822 time zone -0800
-            else
-                tzf = 'XXX'; %  ISO 8601 time zone -08:00
+            fmt = 'yyyy-MM-dd''T''HH';
+            if ~isempty(tokens{2})
+                fmt = [fmt ':mm'];
+            end
+            if ~isempty(tokens{3})
+                fmt = [fmt ':ss'];
             end
             
-            fmts = {'', ':mm', ':mm:ss'};
-            fmt = ['yyyy-MM-dd''T''HH' fmts{length(tokens)-1} tzf];
+            fmt = [fmt 'XX'];
             
-            df = javaObject('java.text.SimpleDateFormat', fmt);
             try
-                d = df.parse(s);
+                d = datetime(s, 'InputFormat', fmt, 'TimeZone', 'UTC', 'Format', 'preserveinput');
             catch e
+                err = e.message;
                 d = s;
-                err = 'is not a valid date-time';
+                return
+            end
+            err = [];
+        end
+        
+        function [d, err] = datestring2datetime(s)
+            %datestring2datetime parses an ISO8601 date into a datetime object.
+            % Allowed formats are yyyy-MM-dd
+            %
+            % Example:
+            %     JSON.datestring2datetime('2016-02-02')
+            
+            tokens = regexp(s, '^(\d{4}\-\d{2}\-\d{2})$', 'tokens', 'once');
+            
+            if isempty(tokens)
+                d = s;
+                err = 'is not a valid date';
+                return;
+            end
+
+            try
+                d = datetime(s, 'InputFormat', 'yyyy-MM-dd', 'TimeZone', '', 'Format', 'preserveinput');
+            catch e
+                err = e.message;
+                d = s;
+                return
+            end
+            err = [];
+        end
+        
+        function [s, err] = datetime2string(d)
+            %datetime2string converts a datetime object to an ISO8601 string
+            
+            if ~isa(d, 'datetime')
+                err = 'is not a valid date';
+                s = d;
                 return;
             end
             
-            % datenum('1970-01-01') == 719529
-            d = (d.getTime()/1000/60 - d.getTimezoneOffset())/60/24 + 719529;
+            
+            if isempty(d.TimeZone)
+                % TODO: We should set the format on a clone!
+                d.Format = 'yyyy-MM-dd';
+            else
+                d.Format = 'yyyy-MM-dd''T''HH:mm:ssXX';
+            end
+            s = char(d);
             err = [];
         end
-
-
         
     end
 end

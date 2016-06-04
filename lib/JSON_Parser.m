@@ -21,8 +21,8 @@ classdef JSON_Parser < JSON
         
         function this = JSON_Parser()
             %this@JSON();
-            this.formatters('date') = @(x) JSON.datestring2num(x);
-            this.formatters('date-time') = @(x) JSON.datetimestring2num(x);
+            this.formatters('date') = @(s) JSON.datestring2datetime(s);
+            this.formatters('date-time') = @(s) JSON.datetimestring2datetime(s);
         end
     
     end
@@ -32,6 +32,24 @@ classdef JSON_Parser < JSON
     end
     
     methods
+        
+        function [value, errors] = parse(this, varargin)
+            try
+                value = this.parse_(varargin{:});
+            catch e
+                if ~isempty(regexp(e.identifier, '^JSON:', 'once'))
+                    value = [];
+                    this.addError([], e.message, [], e.identifier);
+                else
+                    for k=1:numel(e.stack)
+                        e.stack(k)
+                    end
+                    rethrow(e);
+                end
+            end
+            
+            errors = this.errors;
+        end
         
         function [value, errors] = parse_(this, json, rootschema, options)
             if nargin < 2 || ~ischar(json) || isempty(json)
@@ -55,7 +73,7 @@ classdef JSON_Parser < JSON
             end
 
             % If is does not look like JSON it must be a URI
-            if isempty(regexp(json, '^\s*(\[|\{|"|true|false|null|\+?\-?\d)'))
+            if isempty(regexp(json, '^\s*(\[|\{|"|true|false|null|\+?\-?\d)', 'ONCE'))
                 uri = this.resolveURIagainstLoadPath(json);
                 try
                     this.json = urlread(uri);
@@ -561,6 +579,6 @@ classdef JSON_Parser < JSON
             end
         end
 
-    end
+    end % static methods
 end
 

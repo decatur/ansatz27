@@ -43,8 +43,7 @@ assert(strcmp(errors{1}{2}, 'tangling comma before line 1, column 7'));
 tc = TestCase();
 
 [obj, errors] = JSON.parse('a[1,2]');
-% TODO: MATLAB has a different java Exception message
-tc.assertEqual(errors{1}{2}, 'Could not resolve URI a[1,2] because: [java] java.net.URISyntaxException: Illegal character in path at index 1: a[1,2]');
+tc.assertEqual(errors{1}{2}(1:36), 'Could not resolve URI a[1,2] because');
 
 % Check for invalid chars in string "fo\x01o"
 [obj, errors] = JSON.parse(char([34  102  111 1 111 34]));

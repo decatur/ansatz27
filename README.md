@@ -25,7 +25,6 @@ You can validated JSON by JSON Schema online with [jsonschemalint](http://jsonsc
 
 [//]: # "testUsage.m"
 ```MATLAB
-addpath('lib', 'test');
 
 jsonOrFilepath = 'document.json';
 [obj, errors] = JSON.parse(jsonOrFilepath, 'schema.json');
@@ -214,16 +213,16 @@ a.dealValues = [13.13 42.42];
 
 |     JSON          |     Schema                    |      MATLAB               |
 |-------------------|-------------------------------|---------------------------|
-| number/integer    | none \| type=number\|integer    | 1x1 numeric matrix        |
+| number/integer    | none \| type=number\|integer  | 1x1 numeric matrix        |
 | string            | format=date(-time)            | 1x1 numeric matrix datnum |
 | string            | other formats                 | char array                |
-| boolean           | none \| type=boolean            | 1x1 boolean matrix        |
+| boolean           | none \| type=boolean          | 1x1 boolean matrix        |
 | object            | format=struct (default)       | struct                    |
 | object            | format=Map                    | containers.Map            |
 | array             | format=structured-array and item type=object | structured-array |
 | array             | array is uniform (hypercube) and all leafs are numeric | numeric matrix |
 | array             | otherwise                     | cell array                |
-| null              | none \| type=null               | 1x1 NaN                   |
+| null              | none \| type=null             | 1x1 NaN                   |
 
 Note: The coersion to struct will simply drop all properties with invalid field names.
 The coersion to Map will retain all properties. 
@@ -233,7 +232,7 @@ The coersion to Map will retain all properties.
 ```JSON
 { "Hello": "World", "$ref": 2 }
 ```
-*MATLAB*#
+*MATLAB*
 ```MATLAB
 struct('Hello', 'World')
 ```
@@ -244,7 +243,7 @@ struct('Hello', 'World')
 |     MATLAB            |     Schema                            |   JSON            |
 |-----------------------|---------------------------------------|-------------------|
 | 1x1 numeric matrix    | none \| type=number\|integer          | number/integer    |
-| 1x1 numeric matrix    | type=string and format=date(-time)    | string            |
+| datetime              | type=string and format=date(-time)    | string            |
 | numeric matrix        | none \| type=array                    | array             |
 | char array            | none \| string                        | string            |
 | 1x1 boolean matrix    | none \| type=boolean                  | boolean           |
@@ -390,15 +389,15 @@ a(2,:,:) = [5 6; 7 8];
 
 # Date Coercion
 
-The two predefined formatters `date` and `date-time` coerce string dates to numeric values.
+The two predefined formatters `date` and `date-time` coerce ISO8601 date string to datetime objects.
 
 [//]: # "testRoundtrip.xml#Roundtrip Date Formater"
 *MATLAB*
 ```MATLAB
 
 struct( ...
-    'myDate', 1+datenum('2016-01-02'), ...
-    'myDateTime', 1.5+datenum('2016-01-02') ...
+    'myDate', 1+datetime('2016-01-02'), ...
+    'myDateTime', 1.5+datetime('2016-01-02', 'TimeZone', 'Europe/Berlin') ...
 )
 
 ```
@@ -425,7 +424,7 @@ struct( ...
 
 {
     "myDate":"2016-01-03",
-    "myDateTime":"2016-01-03T12:00:00+01:00"
+    "myDateTime":"2016-01-03T12:00:00+0100"
 }
 
 ```
@@ -472,10 +471,10 @@ struct('foo', {1 2}, 'bar', {3 4})
 *MATLAB*
 ```MATLAB
 
-[
-    [736330 736360 13.13]
-    [736361 736389 42.42]
-]
+{
+    {datetime('2016-01-01') datetime('2016-01-31') 13.13}
+    {datetime('2016-02-01') datetime('2016-02-29') 42.42}
+}'
 
 ```
 *Schema*
@@ -512,9 +511,9 @@ struct('foo', {1 2}, 'bar', {3 4})
 
 struct( ...
     'shipping_address', ...
-        struct('street_address', '1600 Pennsylvania Avenue NW', 'city', 'Washington', 'state', 'DC'), ...
+        struct('street_address', '1600 Penn Ave NW', 'city', 'Washington', 'state', 'DC'), ...
     'billing_address', ...
-    struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
+        struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
 
 ```
 *Schema*
@@ -546,7 +545,7 @@ struct( ...
 
 {
     "shipping_address": {
-        "street_address": "1600 Pennsylvania Avenue NW",
+        "street_address": "1600 Penn Ave NW",
         "city":           "Washington",
         "state":          "DC"
     },
@@ -618,9 +617,9 @@ In practice you should consider not to use dictionaries, use arrays and some ext
 ```MATLAB
 
 a = containers.Map();
-a('DEAL-A')  = struct('start', 736409, 'value', 1);
-a('DEAL-XY') = struct('start', 736410, 'value', 2);
-a('DEAL-Z')  = struct('start', 736411, 'value', 3);
+a('DEAL-A')  = struct('start', datetime('2016-03-20'), 'value', 1);
+a('DEAL-XY') = struct('start', datetime('2016-03-21'), 'value', 2);
+a('DEAL-Z')  = struct('start', datetime('2016-03-22'), 'value', 3);
 
 ```
 *Schema*
@@ -707,7 +706,7 @@ For each validation error one item in the `errors` cell array is generated:
 *Errors*
 ```MATLAB
 
-{'/b' 'is not a date' '2016-01-01T12:00:00Z'}
+{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
 {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
 {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
 
@@ -780,4 +779,3 @@ Additionally, one can create an effient DoS with many, possibly huge, external s
 - [ ] ThingSpeak?
 - [ ] Validate keyword multipleOf (integer>0)
 - [ ] Validate exclusiveMinimum/Maximum (min/max must exist)
-- [ ] Use datetime() to coerce date and date-time strings to

@@ -11,7 +11,7 @@ classdef TestStringify < TestBase
             schema = this.getElementText(test, 'schema');
             jsonExpected = this.getElementText(test, 'json');
 
-            [jsonActual, errors] = JSON_Stringifier.stringify(matlab, schema, 0);
+            [jsonActual, errors] = JSON.stringify(matlab, schema, 0);
 
             this.assertEmpty(errors);
             this.assertEqual(jsonActual, jsonExpected);

@@ -130,9 +130,9 @@
         <description>Dictionary</description>
         <matlab>
             a = containers.Map();
-            a('DEAL-A')  = struct('start', 736409, 'value', 1);
-            a('DEAL-XY') = struct('start', 736410, 'value', 2);
-            a('DEAL-Z')  = struct('start', 736411, 'value', 3);
+            a('DEAL-A')  = struct('start', datetime('2016-03-20'), 'value', 1);
+            a('DEAL-XY') = struct('start', datetime('2016-03-21'), 'value', 2);
+            a('DEAL-Z')  = struct('start', datetime('2016-03-22'), 'value', 3);
         </matlab>
         <schema>
             {
@@ -160,9 +160,9 @@
         <description>Dictionary with Struct</description>
         <matlab>
             a = struct();
-            a.DEAL_A  = struct('start', 736409, 'value', 1);
-            a.DEAL_XY = struct('start', 736410, 'value', 2);
-            a.DEAL_Z  = struct('start', 736411, 'value', 3);
+            a.DEAL_A  = struct('start', datetime('2016-03-20'), 'value', 1);
+            a.DEAL_XY = struct('start', datetime('2016-03-21'), 'value', 2);
+            a.DEAL_Z  = struct('start', datetime('2016-03-22'), 'value', 3);
         </matlab>
         <schema>
             {
@@ -493,9 +493,9 @@
     <test>
         <description>From-till-value tripple</description>
         <matlab>
-            [   datenum('2016-01-01') ...
-                datenum('2016-01-31') ...
-                13]
+            {   datetime('2016-01-01') ...
+                datetime('2016-01-31') ...
+                13}
         </matlab>
         <schema>
             {
@@ -512,10 +512,10 @@
     <test>
         <description>List of From-Fill-Value Tripples</description>
         <matlab>
-            [
-                [736330 736360 13.13]
-                [736361 736389 42.42]
-            ]
+            {
+                {datetime('2016-01-01') datetime('2016-01-31') 13.13}
+                {datetime('2016-02-01') datetime('2016-02-29') 42.42}
+            }'
         </matlab>
         <schema>
             {
@@ -565,8 +565,8 @@
         <description>Roundtrip Date Formater</description>
         <matlab>
             struct( ...
-                'myDate', 1+datenum('2016-01-02'), ...
-                'myDateTime', 1.5+datenum('2016-01-02') ...
+                'myDate', 1+datetime('2016-01-02'), ...
+                'myDateTime', 1.5+datetime('2016-01-02', 'TimeZone', 'Europe/Berlin') ...
             )
         </matlab>
         <schema>
@@ -587,7 +587,7 @@
         <json>
             {
                 "myDate":"2016-01-03",
-                "myDateTime":"2016-01-03T12:00:00+01:00"
+                "myDateTime":"2016-01-03T12:00:00+0100"
             }
         </json>
     </test>

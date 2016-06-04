@@ -16,8 +16,8 @@ classdef JSON_Stringifier < JSON
     methods
         function this = JSON_Stringifier()
             %this@JSON();
-            this.formatters('date') = @(x) JSON.datenum2string(x);
-            this.formatters('date-time') = @(x) JSON.datetimenum2string(x);
+            this.formatters('date')      = @(d) JSON.datetime2string(d);
+            this.formatters('date-time') = @(d) JSON.datetime2string(d);
         end
     end
 
@@ -25,6 +25,24 @@ classdef JSON_Stringifier < JSON
     end
     
     methods
+        
+        function [json, errors] = stringify(this, varargin)
+            try
+                json = this.stringify_(varargin{:});
+            catch e
+                if ~isempty(regexp(e.identifier, '^JSON:', 'once'))
+                    json = [];
+                    this.addError([], e.message, [], e.identifier);
+                else
+                    for k=1:numel(e.stack)
+                        e.stack(k)
+                    end
+                    rethrow(e);
+                end
+            end
+            
+            errors = this.errors;
+        end
         
         function [json, errors] = stringify_(this, value, rootschema, space)
             %json=JSON_stringify(value, space) converts an object to JSON

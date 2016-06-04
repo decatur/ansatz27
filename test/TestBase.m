@@ -56,10 +56,10 @@ function text = getElementText(this, parentNode, tagName)
         %text = regexprep(text, '    ', '  ');
         %text = regexprep(text, '^\n', '');
 
-        text = strrep(text, 'BASE_URI', this.baseURI);
+        text = strtrim(strrep(text, 'BASE_URI', this.baseURI));
 
         if strcmp(tagName, 'matlab')
-            if isempty(regexp(text, '^\s*a\s*=', 'once'))
+            if isempty(regexp(text, '^\s*a\s*=', 'ONCE'))
                 text = eval(text);
             else
                 eval(text);
