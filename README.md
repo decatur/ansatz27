@@ -214,7 +214,7 @@ a.dealValues = [13.13 42.42];
 |     JSON          |     Schema                    |      MATLAB               |
 |-------------------|-------------------------------|---------------------------|
 | number/integer    | none \| type=number\|integer  | 1x1 numeric matrix        |
-| string            | format=date(-time)            | 1x1 numeric matrix datnum |
+| string            | format=date(-time)            | datetime           |
 | string            | other formats                 | char array                |
 | boolean           | none \| type=boolean          | 1x1 boolean matrix        |
 | object            | format=struct (default)       | struct                    |
