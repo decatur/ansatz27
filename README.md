@@ -12,7 +12,7 @@ Even the number `1` is a 2-dimensional matrix in MATLAB, and could translate to 
 ansatz27 uses [JSON Schema](http://json-schema.org) to coerce JSON and MATLAB data types consistently and to validate the data.
 
 # Requirements
-GNU Octave version minimum 4.0 or MATLAB about version 2006 (verified for 2013b).
+Version GNU Octave ≥4.0 or MATLAB ≥2013b.
 There are no dependencies.
 
 # Related Work
