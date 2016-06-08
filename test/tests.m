@@ -1,23 +1,24 @@
-%actual
+% Run this script within the containing directory.
 
 clear classes
 
-if JSON.isoct
+if exist('datetime') ~= 2 || exist('containers.Map') ~= 8
     addpath('lib/polyfill', '-end');
-    debug_on_error(true);
 end
 
+if exist('debug_on_error')
+    debug_on_error(true);
+end
 testMisc;
 testContainersMap;
 
 testUsage;
 testErrorHandling;
 
-testTestCase;
-testDatetime;
+%testTestCase;
+%testDatetime;
 
-TestRoundtrip().exec();
-TestStringify().exec();
-TestParse().exec();
-TestValidation().exec();
-
+tc = TestRoundtrip();   tc.exec();
+tc = TestStringify();   tc.exec();
+tc = TestParse();       tc.exec();
+tc = TestValidation();  tc.exec();
