@@ -503,7 +503,7 @@ classdef JSON < handle
             
             if ~isempty(errs)
                 this.errors = errs;
-                error('JSON:PARSE_SCHEMA', 'Errors while parsing schema');
+                error('JSON:PARSE_SCHEMA', 'Parse error in schema %s', uri);
             end
             
             if ~schema.isKey('id')
