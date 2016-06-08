@@ -55,8 +55,8 @@ classdef TestCase < handle
                         this.assertEqual(actual(m).(actualNames{k}), expected(m).(expectedNames{k}));
                     end
                 end
-            elseif isa(expected, 'Map')
-                if ~isa(actual, 'Map')
+            elseif isa(expected, 'Map') || isa(expected, 'containers.Map')
+                if ~( isa(actual, 'Map') || isa(actual, 'containers.Map') )
                     error(msg);
                 end
 
@@ -73,8 +73,8 @@ classdef TestCase < handle
                     end
                     this.assertEqual(actual(actualNames{k}), expected(expectedNames{k}));
                 end
-            elseif isobject(expected)
-                if ~isobject(actual) || ~expected.isequal(actual)
+            elseif isobject(expected) && ismember('isequal', methods(expected))
+                if ~isobject(actual) || ~isequal(expected, actual)
                     error(msg);
                 end
             else
