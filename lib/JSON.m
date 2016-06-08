@@ -499,7 +499,12 @@ classdef JSON < handle
         end
         
         function schema = postLoadSchema(this, schema, uri)
-            schema = JSON.parse(schema, [], struct('objectFormat', 'Map'));
+            [schema, errs] = JSON.parse(schema, [], struct('objectFormat', 'Map'));
+            
+            if ~isempty(errs)
+                this.errors = errs;
+                error('JSON:PARSE_SCHEMA', 'Errors while parsing schema');
+            end
             
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
@@ -969,5 +974,3 @@ classdef JSON < handle
         
     end
 end
-
-
