@@ -49,3 +49,6 @@ tc.assertEqual(errors{1}{2}(1:36), 'Could not resolve URI a[1,2] because');
 [obj, errors] = JSON.parse(char([34  102  111 1 111 34]));
 tc.assertEqual(errors{1}{2}, 'Invalid char found in range #00-#1F at line 1, column 4');
 
+% Check that faulty schemas get reported
+[obj, errors] = JSON.parse('"foo"', '{sdsd=2}');
+assert(length(errors) ==2);
