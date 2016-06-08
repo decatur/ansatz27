@@ -9,6 +9,7 @@ end
 if exist('debug_on_error')
     debug_on_error(true);
 end
+
 testMisc;
 testContainersMap;
 
@@ -16,7 +17,7 @@ testUsage;
 testErrorHandling;
 
 %testTestCase;
-%testDatetime;
+testDatetime;
 
 tc = TestRoundtrip();   tc.exec();
 tc = TestStringify();   tc.exec();
