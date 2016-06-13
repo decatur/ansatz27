@@ -322,8 +322,8 @@ classdef JSON_Parser < JSON
                 end
             end
             
-            % Check for invalid chars.
-            startIndices = regexp(str, '[\x0-\x1f]');
+            % Now that we know where string ends, check original(!) string for invalid chars.
+            startIndices = regexp(this.json(startPos+1:this.pos-2), '[\x0-\x1f]');
             if startIndices
                 this.pos = startPos + startIndices(1);
                 this.parseError('Invalid char found in range #00-#1F at');
