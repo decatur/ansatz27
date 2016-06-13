@@ -52,3 +52,9 @@ tc.assertEqual(errors{1}{2}, 'Invalid char found in range #00-#1F at line 1, col
 % Check that faulty schemas get reported
 [obj, errors] = JSON.parse('"foo"', '{sdsd=2}');
 assert(length(errors) ==2);
+
+[obj, errors] = JSON.parse('"foo\tbar"');
+assert(isempty(errors));
+
+[obj, errors] =  JSON.parse(sprintf('"foo\tbar"'));
+assert(strcmp(errors{1}{2}, 'Invalid char found in range #00-#1F at line 1, column 5'));
