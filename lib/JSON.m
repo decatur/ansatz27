@@ -79,6 +79,8 @@ classdef JSON < handle
                     schema = this.postLoadSchema(schema, uri);
                     localSchemaCache(uri) = schema;
                 end
+            elseif this.isaMap(schema)
+                return;
             elseif isempty(schema)
                 schema = [];
                 return;
@@ -88,6 +90,7 @@ classdef JSON < handle
             
             this.resolveSchema(localSchemaCache);
             schema = JSON.getSchemaFromCache(uri, localSchemaCache);
+
         end
         
         function resolveSchema(this, localSchemaCache)
@@ -488,7 +491,7 @@ classdef JSON < handle
             localSchemaCache(uri) = schema;
         end
         
-        function resolvedURI = resolveURI(this, uri, base)
+        function resolvedURI = resolveURI( this, uri, base)
             %resolveURI resolves the reference against the base URI.
             % See https://tools.ietf.org/html/rfc3986
             resolvedURI = uri;
@@ -499,19 +502,31 @@ classdef JSON < handle
         end
         
         function schema = postLoadSchema(this, schema, uri)
-            [schema, errs] = JSON.parse(schema, [], struct('objectFormat', 'Map'));
-            
-            if ~isempty(errs)
+            parser = JSON_Parser();
+            parser.isSchema = true;
+            [ schema, errs] = parse(parser, schema, [], struct('objectFormat', 'Map'));
+            if ~isempty( errs)
                 this.errors = errs;
                 error('JSON:PARSE_SCHEMA', 'Parse error in schema %s', uri);
             end
-            
+
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
                 schema('id') = uri;
             end
             
             this.normalizeSchema(schema, uri, '', schema('id'));
+            
+            for index=1:length(parser.defaults)
+                p = JSON_Parser();
+                subSchema = JSON.getPath(schema, parser.defaults{index});
+                [ defaultValue, errs ] = parse(p, subSchema('default'), subSchema);
+                if ~isempty( errs)
+                    this.errors = errs;
+                    error('JSON:PARSE_SCHEMA', 'Default value does not validate in schema %s', uri);
+                end
+                subSchema('default') = defaultValue;
+            end
         end
         
         function normalizeSchema(this, rootSchema, uri, pointer, resolutionScope)
@@ -974,3 +989,5 @@ classdef JSON < handle
         
     end
 end
+
+
