@@ -15,6 +15,8 @@ classdef JSON_Parser < JSON
         index_esc
         len_esc
         options
+        isSchema = false    % Are we parsing a schema?
+        defaults = {}
     end
     
     methods
@@ -99,7 +101,7 @@ classdef JSON_Parser < JSON
             this.len_esc = length(this.esc);
             
             this.skipWhitespace();
-            value = this.parseValue(context);
+            value = this.parseValue(context, context.schema);
             this.skipWhitespace();
 
             if this.pos ~= this.len+1
@@ -123,6 +125,7 @@ classdef JSON_Parser < JSON
             this.parseChar('{');
 
             objectFormat = JSON.getPath(schema, '/format', this.options.objectFormat);
+            hasDefault = false;
 
             if strcmp(objectFormat, 'Map')
                 val = containers.Map();
@@ -136,8 +139,15 @@ classdef JSON_Parser < JSON
                     this.parseChar(':');
                     subContext = this.getChildContext(context, key);
                     subContext.schema = this.getPropertySchema(schema, key);
-
-                    v = this.parseValue(subContext);
+                    
+                    beginPos = this.pos;
+                    v = this.parseValue(subContext, subContext.schema);
+                    % TODO: Make sure this is really a default value
+                    if this.isSchema && strcmp(key, 'default')
+                        hasDefault = true;
+                        % Retain the raw string for default values.
+                        v = this.json(beginPos:this.pos-1);
+                    end
                     
                     if isstruct(val)
                         if ~isempty(regexp(key, '^[a-z][a-z0-9_]*$', 'ignorecase'))
@@ -158,6 +168,10 @@ classdef JSON_Parser < JSON
                 end
             end
             this.parseChar('}');
+            
+            if hasDefault
+                this.defaults{end+1} = context.pointer;
+            end
             
         end
         
@@ -181,7 +195,7 @@ classdef JSON_Parser < JSON
 
                     subContext.isArray = true;
                     index = index + 1;
-                    v = this.parseValue(subContext);
+                    v = this.parseValue(subContext, subContext.schema);
                     if isstruct(val)
                         % Note: Simply assigning val(index) = v will break if v and val have different fields!
                         names = fieldnames(v);
@@ -353,9 +367,8 @@ classdef JSON_Parser < JSON
             end
         end
         
-        function val = parseValue(this, context)
-            schema = JSON.getPath(context, '/schema');
-
+        % TODO: Remove context.schema from caller
+        function val = parseValue(this, context, schema)
             if isempty(schema) || ~schema.isKey('manyKeyword') || isequal(schema('manyKeyword'), 'allOf')
                 val = this.parseValue_(context, schema);
             else
@@ -386,7 +399,7 @@ classdef JSON_Parser < JSON
             coersedVal = [];
 
             for k=1:length(schemaArray)
-                val = this.parseValue_(context, schemaArray{k});
+                val = this.parseValue(context, schemaArray{k});
                 if length(this.errors) == state.errorLength
                     % First validation schema wins.
                     if isempty(coersedVal)
