@@ -530,10 +530,11 @@ classdef JSON < handle
         end
         
         function normalizeSchema(this, rootSchema, uri, pointer, resolutionScope)
-            %normalizeSchema traverses the given schema iteratively (depth first) and validates all subschemas.
+            %normalizeSchema traverses the given schema iteratively (depth first) and normalizes and validates all subschemas.
             
             function addSchema(schema, pointer, resolutionScope)
                 schemaInfos{end+1} = struct('schema', schema, 'pointer', pointer, 'resolutionScope', resolutionScope);
+                JSON.log('DEBUG', 'Adding schema %s\n', pointer);
             end
             
             function processProperties(propertyType, schema, pointer, resolutionScope)
@@ -557,6 +558,8 @@ classdef JSON < handle
                 schema = info.schema;
                 resolutionScope = info.resolutionScope;
                 pointer = info.pointer;
+                
+                JSON.log('DEBUG', 'Processing schema %s\n', pointer);
                 
                 if ~JSON.isaMap(schema)
                     error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
@@ -633,8 +636,12 @@ classdef JSON < handle
                     schema('type') = type;
                 end
                 
-                if schema.isKey('required') && ~iscell(schema('required'))
-                    error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
+                if schema.isKey('required')
+                    if isempty(schema('required'))
+                        schema('required') = {};
+                    elseif ~iscell(schema('required'))
+                        error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
+                    end
                 end
                 
                 if schema.isKey('pattern') && ~ischar(schema('pattern'))
