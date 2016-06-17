@@ -399,18 +399,22 @@ classdef JSON_Parser < JSON
             coersedVal = [];
 
             for k=1:length(schemaArray)
-                val = this.parseValue(context, schemaArray{k});
+                val = this.parseValue_(context, schemaArray{k});
                 if length(this.errors) == state.errorLength
-                    % First validation schema wins.
+                    % There were no errors.
+                    % First validating schema wins.
                     if isempty(coersedVal)
                         coersedVal = val;
                     end
 
                     if isequal(manyKeyword, 'anyOf')
+                        % anyOf can stop at first validating schema
                         break;
                     end
-                elseif k < length(schemaArray)
-                    % Reset state
+                end
+                
+                if k < length(schemaArray)
+                    % Reset state if there are more schemas to try.
                     this.errors = this.errors(1:state.errorLength);
                     copyState(state);
                 end
