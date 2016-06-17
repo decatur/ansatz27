@@ -1,0 +1,29 @@
+
+ {
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "Issue6",
+    "type": "object",
+    "allOf": [
+        {
+            "$ref": "common_request_schema.json"
+        },
+        {
+            "type": "object",
+            "required": ["scheduleStart", "scheduleEnd"],
+            "properties": {
+                "scheduleStart": {
+                    "title": "The scheduleStart title",
+                    "description": "The scheduleStart description",
+                    "type": "string",
+                    "format" : "date"
+                }, 
+                "scheduleEnd": {
+                    "title": "The scheduleEnd title",
+                    "description": "The scheduleEnd description",
+                    "type": "string",
+                    "format" : "date"
+                }
+            }
+        }
+    ]
+}
