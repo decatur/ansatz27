@@ -1,0 +1,15 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "required": ["start", "end"],
+    "properties": {
+        "start": {
+            "type": "string",
+            "format" : "date"
+        }, 
+            "end": {
+            "type": "string",
+            "format" : "date"
+        }
+    }
+}
