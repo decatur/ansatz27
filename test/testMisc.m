@@ -58,3 +58,9 @@ assert(isempty(errors));
 
 [obj, errors] =  JSON.parse(sprintf('"foo\tbar"'));
 assert(strcmp(errors{1}{2}, 'Invalid char found in range #00-#1F at line 1, column 5'));
+
+uriPrefix = ['file:///' strrep(pwd, '\', '/') '/test/'];
+
+[obj, errors] = JSON.parse([uriPrefix 'issue6/request.json'], [uriPrefix  'issue6/request_schema.json']);
+assert(isempty(errors));
+assert(isa(obj.start, 'datetime'));
