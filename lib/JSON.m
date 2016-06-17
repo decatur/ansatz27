@@ -80,6 +80,7 @@ classdef JSON < handle
                     localSchemaCache(uri) = schema;
                 end
             elseif this.isaMap(schema)
+                % TODO: Do we not need to call this.resolveSchema()?
                 return;
             elseif isempty(schema)
                 schema = [];
@@ -89,7 +90,7 @@ classdef JSON < handle
             end
             
             this.resolveSchema(localSchemaCache);
-            schema = JSON.getSchemaFromCache(uri, localSchemaCache);
+            schema = JSON.getSchemaFromCache(uri, []);
 
         end
         
@@ -133,12 +134,12 @@ classdef JSON < handle
                 schema = localSchemaCache(uri);
                 if schema.isKey('allOf')
                     %TODO: At any level
-                    this.mergeSchemas(schema);
+                    schema = this.mergeSchemas(schema);
                 end
                 
-                if ~isempty(uri)
+                %if ~isempty(uri)
                     JSON.cacheSchema(uri, schema);
-                end
+                %end
             end
         end
         
@@ -207,7 +208,7 @@ classdef JSON < handle
             
             % Merge properties and required fields of all schemas.
             mergedSchema = containers.Map();
-            mergedSchema('type') = 'object'; % TODO: Why not {'object'}?
+            mergedSchema('type') = {'object'};
             mergedProperties = containers.Map();
             mergedSchema('properties') = mergedProperties;
             mergedSchema('required') = {};
@@ -720,7 +721,7 @@ classdef JSON < handle
                     value = [];
                 end
             elseif nargin >= 3
-                config(key) = value;
+                config(key) = value; %#ok<NASGU>
             end
         end
         
@@ -732,8 +733,12 @@ classdef JSON < handle
             end
         end
         
+        function clearSchemaCache()
+            JSON.configParam('cache', []);
+        end
+        
         function schema = getSchemaFromCache(uri, localSchemaCache)
-            if localSchemaCache.isKey(uri)
+            if ~isempty(localSchemaCache) && localSchemaCache.isKey(uri)
                 schema = localSchemaCache(uri);
                 return;
             end
@@ -769,11 +774,13 @@ classdef JSON < handle
         %        end
         
         function [value, errors] = parse(varargin)
+            JSON.clearSchemaCache();
             parser = JSON_Parser();
             [value, errors] = parse(parser, varargin{:});
         end
         
         function [json, errors] = stringify(varargin)
+            JSON.clearSchemaCache();
             stringifier = JSON_Stringifier();
             [json, errors] = stringifier.stringify(varargin{:});
         end
