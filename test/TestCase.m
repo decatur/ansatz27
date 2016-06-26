@@ -73,7 +73,9 @@ classdef TestCase < handle
                     end
                     this.assertEqual(actual(actualNames{k}), expected(expectedNames{k}));
                 end
-            elseif isobject(expected) && ismember('isequal', methods(expected))
+            elseif isa(expected, 'datetime')
+                % Better would be: elseif isobject(expected) && ismember('isequal', methods(expected))
+                % but this gives a syntax error with Octave at methods, what a pita.
                 if ~isobject(actual) || ~isequal(expected, actual)
                     error(msg);
                 end

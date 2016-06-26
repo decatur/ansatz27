@@ -15,14 +15,16 @@ classdef JSON_Parser < JSON
         index_esc
         len_esc
         options
-        isSchema = false    % Are we parsing a schema?
-        defaults = {}
+        isSchema    % Are we parsing a schema?
+        defaults
     end
     
     methods
         
         function this = JSON_Parser()
             %this@JSON();
+            this.isSchema = false;
+            this.defaults = {};
             this.formatters('date') = @(s) JSON.datestring2datetime(s);
             this.formatters('date-time') = @(s) JSON.datetimestring2datetime(s);
         end
