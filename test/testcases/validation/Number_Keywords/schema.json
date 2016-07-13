@@ -1,0 +1,13 @@
+{
+    "type": "array",
+    "items": [
+        { "type": "number", "minimum": 1 },
+        { "type": "number", "minimum": 1, "exclusiveMinimum": true },
+        { "type": "number", "maximum": 1 },
+        { "type": "number", "maximum": 1, "exclusiveMaximum": true },
+        { "type": "number", "multipleOf": 3 },
+        { "type": "number", "multipleOf": 3 },
+        { "type": "integer" },
+        { "type": "integer" }
+    ]
+}

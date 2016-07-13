@@ -3,26 +3,35 @@ classdef TestRoundtrip < TestBase
     methods
 
         function this = TestRoundtrip()
-            this@TestBase('testRoundtrip.xml');
+            this@TestBase('roundtrip');
         end
 
-        function execSingle(this, test)
-            expectedMatlab = this.getElementText(test, 'matlab');
-            schema = this.getElementText(test, 'schema');
-            expectedJSON = this.getElementText(test, 'json');
-
-            fprintf(1, '\t\tstringify ... ');
+        function execSingle(this, dirName)
+            dirPath = fullfile(this.absdir, dirName);
+            dirUrl = ['file:///' strrep(dirPath, '\', '/')];
             
-            [actualJSON, errors] = JSON.stringify(expectedMatlab, schema, 0);
+            run(fullfile(dirPath, 'payload.m'));
+            expectedMatlab = a;
+
+            if exist(fullfile(dirPath, 'schema.json'), 'file') == 0
+                schemaURL = [];
+            else
+                schemaURL = [dirUrl '/schema.json'];
+            end
+            
+            jsonURL = [dirUrl '/payload.json'];
+            expectedJSON = urlread(jsonURL);
+
+            fprintf(1, 'stringify\n');
+            
+            [actualJSON, errors] = JSON.stringify(expectedMatlab, schemaURL, 0);
             this.assertEmpty(errors);
             this.assertEqual(regexprep(actualJSON, '\s', ''), regexprep(expectedJSON, '\s', ''));
 
-            fprintf(1, '\t\tparse ... ');
-            [actualMatlab, errors] = JSON.parse(expectedJSON, schema);
+            fprintf(1, 'parse\n');
+            [actualMatlab, errors] = JSON.parse(expectedJSON, schemaURL);
             this.assertEmpty(errors);
             this.assertEqual(actualMatlab, expectedMatlab);
-            this.assertEqual(islogical(actualMatlab), islogical(expectedMatlab));
-
         end
 
     end % methods

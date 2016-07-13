@@ -1,0 +1,10 @@
+{
+    "type": "array",
+    "items": [
+        {
+            "type": "number"
+        }, {
+            "type": "null"
+        }
+    ]
+}

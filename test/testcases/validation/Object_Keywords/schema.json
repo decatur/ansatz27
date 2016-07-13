@@ -1,0 +1,6 @@
+{
+    "type": "object",
+    "required": ["bar"],
+    "minProperties": 2,
+    "maxProperties": 0
+}

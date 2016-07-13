@@ -1,0 +1,1 @@
+a = struct('foo', 'bar');

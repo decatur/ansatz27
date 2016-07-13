@@ -1,0 +1,70 @@
+{
+    "title": "KLM Schema",
+    "type": "object",
+    "properties": {
+        "SEK": {
+            "description": "SEK parameters",
+            "type": "object",
+            "required": [
+                "Modules"
+            ],
+            "properties": {
+                "Modules": {
+                    "type": "object",
+                    "required": [
+                        "PF"
+                    ],
+                    "properties": {
+                        "PF": {
+                            "type": "object",
+                            "oneOf": [
+                                {"$ref": "#/definitions/Filter"},
+                                {"$ref": "#/definitions/Calibration"}
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "Signals": {
+            "type": "object"
+        }
+    },
+    "required": [
+        "SEK",
+        "Signals"
+    ],
+    "definitions": {
+        "Filter": {
+            "type": "object",
+            "required": [
+                "Type",
+                "Value"
+            ],
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "pattern": "Filter"
+                }
+            }
+        },
+        "Calibration": {
+            "type": "object",
+            "required": [
+                "Type",
+                "Value"
+            ],
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "pattern": "Calibration"
+                },
+                "Value": {
+                    "type": "object",
+                    "required": [],
+                    "oneOf": [{"type":"string","pattern":"Length"},{"type":"string","pattern":"AcousticLength"}]
+                }
+            }
+        }
+    }
+}

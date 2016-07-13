@@ -1,0 +1,19 @@
+{
+    "allOf": [
+        {
+            "$ref": "schema2.json"
+        },
+        {
+            "type": "object",
+            "required": ["id"],
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "foo": {
+                    "type": "number"
+                }
+            }
+        }
+    ]
+}

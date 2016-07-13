@@ -1,0 +1,11 @@
+{
+    "type": "array",
+    "items": {
+        "type": "array",
+        "items": [
+            {"type": "string", "format": "date"},
+            {"type": "string", "format": "date"},
+            {"type": ["number", "null"] }
+        ]
+    }
+}

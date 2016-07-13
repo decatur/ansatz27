@@ -1,0 +1,9 @@
+{
+    "id": "../",
+    "type": "object",
+    "properties": {
+        "bar": {
+            "$ref": "../schema2.json#/properties/bar"
+        }
+    }
+}

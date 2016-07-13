@@ -1,0 +1,5 @@
+{
+    "DEAL-A" : { "start": "2016-03-20", "value": 1 },
+    "DEAL-XY": { "start": "2016-03-21", "value": 2 },
+    "DEAL-Z" : { "start": "2016-03-22", "value": 3 }
+}

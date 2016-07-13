@@ -1,0 +1,65 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"description": "container schema for all Metadata from streamsapi",
+	"anyOf": [
+		{ "$ref": "#/definitions/coreSchema" },
+		{
+			"type": "array",
+			"items": { "$ref": "#/definitions/coreSchema" },
+			"minItems": 1
+		}
+	],
+	"definitions": {
+		"coreSchema": {
+			"anyOf":[
+				{ "$ref": "#/definitions/vibrationChild_schema"},
+				{ "$ref": "#/definitions/vibrationParent_schema"}
+			]
+		},
+		"vibrationChild_schema": {
+			"description": "schema for a single vibration measurement",
+			"type": "object",
+			"required": [ "id", "parentId", "measurementDate", "additionalMeasurements"],
+			"properties": {
+				"statistics": {
+					"type": "object",
+					"default": {
+						"rms": [ 1, 1]
+					},
+					"properties": {
+						"rms": { "$ref": "#/definitions/numArray"},
+						"mean": { "$ref": "#/definitions/numArray"},
+						"std": { "$ref": "#/definitions/numArray"},
+						"kurtosis": { "$ref": "#/definitions/numArray"},
+						"skewness": { "$ref": "#/definitions/numArray"}
+					}
+				},
+				"measurementDate": {
+					"type": "string",
+					"format": "date-time"
+				}
+			}
+		},
+		"vibrationParent_schema": {
+			"description": "schema for a series of vibration measurements",
+			"type": "object",
+			"required": [ "id", "documentClass", "nominalFreq", "trackedFlag"],
+			"properties": {
+				"documentClass": {
+					"type": "string",
+					"enum": [ "parentOfChunks"]
+				},
+				"trackedFlag": {
+					"type": "boolean"
+				}
+			}
+		},
+		"numArray": {
+			"type": "array",
+			"items": {
+				"type": "number"
+			},
+			"minItems": 1
+		}
+	}
+}

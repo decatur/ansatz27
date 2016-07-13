@@ -1,0 +1,12 @@
+{
+    "id": "4711",
+    "portfolio": {
+        "index": 3,
+        "value": 4.32
+    },
+    "deals": [
+        { "name": "DEAL-A", "value": 13.13 },
+        { "name": "DEAL-B", "value": 42.42 }
+    ],
+    "dealValues": [ 13.13, 42.42 ]
+}

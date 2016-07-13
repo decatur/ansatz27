@@ -1,0 +1,18 @@
+{
+    "SEK": {
+        "Modules": {
+            "PF": {
+                "Type": "Calibration",
+                "Value": {
+                    "Length": 900,
+                    "STFLength": 300,
+                    "CalibrationData": [
+                        {
+                            
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

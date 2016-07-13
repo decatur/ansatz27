@@ -1,0 +1,82 @@
+{
+    "title": "KLM Schema",
+    "type": "object",
+    "properties": {
+        "SEK": {
+            "description": "SEK parameters",
+            "type": "object",
+            "required": [
+                "Modules"
+            ],
+            "properties": {
+                "Modules": {
+                    "type": "object",
+                    "required": [
+                        "PF"
+                    ],
+                    "properties": {
+                        "PF": {
+                            "type": "object",
+                            "oneOf": [
+                                {"$ref": "#/definitions/MIMO_FIR"},
+                                {"$ref": "#/definitions/CalibrationPF"}
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "Signals": {
+            "type": "object"
+        }
+    },
+    "required": [
+        "SEK"
+    ],
+    "definitions": {
+        "MIMO_FIR": {
+            "type": "object",
+            "required": [
+                "Type",
+                "Value"
+            ],
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "pattern": "Filter"
+                }
+            }
+        },
+        "CalibrationPF": {
+            "type": "object",
+            "required": [
+                "Type",
+                "Value"
+            ],
+            "properties": {
+                "Type": {
+                    "type": "string",
+                    "pattern": "Calibration"
+                },
+                "Value": {
+                    "type": "object",
+                    "required": ["STFLength"],
+                    "oneOf": [
+                        {
+                            "required":["Length"],
+                            "properties": {
+                                "Length": {"type":"integer","minimum":1}
+                            }
+                        },
+                        {
+                            "required":["AcousticLength"],
+                            "properties": {
+                                "AcousticLength": {"type":"number"}
+                            }
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

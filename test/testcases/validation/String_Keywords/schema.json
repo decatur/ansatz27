@@ -1,0 +1,9 @@
+{
+    "type": "array",
+    "items": [
+        { "type": "string", "minLength": 3, "maxLength": 4 },
+        { "type": "string", "minLength": 3, "maxLength": 4 },
+        { "type": "string", "minLength": 3, "maxLength": 4 },
+        { "type": "string", "pattern": "^\\w+$" }
+    ]
+}

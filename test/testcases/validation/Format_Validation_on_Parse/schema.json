@@ -1,0 +1,9 @@
+{
+    "type": "object",
+    "properties": {
+        "a": { "type": "string", "format": "date" },
+        "b": { "type": "string", "format": "date" },
+        "c": { "type": "string", "format": "date-time" },
+        "d": { "type": "string", "format": "date-time" }
+    }
+}

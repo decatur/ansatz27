@@ -1,0 +1,27 @@
+[
+  {
+    "parentId": "4e919cfc-2703-4223-b860-b915414a3212",
+    "measurementDate": "2016-01-03T03:14:10Z",
+    "additionalMeasurements": {
+      "power": 2309.4,
+      "velWindAne2": 14.707,
+      "rpmMainShaft": 15.957,
+      "drehzahlSchnelleWelle": 1450.8662,
+      "rpmGen": 1452.4,
+      "angNacPos": 326.6
+    },
+    "id": "057f534a-b03c-4188-a08d-c1a992b2f8bf",
+    "__attachments": {
+      "rawdata": {
+        "_self": "/demv-bal01wf/g001/chunks/057f534a-b03c-4188-a08d-c1a992b2f8bf/rawdata",
+        "contentType": "application/octet-stream"
+      }
+    },
+    "__self": "api/v1.0/vibrations/child/057f534a-b03c-4188-a08d-c1a992b2f8bf",
+    "_self": "dbs/dtt4AA==/colls/dtt4AJdHiAA=/docs/dtt4AJdHiABbAwAAAAAAAA==/",
+    "_rid": "dtt4AJdHiABbAwAAAAAAAA==",
+    "_etag": "\"0000710e-0000-0000-0000-575583a90000\"",
+    "_attachments": "attachments/",
+    "_ts": 1465222058
+  }
+]

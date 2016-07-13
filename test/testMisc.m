@@ -55,6 +55,7 @@ assert(length(errors) ==2);
 
 [obj, errors] = JSON.parse('"foo\tbar"');
 assert(isempty(errors));
+assert(strcmp(obj, sprintf('foo\tbar')));
 
 [obj, errors] =  JSON.parse(sprintf('"foo\tbar"'));
 assert(strcmp(errors{1}{2}, 'Invalid char found in range #00-#1F at line 1, column 5'));
@@ -64,3 +65,16 @@ uriPrefix = ['file:///' strrep(pwd, '\', '/') '/test/'];
 [obj, errors] = JSON.parse([uriPrefix 'issue6/request.json'], [uriPrefix  'issue6/request_schema.json']);
 assert(isempty(errors));
 assert(isa(obj.start, 'datetime'));
+
+% [o, errors] = JSON.parse([uriPrefix 'bugreport3/Parameters.json'], [uriPrefix  'bugreport3/ParametersSchema.json']);
+% assert(isempty(errors));
+% assert(isfield(o, 'SEK'));
+% 
+% [o, errors] = JSON.parse([uriPrefix 'bugreport2/Parameters.json'], [uriPrefix  'bugreport2/ParametersSchema.json']);
+% assert(length(errors) == 1);
+% isequal(fieldnames(o) , {'SEK'; 'Signals'});
+% 
+% [o, errors] = JSON.parse([uriPrefix 'bugreport/testExample.json'], [uriPrefix  'bugreport/streamsContainer_schema.json']);
+% assert(isempty(errors));
+% assert(iscell(o) && length(o) == 1);
+

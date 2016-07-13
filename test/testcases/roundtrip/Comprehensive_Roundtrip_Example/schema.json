@@ -1,0 +1,26 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {
+            "type": "string"
+        },
+        "portfolio": {
+            "type": "object",
+            "properties": {
+                "index": { "type": "integer", "minimum": 1 },
+                "value": { "type": "number" }
+            }
+        },
+        "deals": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "name":  { "type": "string", "pattern": "^DEAL-\\w+$" },
+                    "value": { "type": "number", "minimum": 0 }
+                }
+            }
+        }
+    }
+}

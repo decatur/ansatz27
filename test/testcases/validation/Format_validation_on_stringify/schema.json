@@ -1,0 +1,9 @@
+{
+    "type": "object",
+    "properties": {
+        "a": { "type": "string", "format": "date" },
+        "b": { "$ref": "#/properties/a" },
+        "c": { "type": "string", "format": "date-time" },
+        "d": { "$ref": "#/properties/c" }
+    }
+}

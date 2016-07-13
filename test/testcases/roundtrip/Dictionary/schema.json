@@ -1,0 +1,12 @@
+{
+    "type": "object",
+    "format": "Map",
+    "patternProperties": {
+        "^DEAL-[A-Z]+$": { 
+            "type": "object",
+            "properties": {
+                "start": { "type": "string", "format": "date" }
+            }
+        }
+    }
+}

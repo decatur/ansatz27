@@ -1,0 +1,11 @@
+{
+    "type": "object",
+    "properties": {
+        "id": { "type": "string" },
+        "bar": { "$ref": "#/definitions/barType" }
+    },
+    "additionalProperties": false,
+    "definitions": {
+        "barType": { "$ref": "#/properties/bar" }
+    }
+}

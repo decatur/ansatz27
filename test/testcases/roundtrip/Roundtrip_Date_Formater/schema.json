@@ -1,0 +1,13 @@
+{
+    "type": "object",
+    "properties": {
+        "myDate": { 
+            "type": "string",
+            "format": "date"
+        },
+        "myDateTime": { 
+            "type": "string",
+            "format": "date-time"
+        }
+    }
+}

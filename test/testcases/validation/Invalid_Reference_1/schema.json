@@ -1,0 +1,10 @@
+{
+    "type": "object",
+    "properties": {
+        "id": { "type": "string" },
+        "bar": { "$ref": "#/definitions/BAR" }
+    },
+    "definitions": {
+        "bar": { }
+    }
+}
