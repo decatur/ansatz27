@@ -514,6 +514,8 @@ classdef JSON < handle
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
                 schema('id') = uri;
+            else
+                schema('id') = this.resolveURI(schema('id'), uri);
             end
             
             this.normalizeSchema(schema, uri, '', schema('id'));
