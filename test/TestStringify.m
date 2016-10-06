@@ -3,18 +3,28 @@ classdef TestStringify < TestBase
     methods
 
         function this = TestStringify()
-            this@TestBase('testStringify.xml');
+            this@TestBase('stringify');
         end
 
-        function execSingle(this, test)
-            matlab = this.getElementText(test, 'matlab');
-            schema = this.getElementText(test, 'schema');
-            jsonExpected = this.getElementText(test, 'json');
+        function execSingle(this, dirName)
+            dirPath = fullfile(this.absdir, dirName);
+            dirUrl = ['file:///' strrep(dirPath, '\', '/')];
+            
+            expectedMatlab = eval(urlread([dirUrl '/payload.m']));
 
-            [jsonActual, errors] = JSON.stringify(matlab, schema, 0);
+            if exist(fullfile(dirPath, 'schema.json'), 'file') == 0
+                schemaURL = [];
+            else
+                schemaURL = [dirUrl '/schema.json'];
+            end
+            
+            expectedJSON = urlread([dirUrl '/payload.json']);
 
+            fprintf(1, 'stringify\n');
+            
+            [actualJSON, errors] = JSON.stringify(expectedMatlab, schemaURL, 0);
             this.assertEmpty(errors);
-            this.assertEqual(jsonActual, jsonExpected);
+            this.assertEqual(regexprep(actualJSON, '\s', ''), regexprep(expectedJSON, '\s', ''));
         end
 
     end % methods

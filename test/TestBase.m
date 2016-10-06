@@ -9,7 +9,7 @@ classdef TestBase < TestCase
         
         function this = TestBase(testType)
             this.testType = testType;
-            this.absdir = fullfile(fileparts(which('TestCase')), 'testcases', this.testType);
+            this.absdir = fullfile(pwd(), 'testcases', this.testType);
             this.absdir = strrep(this.absdir, '\', '/');
         end
         

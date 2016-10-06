@@ -202,6 +202,7 @@ classdef JSON_Stringifier < JSON
                 elseif isempty(value)
                     json = 'null';
                 else
+                    % TODO: Assert that value has only one element!
                     json = this.nan2null(num2str(value, this.numberFormat(schema)));
                 end
 

@@ -35,8 +35,10 @@ classdef TestCase < handle
             elseif iscell(expected)
                 if ~iscell(actual)
                     fprintf(1, 'Error: Expected cell, found %s\n', TestCase.toString(actual));
+                    return;
                 elseif ~iscell(actual) || length(expected) ~= length(actual)
                     fprintf(1, 'Error: Expected cell of length %u, found length %u\n', length(expected), length(actual));
+                    return;
                 end
                 for k=1:length(expected)
                     this.assertEqual(actual{k}, expected{k})
@@ -44,6 +46,7 @@ classdef TestCase < handle
             elseif isstruct(expected)
                 if ~isstruct(actual)
                     fprintf(1, 'Error: Expected struct, found %s\n', TestCase.toString(actual));
+                    return;
                 end
                 
                 expectedNames = sort(fieldnames(expected));
@@ -51,12 +54,14 @@ classdef TestCase < handle
                 
                 if length(expected) ~= length(actual) || length(expectedNames) ~= length(actualNames)
                     fprintf(1, 'Error: Mismatch in field names. Expected %s, found %s', expectedNames{:}, actualNames{:});
+                    return;
                 end
                 
                 for m=1:length(expected)
                     for k=1:length(expectedNames)
                         if ~strcmp(expectedNames{k}, actualNames{k})
                             fprintf(1, 'Error: Expected field name %s, found %s\n', expectedNames{k}, actualNames{k});
+                            return;
                         end
                         this.assertEqual(actual(m).(actualNames{k}), expected(m).(expectedNames{k}));
                     end
@@ -64,6 +69,7 @@ classdef TestCase < handle
             elseif isa(expected, 'Map') || isa(expected, 'containers.Map')
                 if ~( isa(actual, 'Map') || isa(actual, 'containers.Map') )
                     fprintf(1, 'Error: Expected map, found %s\n', actual);
+                    return;
                 end
 
                 expectedNames = sort(expected.keys());
@@ -71,11 +77,13 @@ classdef TestCase < handle
                 
                 if length(expectedNames) ~= length(actualNames)
                     fprintf(1, 'Error: Mismatch in field names. Expected %s, found %s', expectedNames{:}, actualNames{:});
+                    return;
                 end
                 
                 for k=1:length(expectedNames)
                     if ~strcmp(expectedNames{k}, actualNames{k})
-                         fprintf(1, 'Error: Expected field name %s, found %s\n', expectedNames{k}, actualNames{k});
+                        fprintf(1, 'Error: Expected field name %s, found %s\n', expectedNames{k}, actualNames{k});
+                        return;
                     end
                     this.assertEqual(actual(actualNames{k}), expected(expectedNames{k}));
                 end
