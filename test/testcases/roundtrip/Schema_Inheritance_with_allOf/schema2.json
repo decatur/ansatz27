@@ -1,9 +1,0 @@
-{
-    "type": "object",
-    "properties": {
-        "bar": {
-            "type": "string",
-            "default": "DEF_VAL"
-        }
-    }
-}
