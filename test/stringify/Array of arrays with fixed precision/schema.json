@@ -1,0 +1,10 @@
+ { 
+    "type": "array",
+    "items": {
+        "type": "array",  
+        "items": {
+            "type": ["number", "null"], 
+            "fixedPrecision": 2
+        }
+    }
+}

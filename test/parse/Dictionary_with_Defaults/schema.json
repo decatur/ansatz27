@@ -1,0 +1,13 @@
+{
+    "type": "object",
+    "format": "Map",
+    "patternProperties": {
+        ".*": {
+            "type": "object",
+            "properties": {
+                "foo": {},
+                "bar": { "type": "number", "default": 3 }
+            }
+        }
+    }
+}

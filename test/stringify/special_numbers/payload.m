@@ -1,0 +1,1 @@
+[1 Inf -Inf NaN 2]
