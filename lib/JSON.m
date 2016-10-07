@@ -91,7 +91,7 @@ classdef JSON < handle
             end
             
             this.resolveSchema(localSchemaCache);
-            schema = JSON.getSchemaFromCache(uri, []);
+            schema = localSchemaCache(uri);
 
         end
         
@@ -127,8 +127,7 @@ classdef JSON < handle
                     this.unresolvedRefs = this.unresolvedRefs([1:index-1 index+1:end]);
                 end
             end
-            
-            % No errors so far. We can now make local schema cache persistent.
+
             uris = localSchemaCache.keys();
             for k=1:length(uris)
                 uri = uris{k};
@@ -138,10 +137,9 @@ classdef JSON < handle
                     schema = this.mergeSchemas(schema);
                 end
                 
-                %if ~isempty(uri)
-                    JSON.cacheSchema(uri, schema);
-                %end
+                localSchemaCache(uri) = schema;
             end
+            
         end
         
         function addError(this, pointer, msg, value, type)
@@ -473,9 +471,9 @@ classdef JSON < handle
         function schema = loadSchemaByURI(this, uri, localSchemaCache)
             JSON.log('DEBUG', 'Loading schema from uri %s', uri);
             
-            schema = JSON.getSchemaFromCache(uri, localSchemaCache);
-            if ~isempty(schema)
-                return;
+            if localSchemaCache.isKey(uri)
+                schema = localSchemaCache(uri);
+                return
             end
             
             try
@@ -732,63 +730,13 @@ classdef JSON < handle
                 config(key) = value; %#ok<NASGU>
             end
         end
-        
-        function cache = getSchemaCache()
-            %getSchemaCache returns the schema cache and lazily creates it.
-            cache = JSON.configParam('cache');
-            if isempty(cache)
-                cache = JSON.configParam('cache', containers.Map());
-            end
-        end
-        
-        function clearSchemaCache()
-            JSON.configParam('cache', []);
-        end
-        
-        function schema = getSchemaFromCache(uri, localSchemaCache)
-            if ~isempty(localSchemaCache) && localSchemaCache.isKey(uri)
-                schema = localSchemaCache(uri);
-                return;
-            end
-            
-            cache = JSON.getSchemaCache();
-            if cache.isKey(uri)
-                % Cache hit
-                schema = cache(uri);
-            else
-                schema = [];
-            end
-        end
-        
-        function cacheSchema(uri, schema)
-            cache = JSON.getSchemaCache();
-            cache(uri) = schema;
-        end
-        
-        %        function value = setBaseURI(baseURI)
-        %            value = JSON.configParam('baseURI', strrep(baseURI, '\', '/'));
-        %        end
-        
-        %        function value = getBaseURI()
-        %            value = JSON.configParam('baseURI');
-        %            if isempty(value)
-        %                if exist('ctfroot', 'builtin') ~= 0
-        %                    baseURI = ['file:' ctfroot];
-        %                else
-        %                    baseURI = ['file:' pwd()];
-        %                end
-        %                value = JSON.setBaseURI(baseURI);
-        %            end
-        %        end
-        
+              
         function [value, errors] = parse(varargin)
-            JSON.clearSchemaCache();
             parser = JSON_Parser();
             [value, errors] = parse(parser, varargin{:});
         end
         
         function [json, errors] = stringify(varargin)
-            JSON.clearSchemaCache();
             stringifier = JSON_Stringifier();
             [json, errors] = stringifier.stringify(varargin{:});
         end
