@@ -1,1 +1,1 @@
-a = {'fu' 'foo' 'foobar' 'Hello World'};
+{'fu' 'foo' 'foobar' 'Hello World'}

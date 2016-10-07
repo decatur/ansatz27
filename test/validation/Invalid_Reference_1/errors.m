@@ -1,3 +1,3 @@
 {
-{[] 'Invalid $ref at uri[] pointer[/properties/bar] ref[#/definitions/BAR]' ''}
+{[] 'Invalid $ref at uri[BASE/schema.json] pointer[/properties/bar] ref[BASE/schema.json#/definitions/BAR]' ''}
 }

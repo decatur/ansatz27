@@ -4,9 +4,7 @@
 # and replaces the text of those areas by the referenced text.
 
 import codecs
-import xml.etree.ElementTree as ET
 import logging
-import textwrap
 import re
 
 logging.basicConfig(level=20) # info
@@ -15,61 +13,37 @@ f = codecs.open("README.md", "r", "utf-8")
 readme = f.read()
 f.close()
 
-def mergeText( readme, sep, text ):
-    c = readme.split('[//]: # "%s"' % sep)
-    if len(c) != 3:
-        logging.error("Invalid separator %s" % sep)
+def mergeText( readme, marker, text, mime ):
+    beginPos = readme.find(marker)
+    if beginPos == -1:
+        logging.error("Invalid marker %s" % marker)
         return readme
 
-    c[1] = text + '\n'
-    readme = ('[//]: # "%s"' % sep).join(c)
+    endPos = readme.find('[//]: #', beginPos+1)
+
+    if mime == 'm': mime = 'MATLAB'
+    elif mime == 'json': mime = 'JSON'
+    else: mime = ''
+
+    readme = readme[1:beginPos] + marker + '\n```' + mime + '\n' + text + '\n```\n' + readme[endPos:]
     return readme
 
-def mergeElement( readme, sep, element ):
-    text = ''
-    for child in element:
-        if child.text == None:
-            continue
+def process( readme, marker ):
+    logging.info("Processing %s" % marker)
 
-        ct = textwrap.dedent(child.text)
-        if child.tag == 'matlab':
-            text = text + '\n*MATLAB*\n```MATLAB\n' + ct + '\n```'
-        elif child.tag == 'schema':
-            text = text + '\n*Schema*\n```JSON\n' + ct + '\n```'
-        elif child.tag == 'json':
-            text = text + '\n*JSON*\n```JSON\n' + ct + '\n```'
-        elif child.tag == 'errors':
-            text = text + '\n*Errors*\n```MATLAB\n' + ct + '\n```'
+    # marker is of the form
+    #   [//]: # "filename"
+    m = re.match('.*"(.*)"', marker)
+    filename = m.group(1)
+    mime = filename[filename.find('.')+1:]
 
-    return mergeText( readme, sep, text )
+    f = codecs.open('test/' + filename, "r", "utf-8")
+    text = f.read()
+    f.close()
 
-def process( readme, sep ):
-    logging.info("Processing %s" % sep)
+    return mergeText( readme, marker, text, mime )
 
-    # sep is of the form
-    #   [//]: # "filename(#hash)?"
-    m = re.match('.*"(.*)"', sep)
-    sep = m.group(1)
-    parts = sep.split('#')
-
-    if len(parts) == 1:
-        f = codecs.open('test/' + sep, "r", "utf-8")
-        code = f.read()
-        f.close()
-        return mergeText( readme, sep, '\n```MATLAB\n' + code + '\n```' )
-    else:
-        testElem = xmlRoots[parts[0]].find( ".//*[description='%s']" % parts[1] )
-        readme = mergeElement(readme, sep, testElem)
-
-    return readme
-
-xmlRoots = dict()
-xmlRoots['testRoundtrip.xml'] = ET.parse('test/testRoundtrip.xml').getroot()
-xmlRoots['testParse.xml'] = ET.parse('test/testParse.xml').getroot()
-xmlRoots['testValidation.xml'] = ET.parse('test/testValidation.xml').getroot()
-
-# Find all markers and deduplicated
-markers = re.findall('\[//\]: # ".*"', readme)[0::2]
+markers = re.findall('\[//\]: # ".*"', readme)
 # print(markers)
 
 for marker in markers:

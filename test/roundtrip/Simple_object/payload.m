@@ -1,1 +1,1 @@
-a = struct('foo', 'bar');
+struct('foo', 'bar')

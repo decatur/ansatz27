@@ -21,7 +21,7 @@ testErrorHandling;
 %testTestCase;
 testDatetime;
 
-tc = TestRoundtrip();   tc.exec();
+tc = TestRoundtrip();   tc.exec(); % Run a single test with tc.exec('Reuse_with_Schema_References');
 tc = TestStringify();   tc.exec();
 tc = TestParse();       tc.exec();
 tc = TestValidation();  tc.exec();

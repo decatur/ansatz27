@@ -1,1 +1,1 @@
-a = [true false];
+[true false]

@@ -10,8 +10,9 @@ classdef TestRoundtrip < TestBase
             dirPath = fullfile(this.absdir, dirName);
             dirUrl = ['file:///' strrep(dirPath, '\', '/')];
             
-            run(fullfile(dirPath, 'payload.m'));
-            expectedMatlab = a;
+            %run(fullfile(dirPath, 'payload.m'));
+            %expectedMatlab = a;
+            expectedMatlab = eval(urlread([dirUrl '/payload.m']));
 
             if exist(fullfile(dirPath, 'schema.json'), 'file') == 0
                 schemaURL = [];

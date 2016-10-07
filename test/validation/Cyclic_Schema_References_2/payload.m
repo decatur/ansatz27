@@ -1,1 +1,1 @@
-a = struct();
+struct()

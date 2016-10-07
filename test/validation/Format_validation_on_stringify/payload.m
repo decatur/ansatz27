@@ -1,1 +1,1 @@
-a = struct('a', datetime('2016-01-01'), 'b', 1234, 'c', datetime('2016-01-01T13+0100', 'InputFormat', 'yyyy-MM-dd''T''HHZ', 'TimeZone', 'UTC'), 'd', 'foo');
+struct('a', datetime('2016-01-01'), 'b', 1234, 'c', datetime('2016-01-01T13+0100', 'InputFormat', 'yyyy-MM-dd''T''HHZ', 'TimeZone', 'UTC'), 'd', 'foo')

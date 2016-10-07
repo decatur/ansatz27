@@ -23,6 +23,7 @@ classdef JSON < handle
         function uri = resolveURIagainstLoadPath(this, uri)
             %resolveURIagainstLoadPath resolves the reference against the base URI and normalizes.
             % See https://tools.ietf.org/html/rfc3986
+
             try
                 r = javaObject('java.net.URI', uri);
             catch e
@@ -35,7 +36,7 @@ classdef JSON < handle
                 if isempty(location)
                     error('JSON:URI', 'Could not resolve URI %s', uri);
                 end
-                uri = ['file:/' strrep(location, '\', '/')];
+                uri = ['file:///' strrep(location, '\', '/')];
             end
         end
         
@@ -499,6 +500,8 @@ classdef JSON < handle
             if ~isempty(base)
                 base = javaObject('java.net.URI', base);
                 resolvedURI = char(base.resolve(uri));
+                % Workaround for a Java bug. Resolved uri may look like file://foo/bar. We need for slashes after the protocol.
+                resolvedURI = regexprep (resolvedURI, 'file:/+', 'file:////');
             end
         end
         
@@ -575,6 +578,9 @@ classdef JSON < handle
                         % TODO: use addError and make that throw
                         error('JSON:PARSE_SCHEMA', '$ref must be a string at %s', pointer);
                     end
+
+                    %keyboard()
+
                     ref = this.resolveURI(ref, resolutionScope);
                     
                     if isempty(strfind(ref, '#'))
@@ -700,7 +706,7 @@ classdef JSON < handle
         
         function log(level, fmt, varargin)
             if ismember(level, JSON.logLevels)
-                fprintf(1, '%s: %s\n', level, fmt, varargin{:});
+                fprintf(1, [level ' ' fmt], varargin{:});
             end
         end
         

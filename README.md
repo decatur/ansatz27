@@ -1,4 +1,4 @@
-A validating and roundtripping JSON Parser and Stringifier for GNU Octave and MATLAB®.
+Parser and Stringifier for GNU Octave and MATLAB®.
 
 ![Roundtrip MATLAB to JSON](/docs/roundtrip.png?raw=true)
 
@@ -25,7 +25,6 @@ You can validated JSON by JSON Schema online with [jsonschemalint](http://jsonsc
 
 [//]: # "testUsage.m"
 ```MATLAB
-
 jsonOrFilepath = 'document.json';
 [obj, errors] = JSON.parse(jsonOrFilepath, 'schema.json');
 
@@ -36,7 +35,7 @@ obj('bar') = {'foo' 'bar'};
 json = JSON.stringify(obj);
 [json, errors] = JSON.stringify(obj, 'schema.json');
 ```
-[//]: # "testUsage.m"
+[//]: #
 
 # Conformance with JSON Schema Specification
 
@@ -146,20 +145,21 @@ json = JSON.stringify(obj);
 
 # Comprehensive Example
 
-[//]: # "testRoundtrip.xml#Comprehensive Roundtrip Example"
 *MATLAB*
+[//]: # "roundtrip/Comprehensive_Example/payload.m"
 ```MATLAB
-
 a = struct('id', '4711');
 a.portfolio.index = 3;
 a.portfolio.value = 4.32;
 a.deals = struct( 'name', {'DEAL-A' 'DEAL-B'}, 'value', {13.13 42.42} );
 a.dealValues = [13.13 42.42];
-
+a;
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Comprehensive_Example/payload.json"
+```JSON
 {
     "id": "4711",
     "portfolio": {
@@ -172,11 +172,12 @@ a.dealValues = [13.13 42.42];
     ],
     "dealValues": [ 13.13, 42.42 ]
 }
-
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Comprehensive_Example/schema.json"
+```JSON
 {
     "type": "object",
     "properties": {
@@ -203,9 +204,8 @@ a.dealValues = [13.13 42.42];
         }
     }
 }
-
 ```
-[//]: # "testRoundtrip.xml#Comprehensive Roundtrip Example"
+[//]: #
 
 # Type Coersion
 
@@ -227,16 +227,19 @@ a.dealValues = [13.13 42.42];
 Note: The coersion to struct will simply drop all properties with invalid field names.
 The coersion to Map will retain all properties. 
 
-[//]: # "testParse.xml#Non-MATLAB Keys"
 *JSON*
+[//]: # "parse/Non_MATLAB_Keys/payload.json"
 ```JSON
 { "Hello": "World", "$ref": 2 }
 ```
+[//]: #
+
 *MATLAB*
+[//]: # "parse/Non_MATLAB_Keys/payload.m"
 ```MATLAB
 struct('Hello', 'World')
 ```
-[//]: # "testParse.xml#Non-MATLAB Keys"
+[//]: #
 
 ## Type Coersion on Stringify
 
@@ -305,14 +308,16 @@ A JSON array is coerced to a structured array if
 3. and `/items/type` is `'object'`
 4. and the *default* value of `/format` is `'structured-array'`
 
-[//]: # "testRoundtrip.xml#Roundtrip Structured Array"
 *MATLAB*
+[//]: # "roundtrip/Roundtrip_Structured_Array/payload.m"
 ```MATLAB
 struct('foo', {1 2}, 'bar', {3 4})
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Roundtrip_Structured_Array/schema.json"
+```JSON
 {
     "type": "array",
     "items": {
@@ -323,18 +328,18 @@ struct('foo', {1 2}, 'bar', {3 4})
         }
     }
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Roundtrip_Structured_Array/payload.json"
+```JSON
 [
     {"foo":1,"bar":3},
     {"foo":2,"bar":4}
 ]
-
 ```
-[//]: # "testRoundtrip.xml#Roundtrip Structured Array"
+[//]: #
 
 ## Numeric Matrix Coercion
 
@@ -342,14 +347,16 @@ A JSON array is coerced to a numeric matrix if
 1. at each level the sub-arrays have the same length,
 2. and if *all* items at the lowest level are numbers or null.
 
-[//]: # "testRoundtrip.xml#Roundtrip Numeric Matrix"
 *MATLAB*
+[//]: # "roundtrip/Roundtrip_Numeric_Matrix/payload.m"
 ```MATLAB
 [ [1 2 NaN]; [4 -5 6] ]
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Roundtrip_Numeric_Matrix/schema.json"
+```JSON
 {
     "type": "array",
     "items": {
@@ -359,51 +366,54 @@ A JSON array is coerced to a numeric matrix if
         }
     }
 }
-
 ```
+[//]: #
+
 *JSON*
+[//]: # "roundtrip/Roundtrip_Numeric_Matrix/payload.json"
 ```JSON
 [[1,2,null],[4,-5,6]]
 ```
-[//]: # "testRoundtrip.xml#Roundtrip Numeric Matrix"
+[//]: #
 
-[//]: # "testRoundtrip.xml#Roundtrip 3D Matrix"
 *MATLAB*
+[//]: # "roundtrip/Roundtrip_3D_Matrix/payload.m"
 ```MATLAB
-
 a = NaN(2,2,2);
 a(1,:,:) = [1 2; 3 4];
 a(2,:,:) = [5 6; 7 8];
-
+a;
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Roundtrip_3D_Matrix/payload.json"
+```JSON
 [
     [ [1,2], [3,4] ],
     [ [5,6], [7,8] ]
 ]
-
 ```
-[//]: # "testRoundtrip.xml#Roundtrip 3D Matrix"
+[//]: #
 
 # Date Coercion
 
 The two predefined formatters `date` and `date-time` coerce ISO8601 date string to datetime objects.
 
-[//]: # "testRoundtrip.xml#Roundtrip Date Formater"
-*MATLAB*
-```MATLAB
 
+*MATLAB*
+[//]: # "roundtrip/Roundtrip_Date_Formater/payload.m"
+```MATLAB
 struct( ...
     'myDate', 1+datetime('2016-01-02'), ...
     'myDateTime', 1.5+datetime('2016-01-02', 'TimeZone', 'Europe/Berlin') ...
 )
-
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Roundtrip_Date_Formater/schema.json"
+```JSON
 {
     "type": "object",
     "properties": {
@@ -417,18 +427,18 @@ struct( ...
         }
     }
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Roundtrip_Date_Formater/payload.json"
+```JSON
 {
     "myDate":"2016-01-03",
     "myDateTime":"2016-01-03T12:00:00+0100"
 }
-
 ```
-[//]: # "testRoundtrip.xml#Roundtrip Date Formater"
+[//]: #
 
 # Defaults
 
@@ -436,20 +446,23 @@ A schema may specify a default value. On stringify, defaults are ignored. In par
 
 On parse, default values are set for unspecified object properties.
 
-[//]: # "testParse.xml#Structured Array with Defaults"
 *MATLAB*
+[//]: # "parse/Structured_Array_with_Defaults/payload.m"
 ```MATLAB
 struct('foo', {1 2}, 'bar', {3 4})
 ```
+[//]: #
+
 *JSON*
+[//]: # "parse/Structured_Array_with_Defaults/payload.json"
 ```JSON
-
 [ { "foo": 1 }, { "foo": 2, "bar": 4 } ]
-
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "parse/Structured_Array_with_Defaults/schema.json"
+```JSON
 {
     "type": "array",
     "items": {
@@ -460,26 +473,26 @@ struct('foo', {1 2}, 'bar', {3 4})
         }
     }
 }
-
 ```
-[//]: # "testParse.xml#Structured Array with Defaults"
+[//]: #
 
 # Typical Use Cases
 
 ## List of From-Fill-Value Tripples
-[//]: # "testRoundtrip.xml#List of From-Fill-Value Tripples"
-*MATLAB*
-```MATLAB
 
+*MATLAB*
+[//]: # "roundtrip/List_of_From-Fill-Value_Tripples/payload.m"
+```MATLAB
 {
     {datetime('2016-01-01') datetime('2016-01-31') 13.13}
     {datetime('2016-02-01') datetime('2016-02-29') 42.42}
-}'
-
+}
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/List_of_From-Fill-Value_Tripples/schema.json"
+```JSON
 {
     "type": "array",
     "items": {
@@ -491,34 +504,35 @@ struct('foo', {1 2}, 'bar', {3 4})
         ]
     }
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/List_of_From-Fill-Value_Tripples/payload.json"
+```JSON
 [
     ["2016-01-01", "2016-01-31", 13.13],
     ["2016-02-01", "2016-02-29", 42.42]
 ]
-
 ```
-[//]: # "testRoundtrip.xml#List of From-Fill-Value Tripples"
+[//]: #
 
 ## Reuse with Schema References
-[//]: # "testRoundtrip.xml#Reuse with Schema References"
-*MATLAB*
-```MATLAB
 
+*MATLAB*
+[//]: # "roundtrip/Reuse_with_Schema_References/payload.m"
+```MATLAB
 struct( ...
     'shipping_address', ...
         struct('street_address', '1600 Penn Ave NW', 'city', 'Washington', 'state', 'DC'), ...
     'billing_address', ...
         struct('street_address', '1st Street SE', 'city', 'Washington', 'state', 'DC'))
-
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Reuse_with_Schema_References/schema.json"
+```JSON
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "definitions": {
@@ -538,11 +552,12 @@ struct( ...
         "shipping_address": { "$ref": "#/definitions/address" }
     }
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Reuse_with_Schema_References/payload.json"
+```JSON
 {
     "shipping_address": {
         "street_address": "1600 Penn Ave NW",
@@ -555,29 +570,28 @@ struct( ...
         "state":          "DC"
     }
 }
-
 ```
-[//]: # "testRoundtrip.xml#Reuse with Schema References"
+[//]: #
 
 ## Schema Inheritance with allOf
 
-[//]: # "testRoundtrip.xml#Schema Inheritance with allOf"
 *MATLAB*
+[//]: # "roundtrip/Schema_Inheritance_with_allOf/payload.m"
 ```MATLAB
-
 struct( ...
     'id', '4711', ...
     'foo', 2, ...
     'bar', 'DEF_VAL')
-
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Schema_Inheritance_with_allOf/schema.json"
+```JSON
 {
     "allOf": [
         {
-            "$ref": "BASE_URI/schema2.json"
+            "$ref": "schema2.json"
         },
         {
             "type": "object",
@@ -593,38 +607,39 @@ struct( ...
         }
     ]
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Schema_Inheritance_with_allOf/payload.json"
+```JSON
 {
     "id":"4711",
     "foo":2,
     "bar":"DEF_VAL"
 }
-
 ```
-[//]: # "testRoundtrip.xml#Schema Inheritance with allOf"
+[//]: #
 
 ## Dictionary
 
 Sometimes an object is used for arbitrary key-value mapping, also called a dictonary or a map.
 In practice you should consider not to use dictionaries, use arrays and some extra lookup logic instead.
 
-[//]: # "testRoundtrip.xml#Dictionary"
 *MATLAB*
+[//]: # "roundtrip/Dictionary/payload.m"
 ```MATLAB
-
 a = containers.Map();
 a('DEAL-A')  = struct('start', datetime('2016-03-20'), 'value', 1);
 a('DEAL-XY') = struct('start', datetime('2016-03-21'), 'value', 2);
 a('DEAL-Z')  = struct('start', datetime('2016-03-22'), 'value', 3);
-
+a;
 ```
-*Schema*
-```JSON
+[//]: #
 
+*Schema*
+[//]: # "roundtrip/Dictionary/schema.json"
+```JSON
 {
     "type": "object",
     "format": "Map",
@@ -637,19 +652,19 @@ a('DEAL-Z')  = struct('start', datetime('2016-03-22'), 'value', 3);
         }
     }
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "roundtrip/Dictionary/payload.json"
+```JSON
 {
     "DEAL-A" : { "start": "2016-03-20", "value": 1 },
     "DEAL-XY": { "start": "2016-03-21", "value": 2 },
     "DEAL-Z" : { "start": "2016-03-22", "value": 3 }
 }
-
 ```
-[//]: # "testRoundtrip.xml#Dictionary"
+[//]: #
 
 # Validation by Schema
 
@@ -666,6 +681,7 @@ These include
 *Note*: The persistent schema cache is only written after schemas are successfully resolved. Therefore the cache will only hold valid schemas.
 
 It is best practise to *always* check for errors and to discard the input if errors have occured:
+
 [//]: # "testErrorHandling.m"
 ```MATLAB
 [obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'schema.json');
@@ -673,14 +689,13 @@ if ~isempty(errors)
     % Report errors and stop processing
 end
 ```
-[//]: # "testErrorHandling.m"
+[//]: #
 
 For each validation error one item in the `errors` cell array is generated:
 
-[//]: # "testValidation.xml#Format Validation on Parse"
 *Schema*
+[//]: # "validation/Format_Validation_on_Parse/schema.json"
 ```JSON
-
 {
     "type": "object",
     "properties": {
@@ -690,28 +705,31 @@ For each validation error one item in the `errors` cell array is generated:
         "d": { "type": "string", "format": "date-time" }
     }
 }
-
 ```
-*JSON*
-```JSON
+[//]: #
 
+*JSON*
+[//]: # "validation/Format_Validation_on_Parse/payload.json"
+```JSON
 {
     "a": "2016-01-01",
     "b": "2016-01-01T12:00:00Z",
     "c": "2016-01-01T12:00:00Z",
     "d": "2016-01-01T12:00:00Y"
 }
-
 ```
-*Errors*
-```MATLAB
+[//]: #
 
+*Errors*
+[//]: # "validation/Format_Validation_on_Parse/errors.m"
+```MATLAB
+{
 {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
 {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
 {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
-
+}
 ```
-[//]: # "testValidation.xml#Format Validation on Parse"
+[//]: #
 
 ## Unhandled Errors
 Both `JSON.parse()` and `JSON.stringify()` may throw an error. This is the case when

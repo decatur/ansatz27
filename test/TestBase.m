@@ -13,7 +13,7 @@ classdef TestBase < TestCase
             this.absdir = strrep(this.absdir, '\', '/');
         end
         
-        function exec(this)
+        function exec(this, testname)
             %document = xmlread(fullfile(this.absdir, this.fileName));
             %tests = document.getDocumentElement().getElementsByTagName('test');
             
@@ -21,10 +21,12 @@ classdef TestBase < TestCase
             subDirs = subDirs(3:end);   % Omit . and ..
             
             for k=1:length(subDirs)
-                fprintf(1, '########## %s ##########\n',  subDirs(k).name);
-                tic();
-                this.execSingle(subDirs(k).name);
-                fprintf(1, 'OK in %g[sec]\n', toc());
+                if exist('testname', 'var') == 0 || isequal(testname, subDirs(k).name)
+                    tic();
+                    fprintf(1, '########## %s ##########\n',  subDirs(k).name);
+                    this.execSingle(subDirs(k).name);
+                    fprintf(1, 'OK in %g[sec]\n', toc());
+                end
             end
             
             if this.errorCount > 0
