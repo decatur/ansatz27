@@ -25,3 +25,5 @@ tc = TestRoundtrip();   tc.exec(); % Run a single test with tc.exec('Reuse_with_
 tc = TestStringify();   tc.exec();
 tc = TestParse();       tc.exec();
 tc = TestValidation();  tc.exec();
+
+schema = JSON.parseSchema('roundtrip/Schema_Inheritance_with_allOf/schema.json')

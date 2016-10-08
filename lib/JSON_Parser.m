@@ -37,7 +37,7 @@ classdef JSON_Parser < JSON
     end
     
     methods
-        
+
         function [value, errors] = parse(this, varargin)
             try
                 value = this.parse_(varargin{:});
