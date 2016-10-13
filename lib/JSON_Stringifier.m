@@ -278,13 +278,13 @@ classdef JSON_Stringifier < JSON
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            items = JSON.getPath(schema, '/items');    
+            %items = JSON.getPath(schema, '/items');
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             l = length(value);
             
             for k=1:l
-                itemSchema = this.getItemSchema(items, k-1);
+                itemSchema = this.getItemSchema(schema, k-1);
 
                 if isstruct(value)
                     item = value(k);
@@ -328,12 +328,12 @@ classdef JSON_Stringifier < JSON
             s = size(tensor);
             assert(s(1) > 0);
             
-            items = JSON.getPath(schema, '/items');
-            if isempty(items)
-                % Make sure a column vector such as [1;2] is generated as [[1],[2]].
-                items = containers.Map();
-                items('type') = { 'array' };
-            end
+            %items = JSON.getPath(schema, '/items');
+            %if isempty(items)
+            %    % Make sure a column vector such as [1;2] is generated as [[1],[2]].
+            %    items = containers.Map();
+            %   items('type') = { 'array' };
+            %end
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -351,7 +351,7 @@ classdef JSON_Stringifier < JSON
                 indx.subs = cat(1, { k }, cellstr(repmat(':', ndims(tensor)-1, 1)));
                 m = squeeze(subsref(tensor, indx));
 
-                itemSchema = this.getItemSchema(items, k-1);
+                itemSchema = this.getItemSchema(schema, k-1);
 
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
@@ -365,7 +365,7 @@ classdef JSON_Stringifier < JSON
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
             
-            items = JSON.getPath(schema, '/items');
+            %items = JSON.getPath(schema, '/items');
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -375,7 +375,7 @@ classdef JSON_Stringifier < JSON
 
 
             for k=1:numel(row)
-                itemSchema = this.getItemSchema(items, k-1);
+                itemSchema = this.getItemSchema(schema, k-1);
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.stringifyValue(row(k), itemContext, itemSchema));

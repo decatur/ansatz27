@@ -180,25 +180,32 @@ classdef JSON_Parser < JSON
         
         function val = parseArray(this, context, schema) % JSON array is written in row-major order
             this.parseChar('[');
-            index = 0;
 
-            items = JSON.getPath(schema, '/items');
-            itemType = JSON.getPath(items, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
-            
+            val = {};
+            itemSchema = this.getItemSchema(schema, 0);
+            itemType = JSON.getPath(itemSchema, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
+
             if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
                 val = struct();
             else
                 val = {};
             end
-            
+        
+            index = 0;
+    
             if this.nextChar() ~= ']'
                 while 1
                     subContext = this.getChildContext(context, index);
-                    subContext.schema = this.getItemSchema(items, index);
-
                     subContext.isArray = true;
+                    if isempty(itemSchema)
+                        subContext.schema = this.getItemSchema(schema, index);
+                    else
+                        subContext.schema = itemSchema;
+                    end
+
                     index = index + 1;
                     v = this.parseValue(subContext, subContext.schema);
+
                     if isstruct(val)
                         % Note: Simply assigning val(index) = v will break if v and val have different fields!
                         names = fieldnames(v);

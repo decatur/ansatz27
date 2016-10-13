@@ -22,10 +22,15 @@ classdef TestBase < TestCase
             
             for k=1:length(subDirs)
                 if exist('testname', 'var') == 0 || isequal(testname, subDirs(k).name)
+                    this.errorCount = 0;
                     tic();
                     fprintf(1, '########## %s ##########\n',  subDirs(k).name);
                     this.execSingle(subDirs(k).name);
-                    fprintf(1, 'OK in %g[sec]\n', toc());
+                    if ~this.errorCount
+                        fprintf(1, 'OK in %g[sec]\n', toc());
+                    else
+                        fprintf(1, 'Failure in %g[sec]\n', toc());
+                    end
                 end
             end
             

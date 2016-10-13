@@ -5,13 +5,14 @@ classdef JSON < handle
     
     properties (Constant)
         isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
-        logLevels = {'WARNING', 'INFO'};
+        levelsToLog = { 'WARNING', 'INFO' };
+        %levelsToLog = { 'DEBUG', 'WARNING', 'INFO' };
     end
     
     properties %(Access = private)
         errors
         formatters
-        unresolvedRefs
+        schemasByURI
     end
     
     methods
@@ -63,68 +64,18 @@ classdef JSON < handle
                 error('Invalid type for schema: %s', class(schema));
             end
 
-            schemasByURI = containers.Map();
-            this.unresolvedRefs = struct([]);   % These are populated by normalizeSchema()
+            this.schemasByURI = containers.Map();
             
             if isempty(regexp(schema, '^\s*\{', 'ONCE')) % A URI cannot start with an opening curly, but a schema will
                 uri = this.resolveURIagainstLoadPath(schema);
-                this.loadSchemaByURI(uri, schemasByURI);
+                schema = this.getSchemaByURI(uri);
             else
-                uri = '';
-                schema = this.postLoadSchema(schema, uri);
-                schemasByURI(uri) = schema;
-            end
-    
-            this.resolveSchema(schemasByURI);
-            schema = schemasByURI(uri);
-
-        end
-        
-        function resolveSchema(this, schemasByURI)
-            
-            while ~isempty(this.unresolvedRefs)
-                index = length(this.unresolvedRefs);
-                ref = this.unresolvedRefs(index);
-                s = sprintf('uri[%s] pointer[%s] ref[%s]', ref.uri, ref.pointer, ref.ref);
-                JSON.log('DEBUG', 'Processing %s', s);
-                parts = strsplit(ref.ref, '#');
-                if ~isempty(parts{1})
-                    schema1 = this.loadSchemaByURI(parts{1}, schemasByURI);
-                    schemasByURI(parts{1}) = schema1;
-                else
-                    schema1 = schemasByURI(ref.uri);
-                end
-                
-                schema1 = JSON.getPath(schema1, parts{2});
-                if isempty(schema1)
-                    error('JSON:PARSE_SCHEMA', 'Invalid $ref at %s', s);
-                end
-                
-                schemasByURI(ref.uri) = JSON.setPath(schemasByURI(ref.uri), ref.pointer, schema1);
-                
-                if schema1.isKey('$ref')
-                    if ismember(ref.ref, this.unresolvedRefs(index).hist)
-                        error('JSON:PARSE_SCHEMA', 'Cyclic references %s', strjoin(this.unresolvedRefs(index).hist, ' -> '));
-                    end
-                    this.unresolvedRefs(index).hist{end+1} = ref.ref;
-                    this.unresolvedRefs(index).ref = schema1('$ref');
-                else
-                    this.unresolvedRefs = this.unresolvedRefs([1:index-1 index+1:end]);
-                end
+                error('TODO: Remove this code')
+                %uri = '';
+                %schema = this.postLoadSchema(schema, uri);
+                %this.schemasByURI(uri) = schema;
             end
 
-            uris = schemasByURI.keys();
-            for k=1:length(uris)
-                uri = uris{k};
-                schema = schemasByURI(uri);
-                if schema.isKey('allOf')
-                    %TODO: At any level
-                    schema = this.mergeSchemas(schema);
-                end
-                
-                schemasByURI(uri) = schema;
-            end
-            
         end
         
         function addError(this, pointer, msg, value, type)
@@ -153,12 +104,9 @@ classdef JSON < handle
             end
             
             childSchema = JSON.getPath(schema, ['/properties/' key]);
+            subpath = [schema('__path') 'properties/' key '/'];
             
-            if ~isempty(childSchema)
-                return;
-            end
-            
-            if schema.isKey('patternProperties')
+            if isempty(childSchema) && schema.isKey('patternProperties')
                 patternProperties = schema('patternProperties');
                 patterns = patternProperties.keys();
                 for k=1:length(patterns)
@@ -168,21 +116,34 @@ classdef JSON < handle
                     end
                 end
             end
-            
+
+            if ~isempty(childSchema)
+                childSchema = this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
+            end
         end
         
-        function childSchema = getItemSchema(this, items, key)
+        function childSchema = getItemSchema(this, schema, key)
             assert(isnumeric(key) && ~rem(key, 1));
             childSchema = [];
             
+            items = JSON.getPath(schema, '/items');
+
+            %keyboard
+
             if isempty(items) % Shortcut
                 return;
             end
-            
+
             if JSON.isaMap(items)
                 childSchema = items;
+                subpath = [schema('__path') 'items/'];
             elseif iscell(items) && key < length(items)
                 childSchema = items{key+1};
+                subpath = [schema('__path') sprintf('items/%d/', key)];
+            end
+
+            if ~isempty(childSchema)
+                childSchema = this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
             end
         end
         
@@ -453,14 +414,17 @@ classdef JSON < handle
     
     methods (Access=private)
         
-        function schema = loadSchemaByURI(this, uri, schemasByURI)
-            JSON.log('DEBUG', 'Loading schema from uri %s', uri);
+        function schema = getSchemaByURI(this, uri)
+            parts = strsplit(uri, '#');
+            uri = parts{1};
+            JSON.log('DEBUG', 'getSchemaByURI %s', uri);
             
-            if schemasByURI.isKey(uri)
-                schema = schemasByURI(uri);
+            if this.schemasByURI.isKey(uri)
+                schema = this.schemasByURI(uri);
                 return
             end
             
+            JSON.log('DEBUG', 'Not in cache, now loading');
             try
                 schema = urlread(uri);
             catch e
@@ -473,7 +437,7 @@ classdef JSON < handle
             end
             
             schema = this.postLoadSchema(schema, uri);
-            schemasByURI(uri) = schema;
+            this.schemasByURI(uri) = schema;
         end
         
         function resolvedURI = resolveURI( this, uri, base)
@@ -503,175 +467,114 @@ classdef JSON < handle
             else
                 schema('id') = this.resolveURI(schema('id'), uri);
             end
+
+            schema = this.normalizeSchema(schema, schema('id'), '/');
             
-            this.normalizeSchema(schema, uri, '', schema('id'));
-            
-            for index=1:length(parser.defaults)
-                p = JSON_Parser();
-                subSchema = JSON.getPath(schema, parser.defaults{index});
-                [ defaultValue, errs ] = parse(p, subSchema('default'), subSchema);
-                if ~isempty( errs)
-                    this.errors = errs;
-                    error('JSON:PARSE_SCHEMA', 'Default value does not validate in schema %s', uri);
-                end
-                subSchema('default') = defaultValue;
-            end
+            %for index=1:length(parser.defaults)
+            %    p = JSON_Parser();
+            %    subSchema = JSON.getPath(schema, parser.defaults{index});
+            %   [ defaultValue, errs ] = parse(p, subSchema('default'), subSchema);
+            %    if ~isempty( errs)
+            %       this.errors = errs;
+            %        error('JSON:PARSE_SCHEMA', 'Default value does not validate in schema %s', uri);
+            %   end
+            %   subSchema('default') = defaultValue;
+            %end
         end
-        
-        function normalizeSchema(this, rootSchema, uri, pointer, resolutionScope)
-            %normalizeSchema traverses the given schema iteratively (depth first) and normalizes and validates all subschemas.
+
+        function schema = normalizeSchema(this, schema, resolutionScope, pointer)
+            if schema.isKey('__isNormalized')
+                return
+            end
+                
+            JSON.log('DEBUG', 'normalizeSchema %s', pointer);
             
-            function addSchema(schema, pointer, resolutionScope)
-                schemaInfos{end+1} = struct('schema', schema, 'pointer', pointer, 'resolutionScope', resolutionScope);
-                JSON.log('DEBUG', 'Adding schema %s\n', pointer);
+            if ~JSON.isaMap(schema)
+                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
+            end
+
+            schema('__path') = pointer;
+            
+            if schema.isKey('$ref')
+                ref = schema('$ref');
+                if ~ischar(ref)
+                    % TODO: use addError and make that throw
+                    error('JSON:PARSE_SCHEMA', '$ref must be a string at %s', pointer);
+                end
+
+                %keyboard()
+
+                ref = this.resolveURI(ref, resolutionScope);
+                
+                if isempty(strfind(ref, '#'))
+                    ref = [ref '#'];
+                end
+                
+                schema('$ref') = ref;
+
+                schema = this.getSchemaByURI(ref);
             end
             
-            function processProperties(propertyType, schema, pointer, resolutionScope)
-                if schema.isKey(propertyType) && ~isempty(schema(propertyType))
-                    props = schema(propertyType);
-                    pNames = props.keys();
-                    for l=1:length(pNames)
-                        subPath = [pointer '/' propertyType '/' pNames{l}];
-                        addSchema(props(pNames{l}), subPath, resolutionScope);
-                    end
+            if schema.isKey('id') && ~isempty(schema('id'))
+                % Change resolution scope.
+                % Note that we do this AFTER processing $ref.
+                schema('__resolutionScope') = this.resolveURI(schema('id'), resolutionScope);
+                resScopURI = javaObject('java.net.URI', resolutionScope);
+                if ~resScopURI.isAbsolute()
+                    error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
+                end
+            else
+                schema('__resolutionScope') = resolutionScope;
+            end
+            
+            manyKeywords = {'allOf', 'anyOf', 'oneOf'};
+            manyCount = 0;
+            
+            % Find how many manyKeywords are present and save the last.
+            for k=1:length(manyKeywords)
+                manyKeyword = manyKeywords{k};
+                
+                if schema.isKey(manyKeyword)
+                    manyCount = manyCount + 1;
+                    schema('manyKeyword') = manyKeyword;
                 end
             end
             
-            schemaInfos = {};
+            if manyCount > 1
+                error('JSON:PARSE_SCHEMA', 'Only one of %s allowed', strjoin(manyKeywords, ', '));
+            %elseif schema.isKey('manyKeyword')
+            %    manyKeyword = schema('manyKeyword');
+            %    manySchema = schema(manyKeyword);
+            %    for k=1:length(manySchema)
+            %        subPath = [pointer '/' manyKeyword '/' num2str(k-1)];
+            %        addSchema(manySchema{k}, subPath, resolutionScope);
+            %    end
+            end
             
-            addSchema(rootSchema, pointer, resolutionScope);
+            if ~schema.isKey('type') || isempty(schema('type'))
+                schema('type') = {};
+            end
             
-            while ~isempty(schemaInfos)
-                info = schemaInfos{end};
-                schemaInfos = schemaInfos(1:end-1);
-                schema = info.schema;
-                resolutionScope = info.resolutionScope;
-                pointer = info.pointer;
-                
-                JSON.log('DEBUG', 'Processing schema %s\n', pointer);
-                
-                if ~JSON.isaMap(schema)
-                    error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
+            type = schema('type');
+            
+            if ischar(type)
+                type = {type};
+                schema('type') = type;
+            end
+            
+            if schema.isKey('required')
+                if isempty(schema('required'))
+                    schema('required') = {};
+                elseif ~iscell(schema('required'))
+                    error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
                 end
-                
-                if schema.isKey('$ref')
-                    %schema = this.resolveRef(rootSchema, schema, pointer, resolutionScope);
-                    ref = schema('$ref');
-                    if ~ischar(ref)
-                        % TODO: use addError and make that throw
-                        error('JSON:PARSE_SCHEMA', '$ref must be a string at %s', pointer);
-                    end
+            end
+            
+            if schema.isKey('pattern') && ~ischar(schema('pattern'))
+                error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
+            end
 
-                    %keyboard()
-
-                    ref = this.resolveURI(ref, resolutionScope);
-                    
-                    if isempty(strfind(ref, '#'))
-                        ref = [ref '#'];
-                    end
-                    
-                    schema('$ref') = ref;
-                    
-                    % TODO: Can we do this better in MATLAB? With Octave this works:
-                    %   ref = struct('uri', uri, 'pointer', pointer, 'ref', ref);
-                    %   ref.hist = {};
-                    %   this.unresolvedRefs(end+1) = ref;
-                    this.unresolvedRefs(end+1).uri = uri;
-                    this.unresolvedRefs(end).pointer = pointer;
-                    this.unresolvedRefs(end).ref = ref;
-                    this.unresolvedRefs(end).hist = {};
-                    JSON.log('DEBUG', 'Add new reference uri[%s] pointer[%s] ref[%s]', uri, pointer, ref);
-                end
-                
-                if schema.isKey('id') && ~isempty(schema('id'))
-                    % Change resolution scope.
-                    % Note that we do this AFTER processing $ref.
-                    resolutionScope = this.resolveURI(schema('id'), resolutionScope);
-                    resScopURI = javaObject('java.net.URI', resolutionScope);
-                    if ~resScopURI.isAbsolute()
-                        error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', resolutionScope);
-                    end
-                end
-                
-                manyKeywords = {'allOf', 'anyOf', 'oneOf'};
-                manyCount = 0;
-                
-                % Find how many manyKeywords are present and save the last.
-                for k=1:length(manyKeywords)
-                    manyKeyword = manyKeywords{k};
-                    
-                    if schema.isKey(manyKeyword)
-                        manyCount = manyCount + 1;
-                        schema('manyKeyword') = manyKeyword;
-                    end
-                end
-                
-                if manyCount > 1
-                    error('JSON:PARSE_SCHEMA', 'Only one of %s allowed', strjoin(manyKeywords, ', '));
-                elseif schema.isKey('manyKeyword')
-                    manyKeyword = schema('manyKeyword');
-                    manySchema = schema(manyKeyword);
-                    for k=1:length(manySchema)
-                        subPath = [pointer '/' manyKeyword '/' num2str(k-1)];
-                        addSchema(manySchema{k}, subPath, resolutionScope);
-                    end
-                end
-                
-                if ~schema.isKey('type') || isempty(schema('type'))
-                    schema('type') = {};
-                end
-                
-                type = schema('type');
-                
-                if ischar(type)
-                    type = {type};
-                    schema('type') = type;
-                end
-                
-                if schema.isKey('required')
-                    if isempty(schema('required'))
-                        schema('required') = {};
-                    elseif ~iscell(schema('required'))
-                        error('JSON:PARSE_SCHEMA', 'Invalid required at %s', pointer);
-                    end
-                end
-                
-                if schema.isKey('pattern') && ~ischar(schema('pattern'))
-                    error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
-                end
-                
-                processProperties('properties', schema, pointer, resolutionScope);
-                processProperties('patternProperties', schema, pointer, resolutionScope);
-                
-                if ismember('array', type) && schema.isKey('items') % TODO: Remove first test
-                    items = schema('items'); % Remember: Cell array has copy semantic
-                    if JSON.isaMap(items)
-                        addSchema(items, [pointer '/items'], resolutionScope);
-                    elseif iscell(items)
-                        for k=1:length(items)
-                            subPath = [pointer '/items/' num2str(k)];
-                            addSchema(items{k}, subPath, resolutionScope);
-                        end
-                    end
-                end
-                
-                if schema.isKey('definitions')
-                    definitions = schema('definitions');
-                    names = definitions.keys();
-                    for k=1:length(names)
-                        subPath = [pointer '/definitions/' names{k}];
-                        addSchema(definitions(names{k}), subPath, resolutionScope);
-                    end
-                end
-                
-                %if any(ismember({'number' 'integer'}, type))
-                    %if isfield(schema, 'enum') && iscell(schema.enum)
-                    %    if all(cellfun(@isnumeric, schema.enum))
-                    %        schema.enum = cell2mat(schema.enum);
-                    %    end
-                    %end
-                %end
-            end % while
+            schema('__isNormalized') = true;
             
         end
         
@@ -688,33 +591,10 @@ classdef JSON < handle
         end
         
         function log(level, fmt, varargin)
-            if ismember(level, JSON.logLevels)
-                fprintf(1, [level ' ' fmt], varargin{:});
+            if ismember(level, JSON.levelsToLog)
+                fprintf(1, [level ' ' fmt '\n'], varargin{:});
             end
         end
-        
-        %function value = configParam(varargin)
-        %    persistent config
-        %    if isempty(config)
-        %        config = containers.Map();
-        %    end
-        %    
-        %    value = JSON.configParam_(config, varargin{:});
-        %end
-        
-        %function value = configParam_(config, key, value)
-        %    if nargin == 1
-        %        value = config;
-        %    elseif nargin == 2
-        %        if config.isKey(key)
-        %            value = config(key);
-        %        else
-        %            value = [];
-        %        end
-        %    elseif nargin >= 3
-        %        config(key) = value; %#ok<NASGU>
-        %    end
-        %end
               
         function [value, errors] = parse(varargin)
             parser = JSON_Parser();

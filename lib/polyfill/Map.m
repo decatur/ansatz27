@@ -78,7 +78,7 @@ classdef Map < handle
         end
 
         function disp(this)
-            disp(JSON.stringify(this, [], 4));
+            disp(this.s) %JSON.stringify(this, [], 4));
         end
         
     end
