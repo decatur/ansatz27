@@ -104,7 +104,7 @@ classdef JSON < handle
             end
             
             childSchema = JSON.getPath(schema, ['/properties/' key]);
-            subpath = [schema('__path') 'properties/' key '/'];
+            subpath = ['properties/' key '/'];
             
             if isempty(childSchema) && schema.isKey('patternProperties')
                 patternProperties = schema('patternProperties');
@@ -118,17 +118,16 @@ classdef JSON < handle
             end
 
             if ~isempty(childSchema)
-                childSchema = this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
+                this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
             end
         end
         
         function childSchema = getItemSchema(this, schema, key)
+            % TODO: Only call this for array items.
             assert(isnumeric(key) && ~rem(key, 1));
             childSchema = [];
             
             items = JSON.getPath(schema, '/items');
-
-            %keyboard
 
             if isempty(items) % Shortcut
                 return;
@@ -136,14 +135,14 @@ classdef JSON < handle
 
             if JSON.isaMap(items)
                 childSchema = items;
-                subpath = [schema('__path') 'items/'];
+                subpath = 'items/';
             elseif iscell(items) && key < length(items)
                 childSchema = items{key+1};
-                subpath = [schema('__path') sprintf('items/%d/', key)];
+                subpath = [sprintf('items/%d/', key)];
             end
 
             if ~isempty(childSchema)
-                childSchema = this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
+                this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
             end
         end
         
@@ -412,7 +411,7 @@ classdef JSON < handle
         
     end % methods
     
-    methods (Access=private)
+    methods % TODO ... (Access=private)
         
         function schema = getSchemaByURI(this, uri)
             parts = strsplit(uri, '#');
@@ -468,21 +467,10 @@ classdef JSON < handle
                 schema('id') = this.resolveURI(schema('id'), uri);
             end
 
-            schema = this.normalizeSchema(schema, schema('id'), '/');
-            
-            %for index=1:length(parser.defaults)
-            %    p = JSON_Parser();
-            %    subSchema = JSON.getPath(schema, parser.defaults{index});
-            %   [ defaultValue, errs ] = parse(p, subSchema('default'), subSchema);
-            %    if ~isempty( errs)
-            %       this.errors = errs;
-            %        error('JSON:PARSE_SCHEMA', 'Default value does not validate in schema %s', uri);
-            %   end
-            %   subSchema('default') = defaultValue;
-            %end
+            this.normalizeSchema(schema, schema('id'), '/');
         end
 
-        function schema = normalizeSchema(this, schema, resolutionScope, pointer)
+        function normalizeSchema(this, schema, resolutionScope, pointer)
             if schema.isKey('__isNormalized')
                 return
             end
@@ -492,8 +480,6 @@ classdef JSON < handle
             if ~JSON.isaMap(schema)
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
             end
-
-            schema('__path') = pointer;
             
             if schema.isKey('$ref')
                 ref = schema('$ref');
@@ -506,13 +492,13 @@ classdef JSON < handle
 
                 ref = this.resolveURI(ref, resolutionScope);
                 
-                if isempty(strfind(ref, '#'))
-                    ref = [ref '#'];
-                end
+                %if isempty(strfind(ref, '#'))
+                %    ref = [ref '#'];
+                %end
                 
-                schema('$ref') = ref;
+                %schema('$ref') = ref;
 
-                schema = this.getSchemaByURI(ref);
+                schema('__refSchema') = this.getSchemaByURI(ref);
             end
             
             if schema.isKey('id') && ~isempty(schema('id'))

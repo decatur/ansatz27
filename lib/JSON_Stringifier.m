@@ -119,7 +119,6 @@ classdef JSON_Stringifier < JSON
         end
 
         function coercedJson = stringifyMany(this, value, context, schema)
-
             manyKeyword = schema('manyKeyword');
             schemaArray = schema(manyKeyword);
 
@@ -128,7 +127,9 @@ classdef JSON_Stringifier < JSON
             coercedJson = [];
 
             for k=1:length(schemaArray)
-                json = this.stringifyValue_(value, context, schemaArray{k});
+                subSchema = schemaArray{k};
+                this.normalizeSchema(subSchema, schema('__resolutionScope'), manyKeyword);
+                json = this.stringifyValue_(value, context, subSchema);
                 if length(this.errors) == state.errorLength
                     % First validation schema wins.
                     if isempty(coercedJson)
@@ -278,7 +279,6 @@ classdef JSON_Stringifier < JSON
             assert(iscell(value) || isstruct(value));
 
             txt = sprintf('[%s', this.nl);
-            %items = JSON.getPath(schema, '/items');
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             l = length(value);
@@ -328,12 +328,16 @@ classdef JSON_Stringifier < JSON
             s = size(tensor);
             assert(s(1) > 0);
             
-            %items = JSON.getPath(schema, '/items');
-            %if isempty(items)
-            %    % Make sure a column vector such as [1;2] is generated as [[1],[2]].
-            %    items = containers.Map();
-            %   items('type') = { 'array' };
-            %end
+            oneItemSchema = JSON.getPath(schema, '/items');
+            if isempty(oneItemSchema)
+                % Make sure a column vector such as [1;2] is generated as [[1],[2]].
+                oneItemSchema = containers.Map();
+                oneItemSchema('type') = { 'array' };
+            elseif JSON.isaMap(oneItemSchema)
+                this.normalizeSchema(oneItemSchema, schema('__resolutionScope'), 'items');
+            else
+                oneItemSchema = [];
+            end
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -351,7 +355,11 @@ classdef JSON_Stringifier < JSON
                 indx.subs = cat(1, { k }, cellstr(repmat(':', ndims(tensor)-1, 1)));
                 m = squeeze(subsref(tensor, indx));
 
-                itemSchema = this.getItemSchema(schema, k-1);
+                if isempty(oneItemSchema)
+                    itemSchema = this.getItemSchema(schema, k-1);
+                else
+                    itemSchema = oneItemSchema;
+                end
 
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
 

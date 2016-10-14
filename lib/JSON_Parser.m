@@ -182,13 +182,16 @@ classdef JSON_Parser < JSON
             this.parseChar('[');
 
             val = {};
-            itemSchema = this.getItemSchema(schema, 0);
-            itemType = JSON.getPath(itemSchema, '/type'); % Note ~isempty(itemType) implies that items is an object, not a list.
-
-            if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
-                val = struct();
+            itemSchema = this.getPath(schema, '/items');
+            if JSON.isaMap(itemSchema)
+                this.normalizeSchema(itemSchema, schema('__resolutionScope'), 'items');
+                itemType = JSON.getPath(itemSchema, '/type');
+                % Note ~isempty(itemType) implies that items is an object, not a list.
+                if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
+                    val = struct();
+                end
             else
-                val = {};
+                itemSchema = [];
             end
         
             index = 0;
@@ -409,7 +412,10 @@ classdef JSON_Parser < JSON
             coersedVal = [];
 
             for k=1:length(schemaArray)
-                val = this.parseValue_(context, schemaArray{k});
+                subSchema = schemaArray{k};
+                this.normalizeSchema(subSchema, schema('__resolutionScope'), manyKeyword);
+
+                val = this.parseValue_(context, subSchema);
                 if length(this.errors) == state.errorLength
                     % There were no errors.
                     % First validating schema wins.

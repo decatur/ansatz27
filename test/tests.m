@@ -21,9 +21,9 @@ testErrorHandling;
 %testTestCase;
 testDatetime;
 
-tc = TestRoundtrip();   tc.exec(); % Run a single test with tc.exec('Reuse_with_Schema_References');
+% Run a single test with tc.exec('Reuse_with_Schema_References');
+tc = TestRoundtrip();   tc.exec(); 
 tc = TestStringify();   tc.exec();
 tc = TestParse();       tc.exec();
 tc = TestValidation();  tc.exec();
 
-schema = JSON.parseSchema('roundtrip/Schema_Inheritance_with_allOf/schema.json')

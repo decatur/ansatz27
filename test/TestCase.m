@@ -99,7 +99,7 @@ classdef TestCase < handle
         function assertEmpty(this, actual)
             if ~isempty(actual)
                 this.err('Error: Expected empty, found ...\n');
-                celldisp(actual);
+                actual
             end
         end
         
