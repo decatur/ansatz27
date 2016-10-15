@@ -15,12 +15,17 @@ classdef Map < handle
         end
 
         function key = denormalizeKey(this, key)
-            a = arrayfun(@(x) sscanf(x, '%x'), reshape(key(3:end), 2, []));
-            key = char(16*a(1,:)+a(2,:));
+            if length(key) >= 2 && isequal(key(1:2), 'x_')
+                a = arrayfun(@(x) sscanf(x, '%x'), reshape(key(3:end), 2, []));
+                key = char(16*a(1,:)+a(2,:));
+            end
         end
 
         function key = normalizeKey(this, key)
-            key = ['x_' sprintf('%x', uint8(key))];
+            s = strrep(key, '_', 'A');
+            if !(isalpha(s(1)) && all(isalnum(s)))
+                key = ['x_' sprintf('%x', uint8(key))];
+            end
         end
 
         function value = subsref(this, idx)
@@ -45,7 +50,11 @@ classdef Map < handle
 
                     [fName, args] = idx.subs;
                     if strcmp(fName, 'isKey')
-                        value = isfield(this.s, this.normalizeKey(args{1}));
+                        if isempty(args{1})
+                            value = false;
+                        else
+                            value = isfield(this.s, this.normalizeKey(args{1}));
+                        end
                     elseif strcmp(fName, 'keys')
                         normalizedNames = fieldnames(this.s);
                         value = cell(1, length(normalizedNames));

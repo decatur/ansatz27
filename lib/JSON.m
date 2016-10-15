@@ -103,8 +103,8 @@ classdef JSON < handle
                 return;
             end
             
-            childSchema = JSON.getPath(schema, ['/properties/' key]);
-            subpath = ['properties/' key '/'];
+            subpath = ['/properties/' key];
+            childSchema = JSON.getPath(schema, subpath);            
             
             if isempty(childSchema) && schema.isKey('patternProperties')
                 patternProperties = schema('patternProperties');
@@ -143,6 +143,18 @@ classdef JSON < handle
 
             if ~isempty(childSchema)
                 this.normalizeSchema(childSchema, schema('__resolutionScope'), subpath);
+            end
+        end
+
+        function subSchema = getSubSchema(this, schema, pointer)
+            subSchema = JSON.getPath(schema, pointer);
+
+            if ~isempty(subSchema)
+                this.normalizeSchema(subSchema, schema('__resolutionScope'), pointer);
+            end
+
+            if subSchema.isKey('$ref')
+                subSchema = subSchema('__refSchema');
             end
         end
         
@@ -411,7 +423,7 @@ classdef JSON < handle
         
     end % methods
     
-    methods % TODO ... (Access=private)
+    methods (Access=private)
         
         function schema = getSchemaByURI(this, uri)
             parts = strsplit(uri, '#');
@@ -471,15 +483,17 @@ classdef JSON < handle
         end
 
         function normalizeSchema(this, schema, resolutionScope, pointer)
+            if ~JSON.isaMap(schema)
+                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object, found %s', class(schema));
+            end
+
             if schema.isKey('__isNormalized')
                 return
             end
                 
             JSON.log('DEBUG', 'normalizeSchema %s', pointer);
             
-            if ~JSON.isaMap(schema)
-                error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object');
-            end
+            
             
             if schema.isKey('$ref')
                 ref = schema('$ref');
@@ -491,14 +505,11 @@ classdef JSON < handle
                 %keyboard()
 
                 ref = this.resolveURI(ref, resolutionScope);
-                
-                %if isempty(strfind(ref, '#'))
-                %    ref = [ref '#'];
-                %end
-                
-                %schema('$ref') = ref;
 
-                schema('__refSchema') = this.getSchemaByURI(ref);
+                % foo#bar->/bar or foo#->/ or foo->/
+                refPointer = regexprep(ref, '[^#]*(#/?|$)', '/', 'once');
+                
+                schema('__refSchema') = JSON.getPath(this.getSchemaByURI(ref), refPointer);
             end
             
             if schema.isKey('id') && ~isempty(schema('id'))
@@ -674,7 +685,7 @@ classdef JSON < handle
             
             if pointer(1) ~= '/'
                 % TODO: Do not throw here
-                error('Invalid pointer syntax for %s', pointer);
+                error('Invalid pointer syntax: %s', pointer);
             end
             
             tokens = strsplit(pointer, '/');

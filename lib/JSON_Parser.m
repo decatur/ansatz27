@@ -184,7 +184,7 @@ classdef JSON_Parser < JSON
             val = {};
             itemSchema = this.getPath(schema, '/items');
             if JSON.isaMap(itemSchema)
-                this.normalizeSchema(itemSchema, schema('__resolutionScope'), 'items');
+                itemSchema = this.getSubSchema(schema, '/items');
                 itemType = JSON.getPath(itemSchema, '/type');
                 % Note ~isempty(itemType) implies that items is an object, not a list.
                 if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
@@ -405,15 +405,14 @@ classdef JSON_Parser < JSON
             end
 
             manyKeyword = schema('manyKeyword');
-            schemaArray = schema(manyKeyword);
+            l = length(schema(manyKeyword));
 
             state = copyState(this);
             state.errorLength = length(this.errors);
             coersedVal = [];
 
-            for k=1:length(schemaArray)
-                subSchema = schemaArray{k};
-                this.normalizeSchema(subSchema, schema('__resolutionScope'), manyKeyword);
+            for k=1:l
+                subSchema = this.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
 
                 val = this.parseValue_(context, subSchema);
                 if length(this.errors) == state.errorLength
@@ -429,7 +428,7 @@ classdef JSON_Parser < JSON
                     end
                 end
                 
-                if k < length(schemaArray)
+                if k < l
                     % Reset state if there are more schemas to try.
                     this.errors = this.errors(1:state.errorLength);
                     copyState(state);

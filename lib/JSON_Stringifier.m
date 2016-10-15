@@ -120,15 +120,14 @@ classdef JSON_Stringifier < JSON
 
         function coercedJson = stringifyMany(this, value, context, schema)
             manyKeyword = schema('manyKeyword');
-            schemaArray = schema(manyKeyword);
+            l = length(schema(manyKeyword));
 
             state = struct();
             state.errorLength = length(this.errors);
             coercedJson = [];
 
-            for k=1:length(schemaArray)
-                subSchema = schemaArray{k};
-                this.normalizeSchema(subSchema, schema('__resolutionScope'), manyKeyword);
+            for k=1:l
+                subSchema = this.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
                 json = this.stringifyValue_(value, context, subSchema);
                 if length(this.errors) == state.errorLength
                     % First validation schema wins.
@@ -139,7 +138,7 @@ classdef JSON_Stringifier < JSON
                     if isequal(manyKeyword, 'anyOf')
                         break;
                     end
-                elseif k < length(schemaArray)
+                elseif k < l
                     % Reset state
                     this.errors = this.errors(1:state.errorLength);
                 end
@@ -334,7 +333,7 @@ classdef JSON_Stringifier < JSON
                 oneItemSchema = containers.Map();
                 oneItemSchema('type') = { 'array' };
             elseif JSON.isaMap(oneItemSchema)
-                this.normalizeSchema(oneItemSchema, schema('__resolutionScope'), 'items');
+                oneItemSchema = this.getSubSchema(schema, '/items');
             else
                 oneItemSchema = [];
             end
