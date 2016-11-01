@@ -11,6 +11,7 @@ classdef JSON_Stringifier < JSON
         nl
         sepPostfix
         indent
+        schemaLoader
     end
     
     methods
@@ -77,7 +78,11 @@ classdef JSON_Stringifier < JSON
             end
 
             this.errors = {};
-            rootschema = this.loadSchema( rootschema );
+
+            this.schemaLoader = JSON_SchemaLoader();
+            if ischar(rootschema)
+                rootschema = this.schemaLoader.load( rootschema );
+            end
             
             context = struct();
             
@@ -127,7 +132,7 @@ classdef JSON_Stringifier < JSON
             coercedJson = [];
 
             for k=1:l
-                subSchema = this.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
+                subSchema = this.schemaLoader.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
                 json = this.stringifyValue_(value, context, subSchema);
                 if length(this.errors) == state.errorLength
                     % First validation schema wins.
@@ -253,7 +258,7 @@ classdef JSON_Stringifier < JSON
                     v = value(key);
                 end
 
-                item_str = this.stringifyValue(v, context, this.getPropertySchema(schema, key));
+                item_str = this.stringifyValue(v, context, this.schemaLoader.getPropertySchema(schema, key));
                 if isempty(item_str) || strcmp(item_str, 'null') % TODO: Can it be empty?
                     continue;
                 end
@@ -283,7 +288,7 @@ classdef JSON_Stringifier < JSON
             l = length(value);
             
             for k=1:l
-                itemSchema = this.getItemSchema(schema, k-1);
+                itemSchema = this.schemaLoader.getItemSchema(schema, k-1);
 
                 if isstruct(value)
                     item = value(k);
@@ -333,7 +338,7 @@ classdef JSON_Stringifier < JSON
                 oneItemSchema = containers.Map();
                 oneItemSchema('type') = { 'array' };
             elseif JSON.isaMap(oneItemSchema)
-                oneItemSchema = this.getSubSchema(schema, '/items');
+                oneItemSchema = this.schemaLoader.getSubSchema(schema, '/items');
             else
                 oneItemSchema = [];
             end
@@ -355,7 +360,7 @@ classdef JSON_Stringifier < JSON
                 m = squeeze(subsref(tensor, indx));
 
                 if isempty(oneItemSchema)
-                    itemSchema = this.getItemSchema(schema, k-1);
+                    itemSchema = this.schemaLoader.getItemSchema(schema, k-1);
                 else
                     itemSchema = oneItemSchema;
                 end
@@ -371,8 +376,6 @@ classdef JSON_Stringifier < JSON
 
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
-            
-            %items = JSON.getPath(schema, '/items');
 
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -382,7 +385,7 @@ classdef JSON_Stringifier < JSON
 
 
             for k=1:numel(row)
-                itemSchema = this.getItemSchema(schema, k-1);
+                itemSchema = this.schemaLoader.getItemSchema(schema, k-1);
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
 
                 txt = sprintf('%s%s%s', txt, sep, this.stringifyValue(row(k), itemContext, itemSchema));

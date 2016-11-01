@@ -18,26 +18,26 @@ classdef TestCase < handle
             
             if isempty(expected)
                 if ~isempty(actual)
-                    this.err('Error: Expected empty, found %s\n', TestCase.toString(actual));
+                    this.err('Error: Expected empty, found %s', TestCase.toString(actual));
                 end
             elseif ischar(expected)
                 if ~ischar(actual) || ~strcmp(actual, expected)
-                    this.err('Error: Expected %s, found %s\n', expected, TestCase.toString(actual));
+                    this.err('Error: Expected %s, found %s', expected, TestCase.toString(actual));
                 end
             elseif isnumeric(expected)
                 if ~isnumeric(actual) || ~isequaln(actual, expected)
-                    this.err('Error: Expected %g, found %s\n', expected, TestCase.toString(actual));
+                    this.err('Error: Expected %g, found %s', expected, TestCase.toString(actual));
                 end
             elseif islogical(expected)
                 if ~islogical(actual) || ~isequal(actual, expected)
-                    this.err('Error: Expected %s, found %s\n', expected, TestCase.toString(actual));
+                    this.err('Error: Expected %s, found %s', expected, TestCase.toString(actual));
                 end
             elseif iscell(expected)
                 if ~iscell(actual)
-                    this.err('Error: Expected cell, found %s\n', TestCase.toString(actual));
+                    this.err('Error: Expected cell, found %s', TestCase.toString(actual));
                     return;
                 elseif ~iscell(actual) || length(expected) ~= length(actual)
-                    this.err('Error: Expected cell of length %u, found length %u\n', length(expected), length(actual));
+                    this.err('Error: Expected cell of length %u, found length %u', length(expected), length(actual));
                     return;
                 end
                 for k=1:length(expected)
@@ -45,22 +45,24 @@ classdef TestCase < handle
                 end
             elseif isstruct(expected)
                 if ~isstruct(actual)
-                    this.err('Error: Expected struct, found %s\n', TestCase.toString(actual));
+                    this.err('Error: Expected struct, found %s', TestCase.toString(actual));
                     return;
                 end
                 
                 expectedNames = sort(fieldnames(expected));
                 actualNames = sort(fieldnames(actual));
                 
-                if length(expected) ~= length(actual) || length(expectedNames) ~= length(actualNames)
-                    this.err('Error: Mismatch in field names. Expected %s, found %s', expectedNames{:}, actualNames{:});
+                if length(expectedNames) ~= length(actualNames)
+                    expectedNames = sprintf('%s, ', expectedNames{:});
+                    actualNames = sprintf('%s, ', actualNames{:});
+                    this.err('Error: Mismatch in field names: Expected [%s] actual [%s]', expectedNames, actualNames);
                     return;
                 end
                 
                 for m=1:length(expected)
                     for k=1:length(expectedNames)
                         if ~strcmp(expectedNames{k}, actualNames{k})
-                            this.err('Error: Expected field name %s, found %s\n', expectedNames{k}, actualNames{k});
+                            this.err('Error: Expected field name %s, found %s', expectedNames{k}, actualNames{k});
                             return;
                         end
                         this.assertEqual(actual(m).(actualNames{k}), expected(m).(expectedNames{k}));
@@ -68,7 +70,7 @@ classdef TestCase < handle
                 end
             elseif isa(expected, 'Map') || isa(expected, 'containers.Map')
                 if ~( isa(actual, 'Map') || isa(actual, 'containers.Map') )
-                    this.err('Error: Expected map, found %s\n', actual);
+                    this.err('Error: Expected map, found %s', actual);
                     return;
                 end
 
@@ -82,14 +84,14 @@ classdef TestCase < handle
                 
                 for k=1:length(expectedNames)
                     if ~strcmp(expectedNames{k}, actualNames{k})
-                        this.err('Error: Expected field name %s, found %s\n', expectedNames{k}, actualNames{k});
+                        this.err('Error: Expected field name %s, found %s', expectedNames{k}, actualNames{k});
                         return;
                     end
                     this.assertEqual(actual(actualNames{k}), expected(expectedNames{k}));
                 end
             elseif isa(expected, 'datetime')
                 if ~isobject(actual) || ~isequal(expected, actual)
-                    this.err('Error: Expected datetime %s, found %s\n', toString(expected), TestCase.toString(actual));
+                    this.err('Error: Expected datetime %s, found %s', TestCase.toString(expected), TestCase.toString(actual));
                 end
             else
                 this.err('Error: Cannot compare type %s', class(expected));
@@ -98,7 +100,7 @@ classdef TestCase < handle
 
         function assertEmpty(this, actual)
             if ~isempty(actual)
-                this.err('Error: Expected empty, found ...\n');
+                this.err('Error: Expected empty, found ...');
                 actual
             end
         end
@@ -106,6 +108,7 @@ classdef TestCase < handle
         function err(this, varargin)
             c = varargin(2:end);
             fprintf(1, varargin{1}, c{:});
+            fprintf(1, '\n');
             this.errorCount = this.errorCount + 1;
         end
         

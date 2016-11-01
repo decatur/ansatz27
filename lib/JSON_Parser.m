@@ -15,16 +15,13 @@ classdef JSON_Parser < JSON
         index_esc
         len_esc
         options
-        isSchema    % Are we parsing a schema?
-        defaults
+        schemaLoader
     end
     
     methods
         
         function this = JSON_Parser()
             %this@JSON();
-            isSchema = false;    % Are we parsing a schema?
-            defaults = {};
 
             this.formatters('date') = @(s) JSON.datestring2datetime(s);
             this.formatters('date-time') = @(s) JSON.datetimestring2datetime(s);
@@ -79,7 +76,7 @@ classdef JSON_Parser < JSON
 
             % If is does not look like JSON it must be a URI
             if isempty(regexp(json, '^\s*(\[|\{|"|true|false|null|\+?\-?\d)', 'ONCE'))
-                uri = this.resolveURIagainstLoadPath(json);
+                uri = JSON.resolveURIagainstLoadPath(json);
                 try
                     this.json = urlread(uri);
                 catch e
@@ -93,10 +90,18 @@ classdef JSON_Parser < JSON
             this.len = length(this.json);
             this.lineCount = 1;
             this.posCurrentNewline = 0;
+
+            this.schemaLoader = JSON_SchemaLoader();
             
             context = struct();
             context.pointer = '';
-            context.schema = this.loadSchema( rootschema );
+            if ischar(rootschema)
+                context.schema = this.schemaLoader.load( rootschema );
+            elseif this.isaMap(rootschema)
+                context.schema = rootschema;
+            else
+                context.schema = [];
+            end
             
             % String delimiters and escape chars identified to improve speed:
             this.esc = find(this.json=='"' | this.json=='\' ); % comparable to: regexp(this.json, '["\\]');
@@ -128,7 +133,6 @@ classdef JSON_Parser < JSON
             this.parseChar('{');
 
             objectFormat = JSON.getPath(schema, '/format', this.options.objectFormat);
-            hasDefault = false;
 
             if strcmp(objectFormat, 'Map')
                 val = containers.Map();
@@ -141,13 +145,12 @@ classdef JSON_Parser < JSON
                     key = this.parseStr();
                     this.parseChar(':');
                     subContext = this.getChildContext(context, key);
-                    subContext.schema = this.getPropertySchema(schema, key);
+                    subContext.schema = this.schemaLoader.getPropertySchema(schema, key);
                     
                     beginPos = this.pos;
                     v = this.parseValue(subContext, subContext.schema);
                     % TODO: Make sure this is really a default value
-                    if this.isSchema && strcmp(key, 'default')
-                        hasDefault = true;
+                    if isa(this, 'JSON_SchemaLoader') && strcmp(key, 'default')
                         % Retain the raw string for default values.
                         v = this.json(beginPos:this.pos-1);
                     end
@@ -172,26 +175,19 @@ classdef JSON_Parser < JSON
             end
             this.parseChar('}');
             
-            if hasDefault
-                this.defaults{end+1} = context.pointer;
-            end
-            
         end
         
         function val = parseArray(this, context, schema) % JSON array is written in row-major order
             this.parseChar('[');
 
             val = {};
-            itemSchema = this.getPath(schema, '/items');
-            if JSON.isaMap(itemSchema)
-                itemSchema = this.getSubSchema(schema, '/items');
+            itemSchema = this.schemaLoader.getSubSchema(schema, '/items');
+            if ~isempty(itemSchema)
                 itemType = JSON.getPath(itemSchema, '/type');
                 % Note ~isempty(itemType) implies that items is an object, not a list.
                 if ~isempty(itemType) && isequal({'object'}, itemType) && strcmp(JSON.getPath(schema, '/format', 'structured-array'), 'structured-array')
                     val = struct();
                 end
-            else
-                itemSchema = [];
             end
         
             index = 0;
@@ -201,7 +197,7 @@ classdef JSON_Parser < JSON
                     subContext = this.getChildContext(context, index);
                     subContext.isArray = true;
                     if isempty(itemSchema)
-                        subContext.schema = this.getItemSchema(schema, index);
+                        subContext.schema = this.schemaLoader.getItemSchema(schema, index);
                     else
                         subContext.schema = itemSchema;
                     end
@@ -412,7 +408,7 @@ classdef JSON_Parser < JSON
             coersedVal = [];
 
             for k=1:l
-                subSchema = this.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
+                subSchema = this.schemaLoader.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
 
                 val = this.parseValue_(context, subSchema);
                 if length(this.errors) == state.errorLength
@@ -446,7 +442,7 @@ classdef JSON_Parser < JSON
                 case '{'
                     val = this.parseObject(context, schema);
                     if ~isempty(schema)
-                        val = JSON_Parser.mergeDefaults(val, schema);
+                        val = this.mergeDefaults(val, schema);
                     end
                 case {'-','0','1','2','3','4','5','6','7','8','9'}
                     val = this.parseNumber();
@@ -486,6 +482,36 @@ classdef JSON_Parser < JSON
                     [val, errMsg] = formatter(val);
                     if ~isempty(errMsg)
                         this.addError(context.pointer, errMsg, val);
+                    end
+                end
+            end
+        end
+
+        function mergedObject = mergeDefaults(this, object, schema)
+            assert(isstruct(object) || JSON.isaMap(object));
+
+            if isstruct(object)
+                s = fieldnames(object);
+            else
+                s = object.keys();
+            end
+
+            mergedObject = object;
+            props = JSON.getPath(schema, '/properties');
+            if ~JSON.isaMap(props)
+                return
+            end
+
+            propertyNames = props.keys();
+
+            for i=1:length(propertyNames)
+                name = propertyNames{i};
+                property = this.schemaLoader.getPropertySchema(schema, name);
+                if property.isKey('default') && ~ismember(name, s)
+                    if isstruct(mergedObject)
+                        mergedObject.(name) = property('default');
+                    else
+                        mergedObject(name) = property('default');
                     end
                 end
             end
@@ -578,37 +604,6 @@ classdef JSON_Parser < JSON
                 m = l;
             end
 
-        end
-
-        function mergedObject = mergeDefaults(object, schema)
-            assert(isstruct(object) || JSON.isaMap(object));
-
-            if isstruct(object)
-                s = fieldnames(object);
-            else
-                s = object.keys();
-            end
-
-            mergedObject = object;
-
-            props = JSON.getPath(schema, '/properties');
-            if ~JSON.isaMap(props)
-                return
-            end
-
-            propertyNames = props.keys();
-
-            for i=1:length(propertyNames)
-                name = propertyNames{i};
-                property = props(name);
-                if property.isKey('default') && ~ismember(name, s)
-                    if isstruct(mergedObject)
-                        mergedObject.(name) = property('default');
-                    else
-                        mergedObject(name) = property('default');
-                    end
-                end
-            end
         end
 
     end % static methods
