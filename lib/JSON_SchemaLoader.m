@@ -43,7 +43,7 @@ classdef JSON_SchemaLoader < JSON_Parser
                 patterns = patternProperties.keys();
                 for k=1:length(patterns)
                     if ~isempty(regexp(key, patterns{k}, 'ONCE'))
-                        childSchema = this.getSubSchema(schema, ['/' patterns{k}]);
+                        childSchema = this.getSubSchema(schema, ['/patternProperties/' patterns{k}]);
                         return;
                     end
                 end
@@ -69,7 +69,7 @@ classdef JSON_SchemaLoader < JSON_Parser
             if JSON.isaMap(items)
                 itemSchema = this.getSubSchema(schema, '/items');
             elseif iscell(items) && key < length(items)
-                itemSchema = this.getSubSchema(schema, sprintf('/items/%d/', key));
+                itemSchema = this.getSubSchema(schema, sprintf('/items/%d', key));
             end
         end
 
@@ -79,12 +79,17 @@ classdef JSON_SchemaLoader < JSON_Parser
             end
 
             referencingSchemas = containers.Map();
+            ref = [];
 
             while true
                 id = schema('id');
                 [schema] = JSON.getPath(schema, pointer);
+
                 
                 if isempty(schema) || ~JSON.isaMap(schema)
+                    if ~isempty(ref)
+                        error('JSON:PARSE_SCHEMA', '$ref is invalid: %s', ref);
+                    end
                     schema = [];
                     return
                 end
@@ -120,8 +125,11 @@ classdef JSON_SchemaLoader < JSON_Parser
                     error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', ref);
                 end
 
-                % foo#bar->/bar or foo#->/ or foo->/
-                pointer = regexprep(ref, '[^#]*(#/?|$)', '/', 'once');
+                % Extract the anchor.
+                pointer = regexprep(ref, '[^#]*#?', '', 'once');
+                if ~isempty(pointer)
+                    pointer = ['/' pointer];
+                end
                 schema = this.getSchemaByURI(ref);
             end
 
@@ -183,7 +191,7 @@ classdef JSON_SchemaLoader < JSON_Parser
                 schema('id') = this.resolveURI(schema('id'), uri);
             end
 
-            schema = this.getSubSchema(schema, '/');
+            schema = this.getSubSchema(schema, '');
         end
 
         function resolvedURI = resolveURI(this, uri, base)
@@ -191,7 +199,6 @@ classdef JSON_SchemaLoader < JSON_Parser
             % See https://tools.ietf.org/html/rfc3986
             resolvedURI = uri;
             if ~isempty(base)
-                base
                 base = javaObject('java.net.URI', base);
                 resolvedURI = char(base.resolve(uri));
                 % Workaround for a Java bug. Resolved uri may look like file://foo/bar. We need for slashes after the protocol.
@@ -212,7 +219,6 @@ classdef JSON_SchemaLoader < JSON_Parser
             % Find how many manyKeywords are present and save the last.
             for k=1:length(manyKeywords)
                 manyKeyword = manyKeywords{k};
-                
                 if schema.isKey(manyKeyword)
                     manyCount = manyCount + 1;
                     schema('manyKeyword') = manyKeyword;
@@ -221,13 +227,8 @@ classdef JSON_SchemaLoader < JSON_Parser
             
             if manyCount > 1
                 error('JSON:PARSE_SCHEMA', 'Only one of %s allowed', strjoin(manyKeywords, ', '));
-            %elseif schema.isKey('manyKeyword')
-            %    manyKeyword = schema('manyKeyword');
-            %    manySchema = schema(manyKeyword);
-            %    for k=1:length(manySchema)
-            %        subPath = [pointer '/' manyKeyword '/' num2str(k-1)];
-            %        addSchema(manySchema{k}, subPath, resolutionScope);
-            %    end
+            elseif schema.isKey('allOf')
+                this.mergeSchemas(schema);
             end
             
             if ~schema.isKey('type') || isempty(schema('type'))
@@ -264,6 +265,34 @@ classdef JSON_SchemaLoader < JSON_Parser
 
             schema('__isNormalized') = true;
             
+        end
+
+        function mergeSchemas(this, schema)
+            %MERGESCHEMAS Summary of this function goes here
+            %   Detailed explanation goes here
+            
+            % Merge properties and required fields of all schemas.
+            mergedProperties = containers.Map();
+            schema('properties') = mergedProperties;
+            schema('required') = {};
+            allOf = schema('allOf');
+            
+            for k=1:length(allOf)
+                subSchema = this.getSubSchema(schema, ['/allOf/' num2str(k-1)]);
+                % TODO: Assert properties is member
+                props = subSchema('properties');
+                keys = props.keys();
+                for l=1:length(keys)
+                    key = keys{l};
+                    mergedProperties(key) = props(key);
+                end
+                
+                if subSchema.isKey('required')
+                    schema('required') = [schema('required') subSchema('required')];
+                end
+            end
+
+            schema.remove('allOf');
         end
 
     end % methods (Access=private)

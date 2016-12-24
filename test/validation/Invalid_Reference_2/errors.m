@@ -1,3 +1,3 @@
 {
-{[] '$ref must be a string at /properties/bar' ''}
+{[] '$ref must be a string, found double' ''}
 }

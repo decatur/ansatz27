@@ -154,7 +154,7 @@ classdef JSON_Stringifier < JSON
             if isnumeric(value)
                 value = this.normalize2nan(value);
             end
-
+            
             format = JSON.getPath(schema, '/format');
             if this.formatters.isKey(format)
                 formatter = this.formatters(format);
@@ -214,6 +214,24 @@ classdef JSON_Stringifier < JSON
                 if islogical(value)
                     json = strrep(json, '1', 'true');
                     json = strrep(json, '0', 'false');
+                end
+            elseif isobject(value)
+                if JSON.isoct
+                    % As of version Octave 4.0.0, both ismember(obj) and methods(obj) are broken
+                    try
+                        json = this.string2json(char(value));
+                    catch e
+                        try
+                            json = this.string2json(value.toJSON());
+                        catch e
+                        end
+                    end
+                else
+                    if ismethod(value, 'char')
+                        json = this.string2json(char(value));
+                    elseif ismethod(value, 'toJSON')
+                        json = this.string2json(value.toJSON());
+                    end
                 end
             end
 
@@ -404,7 +422,7 @@ classdef JSON_Stringifier < JSON
             txt = strrep(txt, sprintf('\r'), '\r');
             txt = strrep(txt, sprintf('\t'), '\t');
             
-            txt = ['"', txt ,'"'];
+            txt = ['"' txt '"'];
         end
         
     end

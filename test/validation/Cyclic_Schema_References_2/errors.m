@@ -1,3 +1,3 @@
 {
-{[] 'Cyclic references BASE/cyclicSchema.json#/definitions/barType -> BASE/cyclicSchema.json#/properties/bar' ''}
+{[] 'Cyclic references at BASE/cyclicSchema.json#/definitions/barType' ''}
 }

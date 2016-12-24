@@ -12,6 +12,6 @@ json = JSON.stringify(obj);
 [json, errors] = JSON.stringify(obj, 'schema.json');
 
 % For performance, explicitely parse a schema to use it for multiple parses or stringifies
-schema = JSON.parseSchema('schema.json');
+schema = JSON.loadSchema('schema.json');
 [obj, errors] = JSON.parse('document.json', schema);
 [json, errors] = JSON.stringify(obj, schema);

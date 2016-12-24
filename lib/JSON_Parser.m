@@ -507,6 +507,7 @@ classdef JSON_Parser < JSON
             for i=1:length(propertyNames)
                 name = propertyNames{i};
                 property = this.schemaLoader.getPropertySchema(schema, name);
+                %if ~isempty(property) && property.isKey('default') && ~ismember(name, s)
                 if property.isKey('default') && ~ismember(name, s)
                     if isstruct(mergedObject)
                         mergedObject.(name) = property('default');

@@ -4,6 +4,7 @@
 classdef TestCase < handle
     
     properties
+        name
         errorCount
     end
     
@@ -11,6 +12,18 @@ classdef TestCase < handle
 
         function this = TestCase()
             this.errorCount = 0;
+        end
+
+        function exec(this)
+            fprintf(1, 'Running test %s\n', this.name);
+            
+            this._exec();
+
+            if this.errorCount > 0
+                fprintf(1, 'There are %u errors\n', this.errorCount);
+            else
+                fprintf(1, 'No errors\n');
+            end
         end
 
         function assertEqual(this, actual, expected)
@@ -70,7 +83,7 @@ classdef TestCase < handle
                 end
             elseif isa(expected, 'Map') || isa(expected, 'containers.Map')
                 if ~( isa(actual, 'Map') || isa(actual, 'containers.Map') )
-                    this.err('Error: Expected map, found %s', actual);
+                    this.err('Error: Expected map, found %s', class(actual));
                     return;
                 end
 
@@ -91,7 +104,7 @@ classdef TestCase < handle
                 end
             elseif isa(expected, 'datetime')
                 if ~isobject(actual) || ~isequal(expected, actual)
-                    this.err('Error: Expected datetime %s, found %s', TestCase.toString(expected), TestCase.toString(actual));
+                    this.err('Error: Expected datetime %s, found %s', char(expected), TestCase.toString(actual));
                 end
             else
                 this.err('Error: Cannot compare type %s', class(expected));
@@ -117,7 +130,7 @@ classdef TestCase < handle
     methods (Static)
         function s = toString(obj)
             if ischar(obj)
-                s = obj;
+                s = ['(char) ' obj];
             elseif isnumeric(obj)
                 s = num2str(obj);
             elseif islogical(obj)
@@ -130,5 +143,5 @@ classdef TestCase < handle
                 s = class(obj);
             end
         end
-    end
+    end % methods
 end

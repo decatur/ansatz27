@@ -22,6 +22,10 @@ classdef Map < handle
         end
 
         function key = normalizeKey(this, key)
+            if isempty(key)
+                key = 'x_';
+                return
+            end
             s = strrep(key, '_', 'A');
             if !(isalpha(s(1)) && all(isalnum(s)))
                 key = ['x_' sprintf('%x', uint8(key))];
@@ -50,10 +54,11 @@ classdef Map < handle
 
                     [fName, args] = idx.subs;
                     if strcmp(fName, 'isKey')
-                        if isempty(args{1})
-                            value = false;
-                        else
-                            value = isfield(this.s, this.normalizeKey(args{1}));
+                        value = isfield(this.s, this.normalizeKey(args{1}));
+                    elseif strcmp(fName, 'remove')
+                        value = [];
+                        if ~isempty(args{1})
+                            this.s = rmfield(this.s, this.normalizeKey(args{1}));
                         end
                     elseif strcmp(fName, 'keys')
                         normalizedNames = fieldnames(this.s);

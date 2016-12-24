@@ -5,8 +5,8 @@ classdef JSON < handle
     
     properties (Constant)
         isoct = exist('OCTAVE_VERSION', 'builtin') ~= 0;
-        %levelsToLog = { 'WARNING', 'INFO' };
-        levelsToLog = { 'DEBUG', 'WARNING', 'INFO' };
+        %levelsToLog = { 'DEBUG', 'WARNING', 'INFO' };
+        levelsToLog = { 'WARNING', 'INFO' };
     end
     
     properties %(Access = private)
@@ -37,37 +37,7 @@ classdef JSON < handle
             this.errors{end+1} = {pointer msg value type};
         end
         
-        function mergedSchema = mergeSchemas(this, schema)
-            %MERGESCHEMAS Summary of this function goes here
-            %   Detailed explanation goes here
-            
-            % Merge properties and required fields of all schemas.
-            mergedSchema = containers.Map();
-            mergedSchema('type') = {'object'};
-            mergedProperties = containers.Map();
-            mergedSchema('properties') = mergedProperties;
-            mergedSchema('required') = {};
-            allOf = schema('allOf');
-            
-            for k=1:length(allOf)
-                subSchema = allOf{k};
-                % TODO: Assert properties is member
-                props = subSchema('properties');
-                keys = props.keys();
-                for l=1:length(keys)
-                    key = keys{l};
-                    mergedProperties(key) = props(key);
-                end
-                
-                if subSchema.isKey('required')
-                    if mergedSchema.isKey('required')
-                        mergedSchema('required') = [mergedSchema('required') subSchema('required')];
-                    else
-                        mergedSchema('required') = subSchema('required');
-                    end
-                end
-            end
-        end
+        
         
         function pType = inferePrimitiveType(this, value, schema, pointer)
             
@@ -364,6 +334,11 @@ classdef JSON < handle
             stringifier = JSON_Stringifier();
             [json, errors] = stringifier.stringify(varargin{:});
         end
+
+        function schema = loadSchema(url)
+            schemaLoader = JSON_SchemaLoader();
+            schema = schemaLoader.load( url );
+        end
         
         function uri = resolveURIagainstLoadPath(uri)
             %resolveURIagainstLoadPath resolves the reference against the base URI and normalizes.
@@ -450,10 +425,11 @@ classdef JSON < handle
             %    JSON.getPath(obj, '/bar/1')            % -> 'bar'
             %    JSON.getPath(obj, '/foo~1bar')         % -> 42
             %    JSON.getPath(obj, '/foobar', 4711)     % -> 4711
+            %    JSON.getPath(obj, '')                  % -> obj
             
             chain = {};
             
-            if isempty(pointer) || isequal(pointer, '/')
+            if isempty(pointer)
                 if isempty(obj)
                     obj = default;
                 end
@@ -462,7 +438,7 @@ classdef JSON < handle
             
             if pointer(1) ~= '/'
                 % TODO: Do not throw here
-                error('Invalid pointer syntax: %s', pointer);
+                error('Invalid pointer syntax: %s', num2str(pointer));
             end
             
             tokens = strsplit(pointer, '/');
@@ -585,13 +561,17 @@ classdef JSON < handle
         
         function [s, err] = datetime2string(d)
             %datetime2string converts a datetime object to an ISO8601 string
-            
+            err = [];
+
+            %if ischar(d)
+            %    s = d;
+            %    return;
+            %else
             if ~isa(d, 'datetime')
-                err = 'is not a valid date';
+                err = ['is not a valid date: ' class(d)];
                 s = d;
                 return;
             end
-            
             
             if isempty(d.TimeZone)
                 % TODO: We should set the format on a clone!
@@ -600,7 +580,6 @@ classdef JSON < handle
                 d.Format = 'yyyy-MM-dd''T''HH:mm:ssXX';
             end
             s = char(d);
-            err = [];
         end
         
     end

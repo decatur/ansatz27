@@ -1,8 +1,15 @@
 obj = containers.Map();
 obj('foo') = struct('bar', 13);
 obj('bar') = {'foo' 'bar'};
+
+obj('toberemoved') = 'toberemoved';
+assert(obj.isKey('toberemoved'));
+obj.remove('toberemoved');
+assert(~obj.isKey('toberemoved'));
+
 obj('foo/bar') = 42;    % Not recommended!
-obj('') = 14;           % Not recommended! 
+obj('') = 14;           % Not recommended!
+assert(isequal(JSON.getPath(obj, ''), obj))
 assert(JSON.getPath(obj, '/foo/bar') == 13)
 assert(strcmp(JSON.getPath(obj, '/bar/1'), 'bar'))
 assert(JSON.getPath(obj, '/foo~1bar') == 42)

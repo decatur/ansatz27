@@ -27,10 +27,10 @@ classdef datetime < handle
 
         function this = datetime(varargin)
             % Usage:
-            %  datetime('2014-01-01T01:02+0100', 'TimeZone', '+0100', 'InputFormat', 'yyyy-MM-dd''T''HH:mm:ssZ')
+            %  datetime('2014-01-01T01:02+0100', 'TimeZone', '+0100', 'InputFormat', 'yyyy-MM-dd''T''HH:mmZ')
 
             if nargin == 0
-                error();
+                error('datetime must be called with arguments');
             end
 
             k = 1;

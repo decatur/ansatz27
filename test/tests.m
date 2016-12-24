@@ -1,29 +1,19 @@
 % Run this script within the containing directory.
 
-clear classes
+inittests;
 
-addpath('../lib');
-
-if exist('datetime') ~= 2 || exist('containers.Map') ~= 8
-    addpath('../lib/polyfill', '-end');
-end
-
-if exist('debug_on_error')
-    debug_on_error(true);
-end
-
-testMisc;
 testContainersMap;
-
 testUsage;
 testErrorHandling;
-
-%testTestCase;
 testDatetime;
 
 % Run a single test with tc.exec('Reuse_with_Schema_References');
-tc = TestRoundtrip();   tc.exec(); 
-tc = TestStringify();   tc.exec();
-tc = TestParse();       tc.exec();
-tc = TestValidation();  tc.exec();
 
+suite = TestSuite();
+suite.add(TestMisc());
+suite.add(TestRoundtrip());
+suite.add(TestStringify());
+suite.add(TestParse());
+suite.add(TestValidation());
+
+suite.exec();
