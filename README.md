@@ -1,4 +1,4 @@
-Parser and Stringifier for GNU Octave and MATLAB®.
+e and MATLAB®.
 
 ![Roundtrip MATLAB to JSON](/docs/roundtrip.png?raw=true)
 
@@ -23,10 +23,13 @@ You can validated JSON by JSON Schema online with [jsonschemalint](http://jsonsc
 
 # Usage
 
-[//]: # "testUsage.m"
+[//]: # "demoUsage.m"
 ```MATLAB
-jsonOrFilepath = 'document.json';
-[obj, errors] = JSON.parse(jsonOrFilepath, 'schema.json');
+% Parse a literal JSON string
+[obj, errors] = JSON.parse('{"id": "MyId", "value": 3.14}');
+
+% Parse JSON from URI
+[obj, errors] = JSON.parse('document.json', 'schema.json');
 
 obj = containers.Map();
 obj('foo') = struct('bar', 13);
@@ -34,6 +37,11 @@ obj('bar') = {'foo' 'bar'};
 
 json = JSON.stringify(obj);
 [json, errors] = JSON.stringify(obj, 'schema.json');
+
+% For performance, explicitely parse a schema to use it for multiple parses or stringifies
+schema = JSON.loadSchema('schema.json');
+[obj, errors] = JSON.parse('document.json', schema);
+[json, errors] = JSON.stringify(obj, schema);
 ```
 [//]: #
 
@@ -456,7 +464,10 @@ struct('foo', {1 2}, 'bar', {3 4})
 *JSON*
 [//]: # "parse/Structured_Array_with_Defaults/payload.json"
 ```JSON
-[ { "foo": 1 }, { "foo": 2, "bar": 4 } ]
+[ 
+    { "foo": 1 },
+    { "foo": 2, "bar": 4 }
+]
 ```
 [//]: #
 
@@ -682,9 +693,9 @@ These include
 
 It is best practise to *always* check for errors and to discard the input if errors have occured:
 
-[//]: # "testErrorHandling.m"
+[//]: # "demoErrorHandling.m"
 ```MATLAB
-[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'schema.json');
+[obj, errors] = JSON.parse('{"foo": 1, "bar": 2}', 'roundtrip/Comprehensive_Example/schema.json');
 if ~isempty(errors)
     % Report errors and stop processing
 end
@@ -724,9 +735,9 @@ For each validation error one item in the `errors` cell array is generated:
 [//]: # "validation/Format_Validation_on_Parse/errors.m"
 ```MATLAB
 {
-{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-{'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
-{'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
+    {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+    {'/b' 'is not a valid date' '2016-01-01T12:00:00Z'}
+    {'/d' 'is not a valid date-time' '2016-01-01T12:00:00Y'}
 }
 ```
 [//]: #
@@ -779,8 +790,8 @@ Additionally, one can create an effient DoS with many, possibly huge, external s
 
 # Building
 
-1. Execute `tests.m` and fix all errors.
-2. Execute `build.py` will replace all code fragments in `README.md`.
+1. Execute `runsuite.m` in its containing directory and fix all errors.
+2. Execute `build.py` in its containing directory to update all code fragments in `README.md`.
 
 # Design Decisions
 

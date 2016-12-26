@@ -49,6 +49,6 @@ markers = re.findall('\[//\]: # ".*"', readme)
 for marker in markers:
     readme = process(readme, marker)
 
-f = codecs.open("README1.md", "w", "utf-8")
+f = codecs.open("README.md", "w", "utf-8")
 f.write(readme)
 f.close()
