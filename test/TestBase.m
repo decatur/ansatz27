@@ -1,19 +1,18 @@
 classdef TestBase < TestCase
     
     properties
-        testType
         absdir
     end
     
     methods
         
         function this = TestBase(testType)
-            this.testType = testType;
-            this.absdir = fullfile(pwd(), this.testType);
+            this.name = testType;
+            this.absdir = fullfile(pwd(), testType);
             this.absdir = strrep(this.absdir, '\', '/');
         end
         
-        function _exec(this, testname)
+        function exec_(this, testname)
             
             subDirs = dir(this.absdir);
             subDirs = subDirs(3:end);   % Omit . and ..

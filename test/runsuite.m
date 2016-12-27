@@ -2,8 +2,8 @@
 
 inittests;
 
-testUsage;
-testErrorHandling;
+demoUsage;
+demoErrorHandling;
 
 suite = TestSuite();
 suite.add(TestContainersMap());

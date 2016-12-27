@@ -21,7 +21,7 @@ classdef JSON_Stringifier < JSON
             this.formatters('date-time') = @(d) JSON.datetime2string(d);
         end
     end
-
+    
     methods (Static)
     end
     
@@ -62,23 +62,23 @@ classdef JSON_Stringifier < JSON
             %   Qianqian Fang 2011-09-09
             
             json = [];
-
+            
             if nargin < 2
                 errors = [];
                 return;
             end
-
+            
             if nargin < 3
                 rootschema = [];
             end
-
+            
             if nargin < 4
                 % Default is 4 spaces indentation per level.
                 space = 4;
             end
-
+            
             this.errors = {};
-
+            
             this.schemaLoader = JSON_SchemaLoader();
             if ischar(rootschema)
                 rootschema = this.schemaLoader.load( rootschema );
@@ -93,7 +93,7 @@ classdef JSON_Stringifier < JSON
             elseif ischar(space)
                 this.indent = space;
             end
-
+            
             if isempty(this.indent)
                 this.nl = '';
                 this.sepPostfix = '';
@@ -101,7 +101,7 @@ classdef JSON_Stringifier < JSON
                 this.nl = sprintf('\r\n');
                 this.sepPostfix = ' ';
             end
-
+            
             context.gap = '';
             context.pointer = '';
             
@@ -115,22 +115,22 @@ classdef JSON_Stringifier < JSON
     methods (Access=private)
         
         function json = stringifyValue(this, value, context, schema)
-
+            
             if isempty(schema) || ~schema.isKey('manyKeyword') || isequal(schema('manyKeyword'), 'allOf')
                 json = this.stringifyValue_(value, context, schema);
             else
                 json = this.stringifyMany(value, context, schema);
             end
         end
-
+        
         function coercedJson = stringifyMany(this, value, context, schema)
             manyKeyword = schema('manyKeyword');
             l = length(schema(manyKeyword));
-
+            
             state = struct();
             state.errorLength = length(this.errors);
             coercedJson = [];
-
+            
             for k=1:l
                 subSchema = this.schemaLoader.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
                 json = this.stringifyValue_(value, context, subSchema);
@@ -139,7 +139,7 @@ classdef JSON_Stringifier < JSON
                     if isempty(coercedJson)
                         coercedJson = json;
                     end
-
+                    
                     if isequal(manyKeyword, 'anyOf')
                         break;
                     end
@@ -149,7 +149,7 @@ classdef JSON_Stringifier < JSON
                 end
             end
         end
-
+        
         function json = stringifyValue_(this, value, context, schema)
             if isnumeric(value)
                 value = this.normalize2nan(value);
@@ -163,18 +163,18 @@ classdef JSON_Stringifier < JSON
                     this.addError(context.pointer, errMsg, value);
                 end
             end
-
-
+            
+            
             if isempty(schema)
                 type = {};
             else
                 assert(JSON.isaMap(schema));
                 type = schema('type');
             end
-
+            
             json = [];
             pType = [];
-
+            
             if ~isempty(type)
                 pType = this.inferePrimitiveType(value, schema, context.pointer);
                 isarray = strcmp(pType, 'array');
@@ -185,7 +185,7 @@ classdef JSON_Stringifier < JSON
             else
                 isarray = (numel(value) > 1);
             end
-
+            
             if ischar(value)
                 json = this.string2json(value);
             elseif iscell(value)
@@ -210,7 +210,7 @@ classdef JSON_Stringifier < JSON
                     % TODO: Assert that value has only one element!
                     json = this.nan2null(num2str(value, this.numberFormat(schema)));
                 end
-
+                
                 if islogical(value)
                     json = strrep(json, '1', 'true');
                     json = strrep(json, '0', 'false');
@@ -234,7 +234,7 @@ classdef JSON_Stringifier < JSON
                     end
                 end
             end
-
+            
             if ~isempty(pType)
                 this.validate(value, pType, schema, context.pointer);
             end
@@ -263,19 +263,19 @@ classdef JSON_Stringifier < JSON
             else
                 names = value.keys();
             end
-
+            
             isFirstItem = true;
             
             for k=1:length(names)
                 key = names{k};
                 context.pointer = [pointer '/' key];
-
+                
                 if isstruct(value)
                     v = value.(key);
                 else
                     v = value(key);
                 end
-
+                
                 item_str = this.stringifyValue(v, context, this.schemaLoader.getPropertySchema(schema, key));
                 if isempty(item_str) || strcmp(item_str, 'null') % TODO: Can it be empty?
                     continue;
@@ -299,7 +299,7 @@ classdef JSON_Stringifier < JSON
         
         function txt = objArray2json(this, value, context, schema)
             assert(iscell(value) || isstruct(value));
-
+            
             txt = sprintf('[%s', this.nl);
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
@@ -307,7 +307,7 @@ classdef JSON_Stringifier < JSON
             
             for k=1:l
                 itemSchema = this.schemaLoader.getItemSchema(schema, k-1);
-
+                
                 if isstruct(value)
                     item = value(k);
                 else
@@ -360,15 +360,15 @@ classdef JSON_Stringifier < JSON
             else
                 oneItemSchema = [];
             end
-
+            
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
-
+            
             txt = sprintf('[%s%s', this.nl, itemContext.gap);
             sep = '';
-
+            
             indx = struct('type', '()');
-
+            
             for k=1:s(1)
                 % We have to use subsref because tensor may have any dimension >= 2.
                 % Example tensor=[1 2;3 4]
@@ -376,43 +376,43 @@ classdef JSON_Stringifier < JSON
                 %   squeeze(subsref(tensor, indx)) -> [3 4]
                 indx.subs = cat(1, { k }, cellstr(repmat(':', ndims(tensor)-1, 1)));
                 m = squeeze(subsref(tensor, indx));
-
+                
                 if isempty(oneItemSchema)
                     itemSchema = this.schemaLoader.getItemSchema(schema, k-1);
                 else
                     itemSchema = oneItemSchema;
                 end
-
+                
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
-
+                
                 txt = sprintf('%s%s%s', txt, sep, this.stringifyValue(m, itemContext, itemSchema));
                 sep = ',';
             end
-
+            
             txt = sprintf('%s%s%s]', txt, this.nl, context.gap);
         end
-
+        
         function txt = row2json(this, row, context, schema)
             assert(isrow(row) || isempty(row))
-
+            
             itemContext = context;
             itemContext.gap = [context.gap this.indent];
             
             txt = sprintf('[%s%s', this.nl, itemContext.gap);
             sep = '';
-
-
+            
+            
             for k=1:numel(row)
                 itemSchema = this.schemaLoader.getItemSchema(schema, k-1);
                 itemContext.pointer = [context.pointer '/' num2str(k-1)];
-
+                
                 txt = sprintf('%s%s%s', txt, sep, this.stringifyValue(row(k), itemContext, itemSchema));
                 sep = ',';
             end
-
+            
             txt = sprintf('%s%s%s]', txt, this.nl, context.gap);
         end
-
+        
         function txt = string2json(this, s)
             assert(ischar(s), 'input is not a string');
             

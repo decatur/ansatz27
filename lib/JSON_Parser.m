@@ -22,19 +22,19 @@ classdef JSON_Parser < JSON
         
         function this = JSON_Parser()
             %this@JSON();
-
+            
             this.formatters('date') = @(s) JSON.datestring2datetime(s);
             this.formatters('date-time') = @(s) JSON.datetimestring2datetime(s);
         end
-    
+        
     end
-
+    
     methods (Static)
-
+        
     end
     
     methods
-
+        
         function [value, errors] = parse(this, varargin)
             try
                 value = this.parse_(varargin{:});
@@ -57,23 +57,23 @@ classdef JSON_Parser < JSON
             if nargin < 2 || ~ischar(json) || isempty(json)
                 error('JSON:PARSE_JSON', 'JSON must be non-empty string');
             end
-
+            
             this.errors = {};
-
+            
             if nargin < 3
                 rootschema = [];
             end
-
+            
             if nargin < 4
                 this.options = struct();
             else
                 this.options = options;
             end
-
+            
             if ~isfield(this.options, 'objectFormat')
                 this.options.objectFormat = 'struct';
             end
-
+            
             % If is does not look like JSON it must be a URI
             if isempty(regexp(json, '^\s*(\[|\{|"|true|false|null|\+?\-?\d)', 'ONCE'))
                 uri = JSON.resolveURIagainstLoadPath(json);
@@ -85,12 +85,12 @@ classdef JSON_Parser < JSON
             else
                 this.json = json;
             end
-
+            
             this.pos = 1;
             this.len = length(this.json);
             this.lineCount = 1;
             this.posCurrentNewline = 0;
-
+            
             this.schemaLoader = JSON_SchemaLoader();
             
             context = struct();
@@ -111,12 +111,12 @@ classdef JSON_Parser < JSON
             this.skipWhitespace();
             value = this.parseValue(context, context.schema);
             this.skipWhitespace();
-
+            
             if this.pos ~= this.len+1
                 % Not all text was consumed.
                 this.parseError('Unexpected trailing text at');
             end
-
+            
             errors = this.errors;
         end
         
@@ -128,12 +128,12 @@ classdef JSON_Parser < JSON
             child = struct();
             child.pointer = [context.pointer '/' num2str(key)];
         end
-
+        
         function val = parseObject(this, context, schema)
             this.parseChar('{');
-
+            
             objectFormat = JSON.getPath(schema, '/format', this.options.objectFormat);
-
+            
             if strcmp(objectFormat, 'Map')
                 val = containers.Map();
             else % default
@@ -162,7 +162,7 @@ classdef JSON_Parser < JSON
                     else
                         val(key) = v;
                     end
-
+                    
                     if this.nextChar() == '}'
                         break;
                     end
@@ -179,7 +179,7 @@ classdef JSON_Parser < JSON
         
         function val = parseArray(this, context, schema) % JSON array is written in row-major order
             this.parseChar('[');
-
+            
             val = {};
             itemSchema = this.schemaLoader.getSubSchema(schema, '/items');
             if ~isempty(itemSchema)
@@ -189,9 +189,9 @@ classdef JSON_Parser < JSON
                     val = struct();
                 end
             end
-        
+            
             index = 0;
-    
+            
             if this.nextChar() ~= ']'
                 while 1
                     subContext = this.getChildContext(context, index);
@@ -201,10 +201,10 @@ classdef JSON_Parser < JSON
                     else
                         subContext.schema = itemSchema;
                     end
-
+                    
                     index = index + 1;
                     v = this.parseValue(subContext, subContext.schema);
-
+                    
                     if isstruct(val)
                         % Note: Simply assigning val(index) = v will break if v and val have different fields!
                         names = fieldnames(v);
@@ -214,7 +214,7 @@ classdef JSON_Parser < JSON
                     else
                         val{index} = v;
                     end
-
+                    
                     if this.nextChar() == ']'
                         break;
                     end
@@ -227,31 +227,31 @@ classdef JSON_Parser < JSON
             end
             
             this.parseChar(']');
-
+            
             if iscell(val) && ~isfield(context, 'isArray')
                 % End-of-line of a nested cell array. Try to convert to matrix.
                 val = JSON_Parser.cellToMat(val);
             end
         end
         
-%         function vec = json1D2array(this, pointer)
-%             s = this.json(this.pos:end); % '[1, 2, 3]...'
-% 
-%             endPos = strchr(s, ']', 1);
-%             s = strtrim(s(2:endPos-1));
-%             s = strrep(s, 'null', 'NaN');
-% 
-%             [vec, COUNT, ERRMSG, POS] = sscanf(s, '%g,');
-% 
-%             if POS ~= length(s)+1
-%                 vec = [];
-%                 return 
-%             end
-% 
-%             this.pos = this.pos + endPos;
-%             this.skipWhitespace();
-%             vec = vec';
-%         end
+        %         function vec = json1D2array(this, pointer)
+        %             s = this.json(this.pos:end); % '[1, 2, 3]...'
+        %
+        %             endPos = strchr(s, ']', 1);
+        %             s = strtrim(s(2:endPos-1));
+        %             s = strrep(s, 'null', 'NaN');
+        %
+        %             [vec, COUNT, ERRMSG, POS] = sscanf(s, '%g,');
+        %
+        %             if POS ~= length(s)+1
+        %                 vec = [];
+        %                 return
+        %             end
+        %
+        %             this.pos = this.pos + endPos;
+        %             this.skipWhitespace();
+        %             vec = vec';
+        %         end
         
         function parseChar(this, c)
             this.skipWhitespace();
@@ -289,8 +289,8 @@ classdef JSON_Parser < JSON
             if this.json(this.pos) ~= '"'
                 this.parseError('expected character " at');
             end
-
-            startPos = this.pos;            
+            
+            startPos = this.pos;
             this.pos = this.pos + 1;
             str = '';
             closed = false;
@@ -351,7 +351,7 @@ classdef JSON_Parser < JSON
                 this.pos = startPos + startIndices(1);
                 this.parseError('Invalid char found in range #00-#1F at');
             end
-
+            
             if ~closed
                 this.parseError('Expected closing quote at end of text at');
             end
@@ -384,7 +384,7 @@ classdef JSON_Parser < JSON
                 val = this.parseMany(context, schema);
             end
         end
-
+        
         function val = parseMany(this, context, schema)
             
             function other = copyState(state)
@@ -399,17 +399,17 @@ classdef JSON_Parser < JSON
                 other.posCurrentNewline = state.posCurrentNewline;
                 other.index_esc = state.index_esc;
             end
-
+            
             manyKeyword = schema('manyKeyword');
             l = length(schema(manyKeyword));
-
+            
             state = copyState(this);
             state.errorLength = length(this.errors);
             coersedVal = [];
-
+            
             for k=1:l
                 subSchema = this.schemaLoader.getSubSchema(schema, sprintf('/%s/%d', manyKeyword, k));
-
+                
                 val = this.parseValue_(context, subSchema);
                 if length(this.errors) == state.errorLength
                     % There were no errors.
@@ -417,7 +417,7 @@ classdef JSON_Parser < JSON
                     if isempty(coersedVal)
                         coersedVal = val;
                     end
-
+                    
                     if isequal(manyKeyword, 'anyOf')
                         % anyOf can stop at first validating schema
                         break;
@@ -431,9 +431,9 @@ classdef JSON_Parser < JSON
                 end
             end
         end
-
+        
         function val = parseValue_(this, context, schema)
-
+            
             switch(this.json(this.pos))
                 case '"'
                     val = this.parseStr();
@@ -486,29 +486,28 @@ classdef JSON_Parser < JSON
                 end
             end
         end
-
+        
         function mergedObject = mergeDefaults(this, object, schema)
             assert(isstruct(object) || JSON.isaMap(object));
-
+            
             if isstruct(object)
                 s = fieldnames(object);
             else
                 s = object.keys();
             end
-
+            
             mergedObject = object;
             props = JSON.getPath(schema, '/properties');
             if ~JSON.isaMap(props)
                 return
             end
-
+            
             propertyNames = props.keys();
-
+            
             for i=1:length(propertyNames)
                 name = propertyNames{i};
                 property = this.schemaLoader.getPropertySchema(schema, name);
-                %if ~isempty(property) && property.isKey('default') && ~ismember(name, s)
-                if property.isKey('default') && ~ismember(name, s)
+                if ~isempty(property) && property.isKey('default') && ~ismember(name, s)
                     if isstruct(mergedObject)
                         mergedObject.(name) = property('default');
                     else
@@ -524,21 +523,21 @@ classdef JSON_Parser < JSON
         end
         
     end
-
+    
     methods (Static)
-
+        
         function m=cellToMat(c)
-
+            
             assert(iscell(c));
-
+            
             if isempty(c)
                 m = [];
                 return;
             end
-
+            
             cc = c;
             dims = [];
-
+            
             while iscell(cc)
                 dims = [dims length(cc)];
                 if ~isempty(cc)
@@ -547,18 +546,18 @@ classdef JSON_Parser < JSON
                     break;
                 end
             end
-
+            
             if length(dims) == 1
                 dims = [1 dims];
             end
-
+            
             m = inf(dims(:)');
-
+            
             hasLogical = false;
             hasNumeric = false;
             stack = {c};
             ind = {1};
-
+            
             while true
                 k = ind{end};
                 if k<=length(stack{end})
@@ -570,7 +569,7 @@ classdef JSON_Parser < JSON
                         if isempty(cc)
                             cc = nan;
                         end
-
+                        
                         if islogical(cc)
                             hasLogical = true;
                         else
@@ -594,9 +593,9 @@ classdef JSON_Parser < JSON
                     ind{end} = 1 + ind{end};
                 end
             end
-
+            
             if any(isinf(m(:)))
-               m = c;
+                m = c;
             elseif hasNumeric && hasLogical
                 m = c;
             elseif hasLogical
@@ -604,9 +603,9 @@ classdef JSON_Parser < JSON
                 l(~m) = false;
                 m = l;
             end
-
+            
         end
-
+        
     end % static methods
 end
 

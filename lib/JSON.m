@@ -272,43 +272,6 @@ classdef JSON < handle
         
     end % methods
     
-    methods (Access=private)
-        
-        
-        
-        
-
-        
-
-        %function resolveSchemaRef(this, schema, resolutionScope)
-        %    refSchema = schema;
-        %    while refSchema.isKey('$ref')
-        %        ref = refSchema('$ref');
-        %        JSON.log('DEBUG', 'resolveSchemaRef %s', ref);%
-%
-        %           if ~ischar(ref)
-        %            % TODO: use addError and make that throw
-        %            error('JSON:PARSE_SCHEMA', '$ref must be a string, found %s', class(ref));
-        %        end
-%
- %               ref = this.resolveURI(ref, resolutionScope);
-%
- %               % foo#bar->/bar or foo#->/ or foo->/
-  %              refPointer = regexprep(ref, '[^#]*(#/?|$)', '/', 'once');
-   %             refSchema = this.getSchemaByURI(ref);
-    %            
-     %           [refSchema, ~, id] = JSON.getPath(refSchema, refPointer);
-      %          if ~isempty(id)
-       %             resolutionScope = id;
-        %            refSchema('__resolutionScope') = id;
-         %       end
-%
- %           end
-  %          schema('__refSchema') = refSchema;
-   %     end
-        
-    end % methods (Access=private)
-    
     methods (Static)
         
         function b = isaMap(obj)
@@ -324,7 +287,7 @@ classdef JSON < handle
                 fprintf(1, [level ' ' fmt '\n'], varargin{:});
             end
         end
-              
+        
         function [value, errors] = parse(varargin)
             parser = JSON_Parser();
             [value, errors] = parse(parser, varargin{:});
@@ -334,7 +297,7 @@ classdef JSON < handle
             stringifier = JSON_Stringifier();
             [json, errors] = stringifier.stringify(varargin{:});
         end
-
+        
         function schema = loadSchema(url)
             schemaLoader = JSON_SchemaLoader();
             schema = schemaLoader.load( url );
@@ -343,7 +306,7 @@ classdef JSON < handle
         function uri = resolveURIagainstLoadPath(uri)
             %resolveURIagainstLoadPath resolves the reference against the base URI and normalizes.
             % See https://tools.ietf.org/html/rfc3986
-
+            
             try
                 r = javaObject('java.net.URI', uri);
             catch e
@@ -359,7 +322,7 @@ classdef JSON < handle
                 uri = ['file:///' strrep(location, '\', '/')];
             end
         end
-
+        
         function obj = setPath(obj, pointer, value)
             %SETPATH sets the value referenced by the pointer.
             % Example
@@ -449,12 +412,12 @@ classdef JSON < handle
                 % '~' needs to be encoded as '~0' and '/' needs to be encoded as '~1'
                 token = strrep(strrep(token, '~0', '~'), '~1', '/');
                 
-                if JSON.isaMap(obj) 
+                if JSON.isaMap(obj)
                     if obj.isKey(token)
                         obj = obj(token);
                         continue;
                     end
-                elseif iscell(obj) 
+                elseif iscell(obj)
                     if ~isempty(regexp(token, '^\d+$', 'once'))
                         l = str2double(token);
                         if l < length(obj) % This will also handle l is not a number
@@ -462,7 +425,7 @@ classdef JSON < handle
                             continue;
                         end
                     end
-                elseif isstruct(obj) 
+                elseif isstruct(obj)
                     if isfield(obj, token)
                         obj = obj.(token);
                         continue;
@@ -478,22 +441,6 @@ classdef JSON < handle
             end
             
         end
-        
-        %         function text = ___readFileToString(pointer, encoding )
-        %             if JSON.isoct
-        %                 [fid, msg] = fopen(pointer, 'r');
-        %             else
-        %                 [fid, msg] = fopen(pointer, 'r', 'l', encoding);
-        %             end
-        %
-        %             if fid == -1
-        %                 % TODO: Do not throw here
-        %                 error('Could not open %s: %s', pointer, msg);
-        %             end
-        %
-        %             text = fscanf(fid, '%c');
-        %             fclose(fid);
-        %         end
         
         function [d, err] = datetimestring2datetime(s)
             %datetimestring2datetime parses an ISO8601 date-time into a datetime object.
@@ -548,7 +495,7 @@ classdef JSON < handle
                 err = 'is not a valid date';
                 return;
             end
-
+            
             try
                 d = datetime(s, 'InputFormat', 'yyyy-MM-dd', 'TimeZone', '', 'Format', 'preserveinput');
             catch e
@@ -562,7 +509,7 @@ classdef JSON < handle
         function [s, err] = datetime2string(d)
             %datetime2string converts a datetime object to an ISO8601 string
             err = [];
-
+            
             %if ischar(d)
             %    s = d;
             %    return;

@@ -9,23 +9,23 @@ classdef TestCase < handle
     end
     
     methods (Access=public)
-
+        
         function this = TestCase()
             this.errorCount = 0;
         end
-
+        
         function exec(this)
             fprintf(1, 'Running test %s\n', this.name);
             
-            this._exec();
-
+            this.exec_();
+            
             if this.errorCount > 0
-                fprintf(1, 'There are %u errors\n', this.errorCount);
+                fprintf(1, '%s: There are %u errors\n', this.name, this.errorCount);
             else
-                fprintf(1, 'No errors\n');
+                fprintf(1, '%s: No errors\n', this.name);
             end
         end
-
+        
         function assertEqual(this, actual, expected)
             % Important: We do not use Octaves recursive isequal because it does not use overloaded isequal on objects!
             
@@ -86,7 +86,7 @@ classdef TestCase < handle
                     this.err('Error: Expected map, found %s', class(actual));
                     return;
                 end
-
+                
                 expectedNames = sort(expected.keys());
                 actualNames = sort(actual.keys());
                 
@@ -110,7 +110,7 @@ classdef TestCase < handle
                 this.err('Error: Cannot compare type %s', class(expected));
             end
         end
-
+        
         function assertEmpty(this, actual)
             if ~isempty(actual)
                 this.err('Error: Expected empty, found ...');
@@ -126,7 +126,7 @@ classdef TestCase < handle
         end
         
     end % methods
-
+    
     methods (Static)
         function s = toString(obj)
             if ischar(obj)

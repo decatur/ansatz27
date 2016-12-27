@@ -6,7 +6,16 @@ methods
         this.name = 'TestContainersMap';
     end
 
-    function _exec(this)
+    function exec_(this)
+
+        obj = containers.Map();
+        obj('a') = 1;
+        obj('_*') = 2;
+        assert(obj('a') == 1);
+        assert(obj('_*') == 2);
+        assert(all(ismember(obj.keys(), {'a', '_*'})));
+        assert(obj.isKey('a'));
+        assert(obj.isKey('_*'));
 
         obj = containers.Map();
         obj('foo') = struct('bar', 13);

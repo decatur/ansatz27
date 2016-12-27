@@ -17,12 +17,12 @@ classdef JSON_SchemaLoader < JSON_Parser
             this.formatters('date') = @(s) JSON.datestring2datetime(s);
             this.formatters('date-time') = @(s) JSON.datetimestring2datetime(s);
         end
-    
+        
         function schema = load(this, uri)
             uri = JSON.resolveURIagainstLoadPath(strtrim(uri));
             schema = this.getSchemaByURI(uri);
         end
-
+        
         function childSchema = getPropertySchema(this, schema, key)
             assert(ischar(key));
             
@@ -33,7 +33,7 @@ classdef JSON_SchemaLoader < JSON_Parser
             
             pointer = ['/properties/' key];
             childSchema = this.getSubSchema(schema, pointer);
-
+            
             if ~isempty(childSchema)
                 return
             end
@@ -48,45 +48,46 @@ classdef JSON_SchemaLoader < JSON_Parser
                     end
                 end
             end
-
+            
         end
         
         function itemSchema = getItemSchema(this, schema, key)
             % TODO: Only call this for array items.
             assert(isnumeric(key) && ~rem(key, 1));
             itemSchema = [];
-
+            
             if isempty(schema)
                 return
             end
             
             items = JSON.getPath(schema, '/items');
-
+            
             if isempty(items) % Shortcut
                 return;
             end
-
+            
             if JSON.isaMap(items)
                 itemSchema = this.getSubSchema(schema, '/items');
             elseif iscell(items) && key < length(items)
                 itemSchema = this.getSubSchema(schema, sprintf('/items/%d', key));
             end
         end
-
+        
         function schema = getSubSchema(this, schema, pointer)
             if isempty(schema)
                 return
             end
-
+            
             referencingSchemas = containers.Map();
             ref = [];
-
+            
             while true
                 id = schema('id');
-                [schema] = JSON.getPath(schema, pointer);
-
+                schema = JSON.getPath(schema, pointer);
                 
-                if isempty(schema) || ~JSON.isaMap(schema)
+                % Note that in MATLAB a Map with no keys is empty, so do
+                % not use isempty(schema)
+                if ~JSON.isaMap(schema) || schema.isempty()
                     if ~isempty(ref)
                         error('JSON:PARSE_SCHEMA', '$ref is invalid: %s', ref);
                     end
@@ -98,33 +99,33 @@ classdef JSON_SchemaLoader < JSON_Parser
                     schema = schema('__refSchema');
                     return
                 end
-
+                
                 schema('id') = id;
-
+                
                 if ~schema.isKey('$ref')
                     break;
                 end
-            
+                
                 ref = schema('$ref');
                 JSON.log('DEBUG', 'resolveSchemaRef %s', ref);
-
+                
                 if ~ischar(ref)
                     % TODO: use addError and make that throw
                     error('JSON:PARSE_SCHEMA', '$ref must be a string, found %s', class(ref));
                 end
-
+                
                 ref = this.resolveURI(ref, schema('id'));
                 if referencingSchemas.isKey(ref)
                     error('JSON:PARSE_SCHEMA', 'Cyclic references at %s', ref);
                 end
-            
+                
                 referencingSchemas(ref) = schema;
-
+                
                 resScopURI = javaObject('java.net.URI', ref);
                 if ~resScopURI.isAbsolute()
                     error('JSON:PARSE_SCHEMA', 'Resolved URI must be absolute: %s', ref);
                 end
-
+                
                 % Extract the anchor.
                 pointer = regexprep(ref, '[^#]*#?', '', 'once');
                 if ~isempty(pointer)
@@ -132,22 +133,22 @@ classdef JSON_SchemaLoader < JSON_Parser
                 end
                 schema = this.getSchemaByURI(ref);
             end
-
+            
             if ~schema.isKey('__isNormalized')
                 this.normalizeSchema(schema, pointer);
             end
-
+            
             refs = referencingSchemas.keys();
-
+            
             for k=1:length(refs)
                 referencingSchema = referencingSchemas(refs{k});
                 referencingSchema('__refSchema') = schema;
             end
-
+            
         end
         
     end % methods
-
+    
     methods (Access=private)
         
         function schema = getSchemaByURI(this, uri)
@@ -175,25 +176,25 @@ classdef JSON_SchemaLoader < JSON_Parser
             schema = this.postLoadSchema(schema, uri);
             this.schemasByURI(uri) = schema;
         end
-
+        
         function schema = postLoadSchema(this, schema, uri)
-
+            
             [ schema, errs] = this.parse_(schema, [], struct('objectFormat', 'Map'));
             if ~isempty( errs)
                 this.errors = errs;
                 error('JSON:PARSE_SCHEMA', 'Parse error in schema %s', uri);
             end
-
+            
             if ~schema.isKey('id')
                 % [7.1 Core] The initial resolution scope of a schema is the URI of the schema itself, if any, or the empty URI if the schema was not loaded from a URI.
                 schema('id') = uri;
             else
                 schema('id') = this.resolveURI(schema('id'), uri);
             end
-
+            
             schema = this.getSubSchema(schema, '');
         end
-
+        
         function resolvedURI = resolveURI(this, uri, base)
             %resolveURI resolves the reference against the base URI.
             % See https://tools.ietf.org/html/rfc3986
@@ -205,12 +206,12 @@ classdef JSON_SchemaLoader < JSON_Parser
                 resolvedURI = regexprep (resolvedURI, 'file:/+', 'file:////');
             end
         end
-
+        
         function normalizeSchema(this, schema, pointer)
             if ~JSON.isaMap(schema)
                 error('JSON:PARSE_SCHEMA', 'A JSON Schema MUST be an object, found %s', class(schema));
             end
-                
+            
             JSON.log('DEBUG', 'normalizeSchema %s', pointer);
             
             manyKeywords = {'allOf', 'anyOf', 'oneOf'};
@@ -253,7 +254,7 @@ classdef JSON_SchemaLoader < JSON_Parser
             if schema.isKey('pattern') && ~ischar(schema('pattern'))
                 error('JSON:PARSE_SCHEMA', 'Pattern must be a string at %s', pointer);
             end
-
+            
             if schema.isKey('default')
                 p = JSON_Parser();
                 [ defaultValue, errs ] = parse(p, schema('default'), schema);
@@ -262,11 +263,11 @@ classdef JSON_SchemaLoader < JSON_Parser
                 end
                 schema('default') = defaultValue;
             end
-
+            
             schema('__isNormalized') = true;
             
         end
-
+        
         function mergeSchemas(this, schema)
             %MERGESCHEMAS Summary of this function goes here
             %   Detailed explanation goes here
@@ -279,23 +280,27 @@ classdef JSON_SchemaLoader < JSON_Parser
             
             for k=1:length(allOf)
                 subSchema = this.getSubSchema(schema, ['/allOf/' num2str(k-1)]);
-                % TODO: Assert properties is member
-                props = subSchema('properties');
-                keys = props.keys();
-                for l=1:length(keys)
-                    key = keys{l};
-                    mergedProperties(key) = props(key);
+                if isempty(subSchema)
+                    continue
+                end
+                if subSchema.isKey('properties')
+                    props = subSchema('properties');
+                    keys = props.keys();
+                    for l=1:length(keys)
+                        key = keys{l};
+                        mergedProperties(key) = props(key);
+                    end
                 end
                 
                 if subSchema.isKey('required')
                     schema('required') = [schema('required') subSchema('required')];
                 end
             end
-
+            
             schema.remove('allOf');
         end
-
-    end % methods (Access=private)
         
+    end % methods (Access=private)
+    
 end
 

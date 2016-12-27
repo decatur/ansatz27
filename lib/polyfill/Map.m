@@ -26,8 +26,7 @@ classdef Map < handle
                 key = 'x_';
                 return
             end
-            s = strrep(key, '_', 'A');
-            if !(isalpha(s(1)) && all(isalnum(s)))
+            if ~(isstrprop(key(1), 'alpha') && all(isstrprop (key, 'alphanum')))
                 key = ['x_' sprintf('%x', uint8(key))];
             end
         end
@@ -66,6 +65,8 @@ classdef Map < handle
                         for k=1:length(normalizedNames)
                             value{k} = this.denormalizeKey(normalizedNames{k});
                         end
+                    elseif strcmp(fName, 'isempty')
+                        value = isempty(fieldnames(this.s));
                     else
                         error('Invalid member %s', fName);
                     end

@@ -6,7 +6,7 @@ methods
         this.name = 'TestDatetime';
     end
 
-    function _exec(this)
+    function exec_(this)
 
         dt1 = datetime(2013, 12, 1, 0, 0, 0, 'TimeZone', 'Europe/Berlin');
         dt2 = datetime(2013, 12, 2, 0, 0, 0, 'TimeZone', 'Europe/Berlin');

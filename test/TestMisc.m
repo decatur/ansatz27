@@ -6,7 +6,7 @@ methods
         this.name = 'Comprehensive Tests';
     end
 
-    function _exec(this)
+    function exec_(this)
 
         [obj, errors] = JSON.parse('file:document.json', 'file:schema.json');
 
@@ -30,16 +30,6 @@ methods
         % A JSON Schema is a JSON document, and that document MUST be an object
         [obj, errors] = JSON.parse('1', '2');
         assert(strcmp(errors{1}{2}, 'Could not resolve URI 2'));
-
-        m = containers.Map();
-        m('a') = 1;
-        m('_*') = 2;
-        assert(m('a') == 1);
-        assert(m('_*') == 2);
-        assert(all(ismember(m.keys(), {'a', '_*'})));
-        assert(m.isKey('a'));
-        assert(m.isKey('_*'));
-
 
         [json, errors] = JSON.parse(sprintf('{"f":12\n,}'));
         assert(strcmp(errors{1}{2}, 'tangling comma before line 2, column 2'));
