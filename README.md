@@ -1,4 +1,4 @@
-e and MATLAB®.
+⚠️ Deprecated. Consider adopting the Python eco system.
 
 ![Roundtrip MATLAB to JSON](/docs/roundtrip.png?raw=true)
 
